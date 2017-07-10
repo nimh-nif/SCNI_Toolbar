@@ -33,7 +33,8 @@ persistent Params Fig;
 
 Fullmfilename   = mfilename('fullpath');
 [Path,~]       	= fileparts(Fullmfilename);
-Params.Dir      = fullfile(Path, '../SCNI_Parameters');
+[Path,~]       	= fileparts(Path);
+Params.Dir      = fullfile(Path, 'SCNI_Parameters');
 if nargin == 0
     [~, CompName] = system('hostname');
 	CompName(regexp(CompName, '\s')) = [];

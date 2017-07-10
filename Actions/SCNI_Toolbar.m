@@ -4,20 +4,33 @@
 % various functions either during or between experimental runs using the
 % Psychtoolbox + DataPixx setup.
 %
-% 
+% 2017-06-27 - Written by murphyap@nih.gov
 %==========================================================================
 
 function [PDS, c, s] = SCNI_Toolbar(PDS, c, s)
 
-global Fig Icon 
+global Fig Params Icon                                                      % Declare global variables
 
-Fig.Background      = [0.6, 0.6, 0.6];
+
+%================= Get parameters file for local machine
+Fullmfilename   = mfilename('fullpath');                                    % Get m-filename
+[Path,~]       	= fileparts(Fullmfilename);                                 % Get path
+addpath(genpath(fullfile(Path, '..')));                                    	% Add SCNI_Datapixx directory and subfolders to Matlab path
+Params.Dir      = fullfile(Path, '../SCNI_Parameters');                     % Get the directory containing parameter files
+[~, CompName]   = system('hostname');                                       % Get the name of the local machine
+CompName(regexp(CompName, '\s')) = [];                                      % Remove whitespace
+Params.File     = fullfile(Params.Dir, sprintf('%s.mat', CompName));        % Construct the expected parameters filename for his machine
+if ~exist(Params.File, 'file')                                              % Check whether expected parameters file exists...
+    Params.File = [];                                                       % If not, set empty
+end
+
+Fig.Background      = [0.6, 0.6, 0.6];                                      
 Fig.ButtonSize      = [0,0,80,80];
 
-%================== Load icons
+%================== Load toolbar icons
 Fullmfilename   = mfilename('fullpath');
 [Path,~]       	= fileparts(Fullmfilename);
-IconDir         = fullfile(Path, 'Icons');
+IconDir         = '/projects/SCNI/SCNI_Datapixx/SCNI_Subfunctions/Icons';%fullfile(Path, 'Icons');
 IconFiles       = wildcardsearch(IconDir, '*.png');
 ButtonOnImg     = fullfile(IconDir, 'ButtonOn.png');
 ButtonOffImg    = fullfile(IconDir, 'ButtonOff.png');
@@ -44,12 +57,12 @@ for b = 1:2
 end
 
 %================== Open toolbar window
-Fig.ToolbarRect     = [0,0,1000,150];
-Fig.ButtonType      = {'pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton'};
-Fig.IconList        = {'Liquid','SpeakerOn','Penalty','GammaCorrect','Sleep','EPI','Display','Photodiode','Eye'};
-Fig.ButtonTips      = {'Give reward','Play audio','Debug mode','Apply gamma','Time out','MRI training','Display settings','Photodiode settings','Eye tracking'};
-Fig.ShortcutKeys    = {'r','a','d','p','k','g','e','t','s'};
-Fig.PannelAssignment= [1,1,2,2,2,2,3,3,3];
+Fig.ToolbarRect     = [0,0,1200,140];
+Fig.ButtonType      = {'togglebutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
+Fig.IconList        = {'Play','Liquid','SpeakerOn','Penalty','GammaCorrect','Sleep','EPI','Display','Photodiode','Eye','DataPixx','TDT'};
+Fig.ButtonTips      = {'Run experiment','Give reward','Play audio','Debug mode','Apply gamma','Time out','MRI training','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings'};
+Fig.ButtonFunc      = {'','SCNI_GiveReward','SCNI_PlaySound','','','','','SCNI_RigSettings','','SCNI_EyeLinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings'};
+Fig.ShortcutKeys    = {'g','r','a','d','p','k','g','e','t','s'};
 Fig.ButtonXPos      = 10:(Fig.ButtonSize(3)+10):((Fig.ButtonSize(3)+10)*numel(Fig.IconList));
 Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure window with specified title
                     'Color',Fig.Background,...                	% Set the figure window background color
@@ -60,16 +73,16 @@ Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure w
                     'Menu','none','Toolbar','none');            % Turn off toolbars and menu
 
 Fig.PannelTitles    = {'Actions', 'Modes', 'Settings'};  
-Fig.ButtonsPPannel  = [2, 4, 3];
+Fig.ButtonsPPannel  = [3, 4, 5];
 Fig.FontSize        = 16;
 Fig.BIndx           = 1;
 for p = 1:numel(Fig.PannelTitles)
     if p == 1
         Xpos = 10;
     else
-        Xpos = 20*p + sum(Fig.PannelPos(1:(p-1),3));
+        Xpos = 10*p + sum(Fig.PannelPos(1:(p-1),3));
     end
-    Fig.PannelPos(p,:)       = [Xpos, 10, Fig.ButtonSize(3)*Fig.ButtonsPPannel(p), Fig.ButtonSize(4)+40];
+    Fig.PannelPos(p,:) 	= [Xpos, 10, (Fig.ButtonSize(3)+10)*Fig.ButtonsPPannel(p)+10, Fig.ButtonSize(4)+40];
     Fig.PannelHandle(p) = uipanel(  'Title',Fig.PannelTitles{p},...
                                     'FontSize',Fig.FontSize,...
                                     'BackgroundColor',Fig.Background,...
@@ -78,7 +91,7 @@ for p = 1:numel(Fig.PannelTitles)
                                     'Parent',Fig.Handle);
                                 
 	for b = 1:Fig.ButtonsPPannel(p)
-        Fig.bh(b) = uicontrol('style',Fig.ButtonType{Fig.BIndx},...
+        Fig.bh(Fig.BIndx) = uicontrol('style',Fig.ButtonType{Fig.BIndx},...
                             'units','pixels',...
                             'position',[Fig.ButtonXPos(b), 10, 0, 0]+Fig.ButtonSize,...
                             'cdata', eval(sprintf('Icon.%s{1}',Fig.IconList{Fig.BIndx})),...
@@ -89,18 +102,6 @@ for p = 1:numel(Fig.PannelTitles)
     end
                                 
 end              
-                
-% for b = 1:numel(Fig.IconList)                
-%     Fig.bh(b) = uicontrol(  'style',Fig.ButtonType{b},...
-%                             'units','pixels',...
-%                             'position',[Fig.ButtonXPos(b), 10, 0, 0]+Fig.ButtonSize,...
-%                             'cdata', eval(sprintf('Icon.%s{1}',Fig.IconList{b})),...
-%                             'callback', {@TestFunction,b},...
-%                             'TooltipString', Fig.ButtonTips{b},...
-%                             'Parent',Fig.PannelHandle(Fig.PannelAssignment(b)));
-% end
-
-
 
 
 end
@@ -108,7 +109,7 @@ end
 
 %% ================== GUI BUTTON CALLBACK FUNCTIONS =======================
 function TestFunction(hObj, event, indx)
-    global Icon Fig
+    global Icon Fig Params
     
   	%======= Toggle button icon
     if strcmpi(get(Fig.bh(indx), 'style'), 'togglebutton')
@@ -120,28 +121,6 @@ function TestFunction(hObj, event, indx)
     end
     
     %======= Perform action
-    switch indx
-        case 1
-            disp('SCNI_AudioSettings')
-            
-        case 2
-            disp('SCNI_PhotodiodeSettings')
-            
-        case 3
-            SCNI_RigSettings;
-            
-        case 4
-            
-            
-        case 5
-            
-            
-        case 6
-            
-        case 7
-            
-            
-    end
-
-
+    eval(sprintf('%s(Params.File)', Fig.ButtonFunc{indx}));
+    
 end

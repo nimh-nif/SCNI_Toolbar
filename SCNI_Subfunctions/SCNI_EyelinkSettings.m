@@ -1,4 +1,4 @@
-%=========================== SCNI_DatapixxSettings.m ===========================
+%=========================== SCNI_EyelinkSettings.m ===========================
 % This function provides a graphical user interface for setting parameters 
 % related to the digital and analog I/O channels of DataPixx2. Parameters 
 % can be saved and loaded, and the updated parameters are returned in the 
@@ -13,11 +13,11 @@
 %
 %==========================================================================
 
-function ParamsOut = SCNI_DatapixxSettings(ParamsFile)
+function ParamsOut = SCNI_EyelinkSettings(ParamsFile)
 
 persistent Params Fig;
 
-Params.Dir = '/projects/SCNI/SCNI_Datapixx/SCNI_Parameters';
+Params.Dir = '/projects/SCNI/SCNI_Eyelink/SCNI_Parameters';
 if nargin == 0
     [~, CompName] = system('hostname');
 	CompName(regexp(CompName, '\s')) = [];
@@ -25,25 +25,28 @@ if nargin == 0
 else
     Params.File = ParamsFile;
 end
-if ~exist(Params.File,'file') | ~isfield(Params, 'DPx')
+if ~exist(Params.File,'file') || ~isfield(Params, 'EL')
     WarningMsg = sprintf('The parameter file ''%s'' does not exist! Loading default parameters...', Params.File);
     msgbox(WarningMsg,'Parameters not detected!','non-modal')
 
-    Params.DPx.TDTonDOUT       = 1;                                                         % Is DataPixx digital out DB25 connected to TDT digital in DB25?
-    Params.DPx.AnalogInCh      = strtrim(cellstr(num2str((0:15).')))';
-    Params.DPx.AnalogInNames   = {'Left eye X','Left eye Y','Left eye pupil','Right eye X','Right eye Y','Right eye pupil', 'Lever 1', 'Lever 2', 'Photodiode','Scanner TTL', 'None'};
-    Params.DPx.AnalogInAssign  = [1,2,3,4,5,6,9,10];
-    Params.DPx.AnalogOutCh     = strtrim(cellstr(num2str((0:3).')))';
-    Params.DPx.AnalogOutNames  = {'Reward','Audio','None'};
-    Params.DPx.AnalogOutAssign = [1,3,3,3];
-    Params.DPx.DigitalInCh     = strtrim(cellstr(num2str((0:23).')))';
-    Params.DPx.DigitalInNames  = {'Photodiode','Scanner TTL','Spikes','None'};
-    Params.DPx.DigitalInAssign = [1,4,4,4];
-    Params.DPx.DigitalOutCh  	= strtrim(cellstr(num2str((0:23).')))';
-    Params.DPx.DigitalOutNames = {'Reward','TDT port A','TDT port B','TDT port C','None'};
-    if Params.DPx.TDTonDOUT == 1
-        Params.DPx.DigitalOutAssign= [1,5,5,5,5,5,5,5,5,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4];
-    end
+    Params.EL.active_eye                    = 'BOTH';                          	% set eye(s) to record
+    Params.EL.binocular_enabled             = 'YES';                         	% enable binocular tracking
+    Params.EL.head_subsample_rate           = '0';                           	% normal (no anti-reflection)
+    Params.EL.heuristic_filter              = 'ON';                             % ON for filter (normal)	
+    Params.EL.pupil_size_diameter           = 'NO';                             % no to diameter (= yes for pupil area)
+    Params.EL.simulate_head_camera          = 'NO';                             % NO to use head camera
+    Params.EL.calibration_type              = 'HV9';                            % Use a 9 point calibration
+    Params.EL.enable_automatic_calibration  = 'YES';                            % YES (default)
+    Params.EL.automatic_calibration_pacing  = '1000';                           % 1000ms (default)
+    Params.EL.recording_parse_type          = 'GAZE';                      
+    Params.EL.saccade_velocity_threshold    = '35';                             % set parser (conservative saccade thresholds)
+    Params.EL.saccade_acceleration_threshold = '9500'; 
+    Params.EL.saccade_motion_threshold      = '0.0';                                           
+    Params.EL.saccade_pursuit_fixup         = '60';                                               
+    Params.EL.fixation_update_interval      = '0';                                             
+    Params.EL.file_event_filter             = 'LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON';     % set EDF file contents
+    Params.EL.link_event_filter             = 'LEFT,RIGHT,FIXATION,BUTTON';                           % set link data (used for gaze cursor)
+    Params.EL.link_sample_data              = 'LEFT,RIGHT,GAZE,AREA';                           
     
 elseif exist(Params.File,'file')
     Params = load(Params.File);
@@ -51,16 +54,40 @@ end
 
 
 
+
+    
+    
+
+[version, versionString]  = Eyelink('GetTrackerVersion')
+
+
+
+eval(sprintf('Eyelink(''command'', ''%s = %s'');', Fieldname{f}, eval(sprintf('Params.EL.%s', Fieldname{f}))));
+Eyelink('Message', 'DISPLAY_COORDS %d %d %d %d',Display.Rect(1),Display.Rect(2),Display.Rect(3),Display.Rect(4));   
+
+
+Eyelink('message', 'SCNI_EyeLinkSettings.m');        	% Send message to EyeLink that setup has started
+Eyelink('StartRecording');                              % Start EyeLink recording for test trial
+WaitSecs(1);
+if Eyelink('CheckRecording') ~=0                        % Check that EyeLink is recording
+	Eyelink('CheckRecording')
+    error('Problem with Eyelink!');
+end
+Eyelink('Stoprecording');                               % stop recording eye-movements
+
+
+
+
 %========================= OPEN GUI WINDOW ================================
-Fig.Handle = figure;%(typecast(uint8('ENav'),'uint32'));               	% Assign GUI arbitrary integer        
-if strcmp('SCNI_DatapixxSettings', get(Fig.Handle, 'Tag')), return; end   	% If figure already exists, return
+Fig.Handle = figure;%(typecast(uint8('SCNI_EL'),'uint32'));               	% Assign GUI arbitrary integer        
+if strcmp('SCNI_EyelinkSettings', get(Fig.Handle, 'Tag')), return; end   	% If figure already exists, return
 Fig.FontSize        = 14;
 Fig.TitleFontSize   = 16;
 Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
 Fig.PannelSize      = [170, 650];                                       
 Fig.PannelElWidths  = [30, 120];
-set(Fig.Handle,     'Name','SCNI: Datapixx settings',...              	% Open a figure window with specified title
-                    'Tag','SCNI_DatapixxSettings',...                 	% Set figure tag
+set(Fig.Handle,     'Name','SCNI: Eyelink settings',...              	% Open a figure window with specified title
+                    'Tag','SCNI_EyelinkSettings',...                 	% Set figure tag
                     'Renderer','OpenGL',...                             % Use OpenGL renderer
                     'OuterPosition', Fig.Rect,...                       % position figure window
                     'NumberTitle','off',...                             % Remove figure number from title
@@ -76,33 +103,31 @@ Fig.Fields      = fieldnames(Params);                                 	% Get par
 %============= CREATE MAIN PANEL
 Fig.TopPanelHandle = uipanel('BackgroundColor',Fig.Background,...
                     'Units','pixels',...
-                    'Position',[20, Fig.Rect(4)-110, Fig.Rect(3)-40, 80],...
+                    'Position',[20, Fig.Rect(4)-160, Fig.Rect(3)-40, 120],...
                     'Parent',Fig.Handle); 
-Fig.Logo        = imread('Logo_VPixx.png');
-Fig.LogoAx    	= axes('box','off','units','pixels','position', [10, 10, 246, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
+Fig.Logo        = imread('Logo_EyeLink.png');
+Fig.LogoAx    	= axes('box','off','units','pixels','position', [10, 10, 100, 100],'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
 image(Fig.Logo);
 axis off;
-if ~exist('Datapixx.m','file')
-    Params.DPx.Installed = 0;
-    Params.DPx.Connected = 0;
+if ~exist('Eyelink.m', 'file')
+    Params.EL.ToolboxFound  = 0;
+    Params.EL.Initialized   = 0;
 else
-    Params.DPx.Installed = 1;
-    try Datapixx('Open')
-        Params.DPx.Connected = 1;
+    try
+        Params.EL.Initialized = Eyelink('Initialize');    
     catch
-        Params.DPx.Connected = 0;
+        Params.EL.Initialized = 0;
     end
 end
-Fig.MainStrings     = {'DataPixx tools installed?','DataPixx box connected?','TDT connected via DB25?'};
-Fig.MainResults     = {Params.DPx.Installed, Params.DPx.Connected, Params.DPx.TDTonDOUT};
+
+Fig.MainStrings     = {'EyeLink toolbox found?','EyeLink initialized?'};
+Fig.MainResults     = {Params.EL.ToolboxFound, Params.EL.Initialized};
 Fig.DetectionColors = [1,0,0; 0,1,0];
 for n = 1:numel(Fig.MainStrings)
     Ypos = 80-(20*n)-10;
-	Fig.Mh(n) = uicontrol('Style', 'checkbox','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [280,Ypos, 160,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left');
-    Fig.Mdh(n) = uicontrol('Style', 'text','String','','Position', [450,Ypos+2, 18,18],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','backgroundcolor', Fig.DetectionColors(Fig.MainResults{n}+1,:));
+	Fig.Mh(n) = uicontrol('Style', 'text','String',Fig.MainStrings{n},'Position', [280,Ypos, 120,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left');
+    Fig.Mdh(n) = uicontrol('Style', 'text','String','','Position', [400,Ypos+2, 20,18],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','backgroundcolor', Fig.DetectionColors(Fig.MainResults{n}+1,:));
 end
-set(Fig.Mh(1:2),'enable','off');
-set(Fig.Mh(3), 'callback', {@ToggleTDTconnection});
 
 %======== Set group controls positions
 Fig.UnusedChanCol           = [0.5,0.5,0.5];
@@ -117,7 +142,7 @@ Fig.AllPannelChannelAssign  = {'Params.DPx.AnalogInAssign','Params.DPx.AnalogOut
 for p = 1:numel(Fig.PannelNames)
     if p == 1
         BoxXpos(p) 	= Fig.Margin + (Fig.PannelSize(1)+Fig.Margin)*(p-1);
-        BoxYpos(p)  = Fig.Rect(4)-450-120;
+        BoxYpos(p)  = Fig.Rect(4)-450-180;
         PannelSize  = [Fig.PannelSize(1), 450];
     elseif p == 2
         BoxXpos(p) 	= BoxXpos(1);
@@ -138,7 +163,7 @@ for p = 1:numel(Fig.PannelNames)
                     'Position',PannelPos{p},...
                     'Parent',Fig.Handle); 
     
-    Ypos         	= PannelPos{p}(4)-Fig.Margin*2.8;
+    Ypos         	= PannelPos{p}(4)-Fig.Margin*2.5;
     ChannelList     = eval(Fig.AllPannelChannels{p});               % Get channel numbers for this pannel
     ChannelNames    = eval(Fig.AllPannelChannelnames{p});           % Get I/O names that can be assigned to this pannel
     ChannelAssign   = eval(Fig.AllPannelChannelAssign{p});          % Get channel assignments
@@ -161,9 +186,8 @@ for p = 1:numel(Fig.PannelNames)
 %     set(h(1:numel(SystemLabels)), 'BackgroundColor', Fig.Background);
 
 end
-if Params.DPx.TDTonDOUT == 1
-    set(Fig.h(4,10:24), 'enable','off','TooltipString','Digital outs 9-23 in use for TDT communciation');    
-end
+
+
 
 
 %================= OPTIONS PANEL
@@ -238,20 +262,29 @@ ParamsOut = Params;
        
     end
 
-    %==================== TDT connected to digital out
-    function ToggleTDTconnection(Obj, Event, Indx)
-        Params.DPx.TDTonDOUT = get(Obj, 'value');
-        set(Fig.Mdh(3),'backgroundcolor', Fig.DetectionColors(Params.DPx.TDTonDOUT+1,:));
-        if Params.DPx.TDTonDOUT == 1
-            Params.DPx.DigitalOutAssign(10:17) = find(~cellfun(@isempty, strfind(Params.DPx.DigitalOutNames, 'TDT port B')));
-            Params.DPx.DigitalOutAssign(18:24) = find(~cellfun(@isempty, strfind(Params.DPx.DigitalOutNames, 'TDT port C')));
-            set(Fig.ChH(4,10:24), 'BackgroundColor', Fig.UsedChanCol);
-            set(Fig.h(4,10:17), 'value', Params.DPx.DigitalOutAssign(10));
-            set(Fig.h(4,18:24), 'value', Params.DPx.DigitalOutAssign(18));
-            set(Fig.h(4,10:24), 'enable','off','TooltipString','Digital outs 9-23 in use for TDT communciation'); 
-        else
-            set(Fig.h(4,10:24), 'enable','on','TooltipString','');
+    %==================== SHUT DOWN EYELINK
+    function Cleanup
+        Eyelink('Stoprecording');       % stop recording eye-movements
+        Eyelink('CloseFile');           % close data file
+        WaitSecs(1.0);                  % give tracker time to execute commands
+        Eyelink('Shutdown');            % shut down tracker
+    end
+
+    %==================== DISPLAY EYE VIDEOIN PTB WINDOW
+    function DisplayEye(win)
+        if nargin == 0
+            win = Screen('OpenWindow', max(Screen('Screens')), [255 255 0], [0 0 800 600]);       % Open a new window for eye image display
         end
+        el = EyelinkInitDefaults(win);                    	% Initialize 'el' eyelink struct with proper defaults for output to window 'w'
+        DisplayVideo = 1;
+        Result = EyelinkInit([], DisplayVideo);            	% Initialize Eyelink connection with callback function and eye camera image display   
+        if ~Result
+            fprintf('Eyelink Init aborted.\n');
+            cleanup;
+            return;
+        end
+        Result = Eyelink('StartSetup',DisplayVideo);        % Perform tracker setup: The flag 1 requests interactive setup with video display 
+
     end
 
     %==================== OPTIONS
@@ -261,7 +294,7 @@ ParamsOut = Params;
             case 1      %================ LOAD PARAMETERS FILE
                 [Filename, Pathname, Indx] = uigetfile('*.mat','Load parameters file', Params.Dir);
                 Params.File = fullfile(Pathname, Filename);
-                SCNI_DatapixxSettings(Params.File);
+                SCNI_EyelinkSettings(Params.File);
 
             case 2      %================ SAVE PARAMETERS TO FILE
                 if exist(Params.File,'file')

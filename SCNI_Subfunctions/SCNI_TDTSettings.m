@@ -62,7 +62,7 @@ Fig.Background  = get(Fig.Handle, 'Color');                           	% Get def
 Fig.Margin      = 20;                                                 	% Set margin between UI panels (pixels)                                 
 Fig.Fields      = fieldnames(Params);                                 	% Get parameter field names
 
-Logo= imread('TDT.png','BackgroundColor',Fig.Background);
+Logo= imread('Logo_TDT.png');
 LogoAx = axes('box','off','units','pixels','position', [120, 520, 260, 42],'color',Fig.Background);
 image(Logo);
 axis off

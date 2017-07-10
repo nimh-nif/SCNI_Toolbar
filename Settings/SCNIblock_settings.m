@@ -120,6 +120,7 @@ m.action_1              = 'SCNI_savedata.m';                         % "SCNI_sav
 m.action_2              = 'SCNI_givejuice.m';   
 m.action_3              = 'SCNI_PlaySound.m';
 m.action_4              = 'SCNI_plotFixation.m'; 
+m.action_5              = 'SCNI_Toolbar.m';
 
 c.output_prefix         = 'SCNIblock';                               % Define the prefix for the Output File
 c.protocol_title        = 'SCNIblock_PROTOCOL';                      % Define Banner text to identify the experimental protocol
