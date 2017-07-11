@@ -309,6 +309,11 @@ if c.UseDataPixx == 1
     PDS.Ts{c.Blocks.Number, c.Blocks.TrialNumber}       = NewDataTs;
     save(c.Matfilename, '-append', 'PDS','c','s');
     
+    if ~ishandle(s.fh)
+        s.fh = figure('name','Eye data');
+    end
+    PlotEyeData(NewData(1:6,:), s.fh);
+    
 end
 
 %================ Reward animal?
@@ -340,6 +345,14 @@ end
  
 
 %% ==================== SCNIBLOCK SUBFUNCTIONS =============================
+
+function PlotEyeData(EyeData, fh)
+    
+    plot(NewData(1,:),NewData(2,:));
+    
+
+
+end
 
 %================= Check experimenter's keyboard input
 function CheckPress(PDS, c, s)

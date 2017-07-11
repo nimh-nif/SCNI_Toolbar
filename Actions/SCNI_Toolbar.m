@@ -25,12 +25,13 @@ if ~exist(Params.File, 'file')                                              % Ch
 end
 
 Fig.Background      = [0.6, 0.6, 0.6];                                      
-Fig.ButtonSize      = [0,0,80,80];
+Fig.ButtonSize      = [0,0,60,60];
 
 %================== Load toolbar icons
 Fullmfilename   = mfilename('fullpath');
 [Path,~]       	= fileparts(Fullmfilename);
 IconDir         = '/projects/SCNI/SCNI_Datapixx/SCNI_Subfunctions/Icons';%fullfile(Path, 'Icons');
+if ismac, IconDir = ['/Volumes', IconDir]; end
 IconFiles       = wildcardsearch(IconDir, '*.png');
 ButtonOnImg     = fullfile(IconDir, 'ButtonOn.png');
 ButtonOffImg    = fullfile(IconDir, 'ButtonOff.png');
@@ -57,12 +58,12 @@ for b = 1:2
 end
 
 %================== Open toolbar window
-Fig.ToolbarRect     = [0,0,1200,140];
-Fig.ButtonType      = {'togglebutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
-Fig.IconList        = {'Play','Liquid','SpeakerOn','Penalty','GammaCorrect','Sleep','EPI','Display','Photodiode','Eye','DataPixx','TDT'};
-Fig.ButtonTips      = {'Run experiment','Give reward','Play audio','Debug mode','Apply gamma','Time out','MRI training','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings'};
-Fig.ButtonFunc      = {'','SCNI_GiveReward','SCNI_PlaySound','','','','','SCNI_RigSettings','','SCNI_EyeLinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings'};
-Fig.ShortcutKeys    = {'g','r','a','d','p','k','g','e','t','s'};
+Fig.ToolbarRect     = [0,0,1920,120];
+Fig.ButtonType      = {'togglebutton','pushbutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
+Fig.IconList        = {'Play','Liquid','SpeakerOn','Exit','Penalty','GammaCorrect','Sleep','EPI','Display','Photodiode','Eye','DataPixx','TDT','OpenEphys'};
+Fig.ButtonTips      = {'Run experiment','Give reward','Play audio','Quit','Debug mode','Apply gamma','Time out','MRI training','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings'};
+Fig.ButtonFunc      = {'','SCNI_GiveReward','SCNI_PlaySound','','','','','','SCNI_RigSettings','','SCNI_EyeLinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings'};
+Fig.ShortcutKeys    = {'g','r','a','q','d','p','k','g','e','t','s','o'};
 Fig.ButtonXPos      = 10:(Fig.ButtonSize(3)+10):((Fig.ButtonSize(3)+10)*numel(Fig.IconList));
 Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure window with specified title
                     'Color',Fig.Background,...                	% Set the figure window background color
@@ -73,7 +74,7 @@ Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure w
                     'Menu','none','Toolbar','none');            % Turn off toolbars and menu
 
 Fig.PannelTitles    = {'Actions', 'Modes', 'Settings'};  
-Fig.ButtonsPPannel  = [3, 4, 5];
+Fig.ButtonsPPannel  = [4, 4, 6];
 Fig.FontSize        = 16;
 Fig.BIndx           = 1;
 for p = 1:numel(Fig.PannelTitles)

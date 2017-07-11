@@ -104,6 +104,7 @@ c.PhotodiodeOn       = 1;                                           % 1 = add ph
 c.PhotodiodeOnCol    = [0,0,0];                                     % Color (RGB) corresponding to 'stimulus on'
 c.PhotodiodeOffCol   = [1,1,1]*255;                                	% Color (RGB) corresponding to 'stimulus off'
 c.PhotdiodeSize      = [0, 0, 60, 60];                              % Size of photodiode marker (pixels)
+c.PhotodiodePos      = 'BottomLeft';                                % Which corner of the display is the photdiode attached to? Options: 'BottomLeft','TopLeft','BottomRight','TopRight'
 
 
 %% ============= Define the m-files used for this protocol ===============

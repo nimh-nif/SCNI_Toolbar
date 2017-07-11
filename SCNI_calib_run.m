@@ -247,16 +247,18 @@ if c.UseDataPixx == 1
     nReadSpls = status.newBufferFrames;                                             % How many samples can we read?
     [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.adcBuffBaseAddr); 	% Read all available samples from ADCs
 	Datapixx('StopAdcSchedule'); 
-    PDS.EyeXYP{s.TrialNumber, s.StimNumber}	= NewData(1:6,:);
+    PDS.EyeXYP{s.TrialNumber, s.StimNumber}     = NewData(1:6,:);
     PDS.AnalogIn{s.TrialNumber, s.StimNumber}	= NewData(7:8,:);           
-    PDS.Ts{s.TrialNumber, s.StimNumber}       = NewDataTs;
+    PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
     save(c.Matfilename, '-append', 'PDS','c','s');
     
+    [s, c] = SCNI_PlotEyeData(NewData(4:5,:), s, c);
+    %[s, c] = PlotEyeData(NewData(1:6,:), s, c);
 end
 
 %================ Reward animal?
 if c.Reward_MustFix == 1                    %========== If fixation is required for reward
-	Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}, c);	% Check whether fixation criteria were met for this trial
+	Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}, c);       % Check whether fixation criteria were met for this trial
     if Valid == 1
         c.RewardEarned = 1;
     else
@@ -283,6 +285,29 @@ end
  
 
 %% ==================== SCNIBLOCK SUBFUNCTIONS =============================
+
+function [s, c] = PlotEyeData(NewData, s, c)
+    if ~isfield(s, 'fh') || ~ishandle(s.fh)
+        s.fh = figure('name','Eye data');
+        FirstPlot = 1;
+    else
+        FirstPlot = 0;
+        figure(s.fh);
+        delete(s.ph);
+    end
+    s.ph(1) = plot(NewData(1,:),NewData(2,:), '-g');
+    hold on
+    s.ph(2) = plot(NewData(4,:),NewData(5,:), '-r');
+    if FirstPlot == 1
+        set(gca, 'color', [0.5,0.5,0.5], 'xlim', [-5 5], 'ylim', [-5 5], 'xtick', -5:1:5);
+        grid on;
+        xlabel('X voltage (V)')
+        ylabel('Y voltage (V)')
+        legend('Left eye', 'Right eye');
+        hold on;
+    end
+
+end
 
 %================= Check experimenter's keyboard input
 function CheckPress(PDS, c, s)

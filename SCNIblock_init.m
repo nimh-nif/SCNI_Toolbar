@@ -175,10 +175,19 @@ end
 
 %========== Preapre photodiode marker
 if c.PhotodiodeOn == 1
-    if c.LinuxDisplay == 1                                                                              % If using dual displays on Linux...
+    if c.LinuxDisplay == 1                                                                                  % If using dual displays on Linux...
         if c.UseSBS3D == 0  
-            c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]);                                % Specify subject's portion of the screen 
-        elseif c.UseSBS3D == 1                                                                          % For presenting side-by-side stereoscopic 3D images...
+             switch c.PhotodiodePos
+                case 'BottomLeft'
+                    c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]) - c.PhotdiodeSize([1,4,1,4]);	% Specify subject's portion of the screen 
+                case 'TopLeft'
+                    c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]);
+                case 'TopRight'
+                  	c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]).*[2,1,2,1] - c.PhotdiodeSize([3,2,3,2]);
+             	case 'BottomRight'
+                  	c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]).*[2,1,2,1] - c.PhotdiodeSize([3,4,3,4]);
+            end
+        elseif c.UseSBS3D == 1                                                                              % For presenting side-by-side stereoscopic 3D images...
             c.MonkeyDiodeRect(1,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1]) + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         	% Center a horizontally squashed fixation rectangle in a half screen rectangle
             c.MonkeyDiodeRect(2,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1])*1.5 + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         
         end
