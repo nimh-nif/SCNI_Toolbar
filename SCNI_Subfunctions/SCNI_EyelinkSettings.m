@@ -46,36 +46,17 @@ if ~exist(Params.File,'file') || ~isfield(Params, 'EL')
     Params.EL.fixation_update_interval      = '0';                                             
     Params.EL.file_event_filter             = 'LEFT,RIGHT,FIXATION,SACCADE,BLINK,MESSAGE,BUTTON';     % set EDF file contents
     Params.EL.link_event_filter             = 'LEFT,RIGHT,FIXATION,BUTTON';                           % set link data (used for gaze cursor)
-    Params.EL.link_sample_data              = 'LEFT,RIGHT,GAZE,AREA';                           
+    Params.EL.link_sample_data              = 'LEFT,RIGHT,GAZE,AREA';          
+    
+    Params.EL.Host_IP                       = '159.40.249.29';                  % IP address of EyeLink II host PC
+    Params.EL.Host_Port                     = '';
+    Params.EL.Host                          = '';
+    
+    
     
 elseif exist(Params.File,'file')
     Params = load(Params.File);
 end
-
-
-
-
-    
-    
-
-[version, versionString]  = Eyelink('GetTrackerVersion')
-
-
-
-eval(sprintf('Eyelink(''command'', ''%s = %s'');', Fieldname{f}, eval(sprintf('Params.EL.%s', Fieldname{f}))));
-Eyelink('Message', 'DISPLAY_COORDS %d %d %d %d',Display.Rect(1),Display.Rect(2),Display.Rect(3),Display.Rect(4));   
-
-
-Eyelink('message', 'SCNI_EyeLinkSettings.m');        	% Send message to EyeLink that setup has started
-Eyelink('StartRecording');                              % Start EyeLink recording for test trial
-WaitSecs(1);
-if Eyelink('CheckRecording') ~=0                        % Check that EyeLink is recording
-	Eyelink('CheckRecording')
-    error('Problem with Eyelink!');
-end
-Eyelink('Stoprecording');                               % stop recording eye-movements
-
-
 
 
 %========================= OPEN GUI WINDOW ================================
@@ -84,7 +65,7 @@ if strcmp('SCNI_EyelinkSettings', get(Fig.Handle, 'Tag')), return; end   	% If f
 Fig.FontSize        = 14;
 Fig.TitleFontSize   = 16;
 Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
-Fig.PannelSize      = [170, 650];                                       
+Fig.PannelSize      = [300, 650];                                       
 Fig.PannelElWidths  = [30, 120];
 set(Fig.Handle,     'Name','SCNI: Eyelink settings',...              	% Open a figure window with specified title
                     'Tag','SCNI_EyelinkSettings',...                 	% Set figure tag
@@ -118,6 +99,22 @@ else
     catch
         Params.EL.Initialized = 0;
     end
+    
+    [version, versionString]  = Eyelink('GetTrackerVersion');
+    eval(sprintf('Eyelink(''command'', ''%s = %s'');', Fieldname{f}, eval(sprintf('Params.EL.%s', Fieldname{f}))));
+    Eyelink('Message', 'DISPLAY_COORDS %d %d %d %d',Display.Rect(1),Display.Rect(2),Display.Rect(3),Display.Rect(4));   
+
+
+    Eyelink('message', 'SCNI_EyeLinkSettings.m');        	% Send message to EyeLink that setup has started
+    Eyelink('StartRecording');                              % Start EyeLink recording for test trial
+    WaitSecs(1);
+    if Eyelink('CheckRecording') ~=0                        % Check that EyeLink is recording
+        Eyelink('CheckRecording')
+        error('Problem with Eyelink!');
+    end
+    Eyelink('Stoprecording');                               % stop recording eye-movements
+    
+    
 end
 
 Fig.MainStrings     = {'EyeLink toolbox found?','EyeLink initialized?'};
@@ -132,11 +129,10 @@ end
 %======== Set group controls positions
 Fig.UnusedChanCol           = [0.5,0.5,0.5];
 Fig.UsedChanCol             = [0, 1, 0];
-Fig.PannelNames             = {'Analog IN','Analog OUT','Digital IN','Digital OUT'};
-Fig.AllPannelChannels       = {'Params.DPx.AnalogInCh','Params.DPx.AnalogOutCh','Params.DPx.DigitalInCh','Params.DPx.DigitalOutCh'};
-Fig.AllPannelChannelnames   = {'Params.DPx.AnalogInNames', 'Params.DPx.AnalogOutNames','Params.DPx.DigitalInNames','Params.DPx.DigitalOutNames'};
-Fig.AllPannelChannelAssign  = {'Params.DPx.AnalogInAssign','Params.DPx.AnalogOutAssign','Params.DPx.DigitalInAssign','Params.DPx.DigitalOutAssign'};
+Fig.PannelNames             = {'Host PC','Settings','Events'};
+Fig.HostFields              = {'IP address','Port number'};
 
+Fig.EvventFields            = {};
 
 %============= CREATE PANELS
 for p = 1:numel(Fig.PannelNames)
@@ -154,7 +150,6 @@ for p = 1:numel(Fig.PannelNames)
         PannelSize  = Fig.PannelSize;
     end
     PannelPos{p}    = [BoxXpos(p), BoxYpos(p), PannelSize]; 
-    
     
     Fig.PanelHandle(p) = uipanel( 'Title',Fig.PannelNames{p},...
                     'FontSize',Fig.TitleFontSize,...

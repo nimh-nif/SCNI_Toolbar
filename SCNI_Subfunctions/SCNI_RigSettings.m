@@ -52,13 +52,16 @@ if ~exist(Params.File,'file')
     Params.ClippingPlanes   = [-20, 20];
     Params.Perspective      = 1;
     Params.LightingOn       = 1;
-    Params.Color.Grid     	= [0 1 1];
-    Params.Color.Eye        = [1 0 0];
-    Params.Color.GazeWin    = [0 1 0];
-    Params.Color.Background = [0.5 0.5 0.5];
-    Params.Exp.GridSpacing  = 5;
-    Params.Exp.EyeSamples   = 1;
-    Params.Exp.GazeWinAlpha	= 1;
+    Params.Exp.GridOn       = 1;
+    Params.Exp.EyeOn        = 1;
+    Params.Exp.GazeWinOn    = 1;
+    Params.Exp.GridColor  	= [0 1 1];
+    Params.Exp.EyeColor         = [1 0 0];
+    Params.Exp.GazeWinColor     = [0 1 0];
+    Params.Exp.BackgroundColor  = [0.5 0.5 0.5];
+    Params.Exp.GridSpacing      = 5;
+    Params.Exp.EyeSamples       = 1;
+    Params.Exp.GazeWinAlpha     = 1;
     
 elseif exist(Params.File,'file')
     load(Params.File, 'Params');
@@ -72,7 +75,7 @@ if strcmp('SCNI_RigSettings', get(Fig.Handle, 'Tag')), return; end   	% If figur
 Fig.FontSize        = 10;
 Fig.TitleFontSize   = 14;
 Fig.PanelYdim       = 130;
-Fig.Rect            = [0 200 500 800];                               	% Specify figure window rectangle
+Fig.Rect            = [0 200 500 900];                               	% Specify figure window rectangle
 set(Fig.Handle,     'Name','SCNI: Rig settings',...                     % Open a figure window with specified title
                     'Tag','SCNI_RigSettings',...                     	% Set figure tag
                     'Renderer','OpenGL',...                             % Use OpenGL renderer
@@ -87,10 +90,9 @@ Fig.Fields      = fieldnames(Params);                                 	% Get par
 
 %======== Set group controls positions
 BoxPos{1} = [Fig.Margin,Fig.Rect(4)-250-Fig.Margin*2,Fig.Rect(3)-Fig.Margin*2, 260];         	
-BoxPos{2} = [Fig.Margin,BoxPos{1}(2)-160-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 160];
-BoxPos{3} = [Fig.Margin*2+BoxPos{2}(3),BoxPos{2}(2),BoxPos{2}(3),BoxPos{2}(4)];
-BoxPos{4} = [Fig.Margin,BoxPos{2}(2)-160-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 160];
-BoxPos{5} = [Fig.Margin,BoxPos{4}(2)-80-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 200];
+BoxPos{2} = [Fig.Margin,BoxPos{1}(2)-200-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 200];
+BoxPos{3} = [Fig.Margin,BoxPos{2}(2)-140-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 140];
+BoxPos{4} = [Fig.Margin,BoxPos{3}(2)-200-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 200];
 
 % Logo= imread(fullfile('Documentation','ElectroNav_5.png'),'BackgroundColor',Fig.Background);
 % LogoAx = axes('box','off','units','pixels','position', [120, 520, 260, 42],'color',Fig.Background);
@@ -147,7 +149,7 @@ Fig.GeometryHandle = uipanel( 'Title','Viewing Geometry',...
                 'FontSize',Fig.FontSize+2,...
                 'BackgroundColor',Fig.Background,...
                 'Units','pixels',...
-                'Position',BoxPos{5},...
+                'Position',BoxPos{2},...
                 'Parent',Fig.Handle);  
             
 Ypos    = 150;           
@@ -216,11 +218,12 @@ Fig.ColorHandle = uipanel( 'Title','Experimenter display',...
                 'FontSize',Fig.FontSize+2,...
                 'BackgroundColor',Fig.Background,...
                 'Units','pixels',...
-                'Position',BoxPos{2},...
+                'Position',BoxPos{3},...
                 'Parent',Fig.Handle);  
-Ypos            = BoxPos{2}(4)-Fig.Margin-10;           
+Ypos            = BoxPos{3}(4)-Fig.Margin-10;           
 ColorLabels     = {'Grid','Eye position','Gaze window','Background'};
-ColorDefaults   = [Params.Color.Grid; Params.Color.Eye; Params.Color.GazeWin; Params.Color.Background];     
+ColorValues     = {Params.Exp.GridOn, Params.Exp.EyeOn, Params.Exp.GazeWinOn, 1};
+ColorDefaults   = [Params.Exp.GridColor; Params.Exp.EyeColor; Params.Exp.GazeWinColor; Params.Exp.BackgroundColor];     
 SettingsLabels  = {'Grid spacing (deg)', 'Samples (ms)', 'Alpha', ''};
 SettingsVals    = {num2str(Params.Exp.GridSpacing), num2str(Params.Exp.EyeSamples), num2str(Params.Exp.GazeWinAlpha), ''};
 Fig.TipStr      = {'Toggle grid','Toggle eye postion','Toggle fixation window',''};
@@ -231,7 +234,7 @@ for n = 1:numel(ColorLabels)
     uicontrol(  'Style', 'radio',...
                 'Background', Fig.Background,...
                 'String', ColorLabels{n},...
-                'Value', 1,...
+                'Value', ColorValues{n},...
                 'Position', [15,Ypos,120,25],...
                 'TooltipString', Fig.TipStr{n},...
                 'Parent',Fig.ColorHandle,...
@@ -259,38 +262,50 @@ end
 
 
 
-% %================= MONKEY DISPLAY PANEL
-% Fig.MaterialsHandle = uipanel( 'Title','Monkey display',...
+%================= DISPLAY PREVIEW PANEL
+% Fig.PreviewHandle = uipanel( 'Title','Display Preview',...
 %                 'FontSize',Fig.FontSize+2,...
 %                 'BackgroundColor',Fig.Background,...
 %                 'Units','pixels',...
-%                 'Position',BoxPos{3},...
+%                 'Position',BoxPos{4},...
 %                 'Parent',Fig.Handle);  
-% Ypos = BoxPos{3}(4)-Fig.Margin*2-10;           
-% TipStr = 'Select light reflectance component colors.';
-% uicontrol(  'Style', 'togglebutton','Value',1,'String','Materials on/off','Position', [Fig.Margin,Ypos,120,20],'Background',Fig.Background,...
-%             'TooltipString', TipStr,'Parent',Fig.MaterialsHandle,'HorizontalAlignment', 'left');
-%         
-%         
-% MonkeyLabels = {'Ambient','Diffuse','Specular','Background'};
-%         
-% % ShadeHandle = uibuttongroup('visible','off','Position',[180,Ypos,120,25],'parent', Fig.GeometryHandle, 'SelectionChangeFcn', {@FileCheck, 1});
-% for n = 1:numel(MonkeyLabels)
-%   	Ypos = Ypos-25;
-%     uicontrol(  'Style', 'radio',...
-%                 'Background', Fig.Background,...
-%                 'String', MaterialsLabels{n},...
-%                 'Position', [15,Ypos,80,25],...
-%                 'TooltipString', TipStr,...
-%                 'Parent',Fig.MaterialsHandle);
-%     uicontrol(  'Style', 'pushbutton',...
-%                 'Background', [0.3 0.3 0.3],...
-%                 'Tag', MaterialsLabels{n}, ...
-%                 'String', '',...
-%                 'Position',[110,Ypos,20,20],...
-%                 'Parent',Fig.MaterialsHandle,...
-%                 'Callback', {@SetColor, n});
-% end
+% Ypos = BoxPos{4}(4)-Fig.Margin*2-10;           
+
+%Fig.Axh(1) = axes('Parent',Fig.PreviewHandle, 'position', [0.05, 0.1, 0.4, 0.7]);
+Fig.Axh(1) = axes('Parent',Fig.Handle, 'units','pixels','position',[50 50 300 150]);
+set(Fig.Axh(1), 'color', Params.Color.Background, 'units','pixels');
+axis equal tight off
+xlabel('Experimenter display','fontsize', Fig.FontSize+2);
+Fig.Im      = image(1:Resolution(2), 1:Resolution(1), ones(Resolution(2),Resolution(1),3)*0.5, 'Parent', Fig.Axh(1));
+% alpha(Fig.Im, 0);
+
+%============= Calculate experimenter grid positions
+if Params.Exp.GridOn == 1 
+    
+    CircleSpacing   = Params.Exp.GridSpacing*Params.Display.PixPerDeg;         	% Increase in diameter with each concentric circle
+    NoCircles       = floor(Params.Display.Rect(3)/CircleSpacing(1));         	% Calculate number of circles to fill screen width
+    Params.Exp.GridLineWidth = 1;                                             	% Pen width for grid lines (pixels)
+    for circleno = 1:NoCircles
+        CircleDiameter(circleno,:)              = CircleSpacing*circleno;               
+        Params.Exp.GridCircleRects(:,circleno) 	= CenterRect([0,0,CircleDiameter(circleno,:)], Params.Display.Rect)'; 
+    end
+    Params.Exp.Meridians     = [Params.Display.ExpRect([3,3])/2, 0, Params.Display.ExpRect(3); 0, Params.Display.ExpRect(4), Params.Display.ExpRect([4,4])/2];
+    
+    %=========== Draw grid to figure
+    axes(Fig.Axh(1));
+   	
+    ph(1) = plot([0 0], ylim, '-k', 'color', Params.Exp.GridColor);
+    ph(2) = plot(xlim, [0 0], '-k', 'color', Params.Exp.GridColor);
+    
+    
+end
+
+
+%Fig.Axh(2) = axes('Parent',Fig.PreviewHandle, 'position', [0.55, 0.1, 0.4, 0.7]);
+
+
+% xlabel('Subject display','fontsize', Fig.FontSize);
+        
     
 
 %================= OPTIONS PANEL
