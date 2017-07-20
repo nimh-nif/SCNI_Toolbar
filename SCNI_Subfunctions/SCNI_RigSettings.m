@@ -5,25 +5,13 @@
 % and the updated parameters are returned in the structure 'Params'.
 %
 % INPUTS:
-%   DefaultInputs:          optional string containing full path of .mat
-%                           file containing previously saved parameters.
+%   ParamsFile:   	optional string containing full path of a .mat file
+%                	containing previously saved parameters. If no input is
+%                	provided, the function will search for a .mat file with
+%                	the name of the local computer. If no file is found,
+%                	default parameters are loaded.
 % OUTPUT:
-%   Params.Stereomode:      Method of stereoscopic presentation (1-10). For
-%                           monocular rendering select 0.
-%   Params.ViewingDist:     Viewing distance (eyes to screen) in centimetres.
-%   Params.IPD:             Interpupillary distance in centimetres.
-%   Params.ScreenDims:      2 element vector containing physical screen
-%                           dimensions [width, height] in centimetres.
-%   Params.ClippingPlanes:  2 element vector containing distance of frustum
-%                           clipping planes along the z-axis relative to the
-%                           plane of the screen [-near, far] in centimetres.
-%   Params.Perspective:     0 = Orthographic, 1 = Perspective projection.
-%   Params.ColorOn:      Polygon face Color on/ off
-%   Params.Ambient:         4 element [RGBA] vector specifying ambient lighting
-%   Params.Diffuse:         4 element [RGBA] vector specifying diffuse lighting
-%   Params.Specular:        4 element [RGBA] vector specifying specular lighting
-%   Params.Background:      4 element [RGBA] vector specifying background color
-%   Params.
+%   Params:         a structure containing the parameters set in the GUI.
 %
 %==========================================================================
 
@@ -45,24 +33,24 @@ end
 if ~exist(Params.File,'file')
     WarningMsg = sprintf('The parameter file ''%s'' does not exist! Loading default parameters...', Params.File);
     msgbox(WarningMsg,'Parameters not detected!','non-modal')
-    Params.Stereomode       = 6;
-    Params.ViewingDist      = 50;
-    Params.IPD              = 3.5;
-    Params.ScreenDims       = [122.6, 71.8];                % SCNI 55" LG OLED 4K TV/ [25.2, 16.0] = NIF Epson porjectors
-    Params.ClippingPlanes   = [-20, 20];
-    Params.Perspective      = 1;
-    Params.LightingOn       = 1;
-    Params.Exp.GridOn       = 1;
-    Params.Exp.EyeOn        = 1;
-    Params.Exp.GazeWinOn    = 1;
-    Params.Exp.GridColor  	= [0 1 1];
+    Params.Stereomode           = 6;
+    Params.ViewingDist          = 50;
+    Params.IPD                  = 3.5;
+    Params.ScreenDims           = [122.6, 71.8];                % SCNI 55" LG OLED 4K TV/ [25.2, 16.0] = NIF Epson porjectors
+    Params.ClippingPlanes       = [-20, 20];
+    Params.Perspective          = 1;
+    Params.LightingOn           = 1;
+    Params.Exp.GridOn           = 1;
+    Params.Exp.EyeOn            = 1;
+    Params.Exp.GazeWinOn        = 1;
+    Params.Exp.GridColor        = [0 1 1];
     Params.Exp.EyeColor         = [1 0 0];
     Params.Exp.GazeWinColor     = [0 1 0];
     Params.Exp.BackgroundColor  = [0.5 0.5 0.5];
     Params.Exp.GridSpacing      = 5;
     Params.Exp.EyeSamples       = 1;
     Params.Exp.GazeWinAlpha     = 1;
-    
+    Params.PD.Position          = 2;
 elseif exist(Params.File,'file')
     load(Params.File, 'Params');
 end
@@ -89,8 +77,8 @@ Fig.Margin      = 20;                                                 	% Set mar
 Fig.Fields      = fieldnames(Params);                                 	% Get parameter field names
 
 %======== Set group controls positions
-BoxPos{1} = [Fig.Margin,Fig.Rect(4)-250-Fig.Margin*2,Fig.Rect(3)-Fig.Margin*2, 260];         	
-BoxPos{2} = [Fig.Margin,BoxPos{1}(2)-200-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 200];
+BoxPos{1} = [Fig.Margin,Fig.Rect(4)-230-Fig.Margin*2,Fig.Rect(3)-Fig.Margin*2, 240];         	
+BoxPos{2} = [Fig.Margin,BoxPos{1}(2)-220-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 220];
 BoxPos{3} = [Fig.Margin,BoxPos{2}(2)-140-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 140];
 BoxPos{4} = [Fig.Margin,BoxPos{3}(2)-200-Fig.Margin/2,Fig.Rect(3)-Fig.Margin*2, 200];
 
@@ -116,6 +104,7 @@ if exist('PsychtoolboxVersion', 'file')==2
     PTBversion  = PTBversion(1:WhiteSpace(1));
     NoXscreens 	= numel(Screen('screens'));
     Resolution  = Screen('rect',max(Screen('screens')));
+    RefreshRate = Screen('NominalFramerate', max(Screen('screens')));
 else
     PTBversion  = 'Not detected!';
     NoXscreens  = 'Unknown!';
@@ -127,17 +116,17 @@ else
     [~,ParamsFileName] = fileparts(Params.File);
 end     
 MissingDataColor    = [1,0,0];
-Xwidth              = [180, 220];
+Xwidth              = [180, 260];
 Ypos                = BoxPos{1}(4)-Fig.Margin*2.5;
-SystemValues = {CompName, OS, MatlabVersion,OpenGL.Renderer, OpenGL.Version, PTBversion, ParamsFileName, num2str(NoXscreens), sprintf('%d x %d', Resolution([3,4]))};
-SystemLabels = {'Computer ID:','Operating system:','MATLAB version:','Graphics board:','OpenGL version:','PsychToolbox version:','Params file:','No. X Screens:','Total pixels:'};
+SystemValues        = {CompName, OS, MatlabVersion,OpenGL.Renderer, OpenGL.Version, PTBversion, ParamsFileName, num2str(NoXscreens), sprintf('%d x %d', Resolution([3,4])), sprintf('%d Hz',RefreshRate)};
+SystemLabels        = {'Computer ID:','Operating system:','MATLAB version:','Graphics board:','OpenGL version:','PsychToolbox version:','Params file:','No. X Screens:','Total pixels:','Refresh rate:'};
 for n = 1:numel(SystemLabels)
     h(n) = uicontrol('Style', 'text','String',SystemLabels{n},'Position', [Fig.Margin,Ypos,Xwidth(1),20],'Parent',Fig.SystemHandle,'HorizontalAlignment', 'left');
    	h(n+numel(SystemLabels)) = uicontrol('Style', 'text','String',SystemValues{n},'Position', [Xwidth(1),Ypos,Xwidth(2),20],'Parent',Fig.SystemHandle,'HorizontalAlignment', 'left');
     if strfind(SystemValues{n}, '!')
         set(h(n+numel(SystemLabels)), 'BackgroundColor', MissingDataColor);
     end
- 	Ypos = Ypos-25;
+ 	Ypos = Ypos-20;
 end
 set(h(1:numel(SystemLabels)), 'BackgroundColor', Fig.Background);
 
@@ -152,7 +141,7 @@ Fig.GeometryHandle = uipanel( 'Title','Viewing Geometry',...
                 'Position',BoxPos{2},...
                 'Parent',Fig.Handle);  
             
-Ypos    = 150;           
+Ypos    = 170;           
 Xwidth  = [150, 180];
 %=================== STEREO MODE SELECTION
 TipStr = 'Select a stereoscopic viewing method.';
@@ -180,37 +169,46 @@ else
     set(findobj('Tag','Method'), 'Value', Params.Stereomode+1);
 end
 
-ViewPortStrings = {'Viewing distance (cm):','Interpupillary distance (cm)','Screen dimensions (cm)','Pixels/degree (X, Y)','Photodiode position'};
+ViewPortStrings = {'Viewing distance (cm):','Interpupillary distance (cm)','Screen dimensions (cm)','Screen dimensions (pixels)','Pixels/degree (X, Y)','Photodiode position'};
 TipStr = {  'Set the viewing distance in centimetres (distance from observer to screen).',...
             'Set the observer''s interpupillary distance (distance between the eyes) in centimetres.',...
             'Set the physical dimensions of the display screen in centimetres (width x height)'...
-            'Screen resolution per degree of visual angle', ''};
-Tags        = {'VD','IPD','ScreenDim','PixPerDeg','Photodiode'};
-DefaultAns  = {Params.ViewingDist,Params.IPD,Params.ScreenDims,[30 30],1};
+            'Set the resolution of the subject''s display in pixels (width x height)',...
+            'Screen resolution per degree of visual angle', ...
+            'Set the location to present a photodiode marker'};
+Tags        = {'VD','IPD','ScreenDim','Pixels','PixPerDeg','Photodiode'};
+Params.Rect         = Resolution;
+Params.PixPerCm   	= Params.Rect([3,4])./Params.ScreenDims;                         % Calculate number of pixels per centimetre
+Params.PixPerDeg 	= (Params.PixPerCm*Params.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
+PDpositions         = {'None','Bottom left','Top left','Top right','Bottom right'};
+DefaultAns          = {Params.ViewingDist,Params.IPD,Params.ScreenDims,Params.Rect([3,4]), Params.PixPerDeg,PDpositions};     
 
-
-%================== 
+%================== OTHER GEOMERTY PARAMETER CONTROLS
 Indx = 2;
 Xpos = [200, 290];
 for n = 1:numel(ViewPortStrings)
     LabelH(n) = uicontrol(  'Style', 'text','String',ViewPortStrings{n},'Position', [Fig.Margin,Ypos,160,20],...
                 'TooltipString', TipStr{n},'Parent',Fig.GeometryHandle,'HorizontalAlignment', 'left');
-    if ismember(n,[3,4])
+    if ismember(n,[3,4,5])
         
         for i = 1:2
-            uicontrol(  'Style', 'edit','Tag', Tags{n},'String', num2str(DefaultAns{n}(i)),'Position', [Xpos(i),Ypos,80,22],...
+            Fig.GeomH{n}(i) = uicontrol(  'Style', 'edit','Tag', Tags{n},'String', num2str(DefaultAns{n}(i)),'Position', [Xpos(i),Ypos,80,22],...
                         'TooltipString', TipStr{n},'Parent',Fig.GeometryHandle,'Callback', {@SetGeometry, Indx});
                     Indx = Indx+1;
         end
+    elseif n == 6
+        Fig.GeomH{n} = uicontrol(  'Style', 'popup','Tag', Tags{n},'String', DefaultAns{n},'value',Params.PD.Position,'Position', [Xpos(1),Ypos,120,22],...
+                    'TooltipString', TipStr{n},'Parent',Fig.GeometryHandle,'Callback', {@SetGeometry, Indx});
+                    Indx = Indx+1;
     else
-        uicontrol(  'Style', 'edit','Tag', Tags{n},'String', num2str(DefaultAns{n}),'Position', [Xpos(1),Ypos,120,22],...
+        Fig.GeomH{n} = uicontrol(  'Style', 'edit','Tag', Tags{n},'String', num2str(DefaultAns{n}),'Position', [Xpos(1),Ypos,120,22],...
                     'TooltipString', TipStr{n},'Parent',Fig.GeometryHandle,'Callback', {@SetGeometry, Indx});
                     Indx = Indx+1;
     end
     Ypos = Ypos-25;
 end
 set(LabelH, 'BackgroundColor',Fig.Background);
-
+set(Fig.GeomH{5}, 'enable', 'off');
 
 
 %================= EXPERIMENTER PANEL
@@ -262,49 +260,47 @@ end
 
 
 
-%================= DISPLAY PREVIEW PANEL
-% Fig.PreviewHandle = uipanel( 'Title','Display Preview',...
-%                 'FontSize',Fig.FontSize+2,...
-%                 'BackgroundColor',Fig.Background,...
-%                 'Units','pixels',...
-%                 'Position',BoxPos{4},...
-%                 'Parent',Fig.Handle);  
-% Ypos = BoxPos{4}(4)-Fig.Margin*2-10;           
-
-%Fig.Axh(1) = axes('Parent',Fig.PreviewHandle, 'position', [0.05, 0.1, 0.4, 0.7]);
-Fig.Axh(1) = axes('Parent',Fig.Handle, 'units','pixels','position',[50 50 300 150]);
-set(Fig.Axh(1), 'color', Params.Color.Background, 'units','pixels');
-axis equal tight off
-xlabel('Experimenter display','fontsize', Fig.FontSize+2);
-Fig.Im      = image(1:Resolution(2), 1:Resolution(1), ones(Resolution(2),Resolution(1),3)*0.5, 'Parent', Fig.Axh(1));
-% alpha(Fig.Im, 0);
-
-%============= Calculate experimenter grid positions
-if Params.Exp.GridOn == 1 
-    
-    CircleSpacing   = Params.Exp.GridSpacing*Params.Display.PixPerDeg;         	% Increase in diameter with each concentric circle
-    NoCircles       = floor(Params.Display.Rect(3)/CircleSpacing(1));         	% Calculate number of circles to fill screen width
-    Params.Exp.GridLineWidth = 1;                                             	% Pen width for grid lines (pixels)
-    for circleno = 1:NoCircles
-        CircleDiameter(circleno,:)              = CircleSpacing*circleno;               
-        Params.Exp.GridCircleRects(:,circleno) 	= CenterRect([0,0,CircleDiameter(circleno,:)], Params.Display.Rect)'; 
-    end
-    Params.Exp.Meridians     = [Params.Display.ExpRect([3,3])/2, 0, Params.Display.ExpRect(3); 0, Params.Display.ExpRect(4), Params.Display.ExpRect([4,4])/2];
-    
-    %=========== Draw grid to figure
-    axes(Fig.Axh(1));
-   	
-    ph(1) = plot([0 0], ylim, '-k', 'color', Params.Exp.GridColor);
-    ph(2) = plot(xlim, [0 0], '-k', 'color', Params.Exp.GridColor);
-    
-    
-end
-
-
-%Fig.Axh(2) = axes('Parent',Fig.PreviewHandle, 'position', [0.55, 0.1, 0.4, 0.7]);
-
-
-% xlabel('Subject display','fontsize', Fig.FontSize);
+% %================= DISPLAY PREVIEW PANEL
+% % Fig.PreviewHandle = uipanel( 'Title','Display Preview',...
+% %                 'FontSize',Fig.FontSize+2,...
+% %                 'BackgroundColor',Fig.Background,...
+% %                 'Units','pixels',...
+% %                 'Position',BoxPos{4},...
+% %                 'Parent',Fig.Handle);  
+% % Ypos = BoxPos{4}(4)-Fig.Margin*2-10;           
+% 
+% %Fig.Axh(1) = axes('Parent',Fig.PreviewHandle, 'position', [0.05, 0.1, 0.4, 0.7]);
+% Fig.Axh(1) = axes('Parent',Fig.Handle, 'units','pixels','position',[50 50 300 150]);
+% set(Fig.Axh(1), 'color', Params.Color.Background, 'units','pixels');
+% axis equal tight off
+% xlabel('Experimenter display','fontsize', Fig.FontSize+2);
+% Fig.Im      = image(1:Resolution(2), 1:Resolution(1), ones(Resolution(2),Resolution(1),3)*0.5, 'Parent', Fig.Axh(1));
+% % alpha(Fig.Im, 0);
+% 
+% %============= Calculate experimenter grid positions
+% if Params.Exp.GridOn == 1 
+%     
+%     CircleSpacing   = Params.Exp.GridSpacing*Params.Display.PixPerDeg;         	% Increase in diameter with each concentric circle
+%     NoCircles       = floor(Params.Display.Rect(3)/CircleSpacing(1));         	% Calculate number of circles to fill screen width
+%     Params.Exp.GridLineWidth = 1;                                             	% Pen width for grid lines (pixels)
+%     for circleno = 1:NoCircles
+%         CircleDiameter(circleno,:)              = CircleSpacing*circleno;               
+%         Params.Exp.GridCircleRects(:,circleno) 	= CenterRect([0,0,CircleDiameter(circleno,:)], Params.Display.Rect)'; 
+%     end
+%     Params.Exp.Meridians     = [Params.Display.ExpRect([3,3])/2, 0, Params.Display.ExpRect(3); 0, Params.Display.ExpRect(4), Params.Display.ExpRect([4,4])/2];
+%     
+%     %=========== Draw grid to figure
+%     axes(Fig.Axh(1));
+%    	
+%     ph(1) = plot([0 0], ylim, '-k', 'color', Params.Exp.GridColor);
+%     ph(2) = plot(xlim, [0 0], '-k', 'color', Params.Exp.GridColor);
+%     
+%     
+% end
+% 
+% 
+% %Fig.Axh(2) = axes('Parent',Fig.PreviewHandle, 'position', [0.55, 0.1, 0.4, 0.7]);
+% % xlabel('Subject display','fontsize', Fig.FontSize);
         
     
 
@@ -354,32 +350,41 @@ ParamsOut = Params;
     function SetGeometry(hObj, Evnt, Indx)
         switch Indx
             case 1          %============== Stereomode
-                Params.Stereomode = get(hObj,'Value')-1;
-            case 2
-                Params.ViewingDist = str2num(get(hObj,'String'));
-            case 3
+                Params.Stereomode   = get(hObj,'Value')-1;
+                
+            case 2          %============== Viewing distance
+                Params.ViewingDist  = str2num(get(hObj,'String'));
+             	Params.PixPerCm   	= Params.Rect([3,4])./Params.ScreenDims;                     % Calculate number of pixels per centimetre
+                Params.PixPerDeg   	= (Params.PixPerCm*Params.ViewingDist*tand(0.5))*2;  
+                set(Fig.GeomH{5}(1), 'string', num2str(Params.PixPerDeg(1)));
+                set(Fig.GeomH{5}(2), 'string', num2str(Params.PixPerDeg(2)));
+                
+            case 3          %============== Inter pupillary distance of subject
                 Params.IPD = str2num(get(hObj,'String'));
-            case 4
-                Params.ScreenDims(1) = str2num(get(hObj,'String'));
-            case 5
-                Params.ScreenDims(2) = str2num(get(hObj,'String'));
-            case 6
-                Params.ClippingPlanes(1) = str2num(get(hObj,'String'));
-                if Params.ClippingPlanes(1)>0
-                    Params.ClippingPlanes(1) = -Params.ClippingPlanes(1);
-                end
-            case 7
-                Params.ClippingPlanes(2) = str2num(get(hObj,'String'));
-                if Params.ClippingPlanes(2)<0
-                    Params.ClippingPlanes(2) = -Params.ClippingPlanes(2);
-                end
-            case 8
-                Params.Perspective = 0;
-            case 9
-                Params.Perspective = 1;
-        end
-        Params
+                
+            case {4,5}          %============== Screen width/ height (cm)
+                i = Indx-3;
+                Params.ScreenDims(i)    = str2num(get(hObj,'String'));
+                Params.PixPerCm(i)   	= Params.Rect(i+2)/Params.ScreenDims(i);                  % Calculate number of pixels per centimetre
+                Params.PixPerDeg(i)   	= (Params.PixPerCm(i)*Params.ViewingDist*tand(0.5))*2;  
+                set(Fig.GeomH{5}(i), 'string', num2str(Params.PixPerDeg(i)));
 
+            case {6,7}          %==============  Screen width/ height (pixels)
+                i = Indx-5;
+                Params.ScreenDims(i)    = str2num(get(hObj,'String'));
+                Params.PixPerCm(i)   	= Params.Rect(i+2)/Params.ScreenDims(i);                  % Calculate number of pixels per centimetre
+                Params.PixPerDeg(i)   	= (Params.PixPerCm(i)*Params.ViewingDist*tand(0.5))*2;  
+                set(Fig.GeomH{5}(i), 'string', num2str(Params.PixPerDeg(i)));
+                
+            case {8, 9}   	%============== Pixels per degree is DISABLED
+
+            case 10          %============== Photodiode position
+                Params.PD.Position = get(hObj,'Value');
+
+        end
+        
+        
+        
     end
 
 
@@ -442,7 +447,11 @@ ParamsOut = Params;
                     return;
                 end
                 Params.File = fullfile(Pathname, Filename);
-                save(Params.File, 'Params');
+                if exist(Params.File, 'file')
+                    save(Params.File, 'Params','-append');
+                elseif ~exist(Params.File, 'file')
+                    save(Params.File, 'Params');
+                end
                 msgbox(sprintf('Parameters file saved to ''%s''!', Params.File),'Saved');
 
             case 3      %================ CLOSE PARAMETERS GUI

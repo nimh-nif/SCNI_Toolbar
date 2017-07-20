@@ -47,27 +47,27 @@ if ~exist(Params.File,'file') || ~isfield(Params, 'DPx')
     end
     msgbox(WarningMsg,'Parameters not detected!','non-modal')
 
-    Params.DPx.TDTonDOUT        = 1;                                                         % Is DataPixx digital out DB25 connected to TDT digital in DB25?
-    Params.DPx.AnalogInCh       = 0:15;
-    Params.DPx.AnalogInNames    = {'Left eye X','Left eye Y','Left eye pupil','Right eye X','Right eye Y','Right eye pupil', 'Lever 1', 'Lever 2', 'Photodiode','Scanner TTL', 'None'};
-    Params.DPx.AnalogInAssign   = [1,2,3,4,5,6,9,10,11,11,11,11,11,11,11,11];
-    Params.DPx.AnalogOutCh      = 0:3;
-    Params.DPx.AnalogOutNames   = {'Reward','Audio','None'};
-    Params.DPx.AnalogOutAssign  = [1,3,3,3];
-    Params.DPx.DigitalInCh      = 0:23;
-    Params.DPx.DigitalInNames   = {'Photodiode','Scanner TTL','Spikes','None'};
-    Params.DPx.DigitalInAssign  = [1,4,4,4];
+    Params.DPx.TDTonDOUT       = 1;                                                         % Is DataPixx digital out DB25 connected to TDT digital in DB25?
+    Params.DPx.AnalogInCh      = 0:15;
+    Params.DPx.AnalogInNames   = {'Left eye X','Left eye Y','Left eye pupil','Right eye X','Right eye Y','Right eye pupil', 'Lever 1', 'Lever 2', 'Photodiode','Scanner TTL', 'None'};
+    Params.DPx.AnalogInAssign  = [1,2,3,4,5,6,9,10,11,11,11,11,11,11,11,11];
+    Params.DPx.AnalogOutCh     = 0:3;
+    Params.DPx.AnalogOutNames  = {'Reward','Audio','None'};
+    Params.DPx.AnalogOutAssign = [1,3,3,3];
+    Params.DPx.DigitalInCh     = 0:23;
+    Params.DPx.DigitalInNames  = {'Photodiode','Scanner TTL','Spikes','None'};
+    Params.DPx.DigitalInAssign = [1,4,4,4];
     Params.DPx.DigitalOutCh     = 0:23;
     Params.DPx.DigitalOutNames  = {'Reward','TDT port A','TDT port B','TDT port C','None'};
     if Params.DPx.TDTonDOUT == 1
-        Params.DPx.DigitalOutAssign = [1,5,5,5,5,5,5,5,5,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4];
+        Params.DPx.DigitalOutAssign= [1,5,5,5,5,5,5,5,5,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4];
     end
 end
 
 
 %========================= OPEN GUI WINDOW ================================
 Fig.Handle = figure;%(typecast(uint8('ENav'),'uint32'));               	% Assign GUI arbitrary integer        
-if strcmp('SCNI_DatapixxSettings', get(Fig.Handle, 'Tag')), return; end	% If figure already exists, return
+if strcmp('SCNI_DatapixxSettings', get(Fig.Handle, 'Tag')), return; end   	% If figure already exists, return
 Fig.FontSize        = 14;
 Fig.TitleFontSize   = 16;
 Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
@@ -81,18 +81,19 @@ set(Fig.Handle,     'Name','SCNI: Datapixx settings',...              	% Open a 
                     'Resize', 'off',...                                 % Prevent resizing of GUI window
                     'Menu','none',...                                   % Turn off memu
                     'Toolbar','none');                                  % Turn off toolbars to save space
-Fig.Background      = get(Fig.Handle, 'Color');                      	% Get default figure background color
-Fig.Margin          = 20;                                             	% Set margin between UI panels (pixels)                                 
-Fig.Fields          = fieldnames(Params);                              	% Get parameter field names
+Fig.Background  = get(Fig.Handle, 'Color');                           	% Get default figure background color
+Fig.Margin      = 20;                                                 	% Set margin between UI panels (pixels)                                 
+Fig.Fields      = fieldnames(Params);                                 	% Get parameter field names
+
 
 
 %============= CREATE MAIN PANEL
-Fig.TopPanelHandle  = uipanel('BackgroundColor',Fig.Background,...       
+Fig.TopPanelHandle = uipanel('BackgroundColor',Fig.Background,...       
                     'Units','pixels',...
                     'Position',[20, Fig.Rect(4)-110, Fig.Rect(3)-40, 80],...
                     'Parent',Fig.Handle); 
-Fig.Logo            = imread('Logo_VPixx.png');
-Fig.LogoAx          = axes('box','off','units','pixels','position', [10, 10, 246, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
+Fig.Logo        = imread('Logo_VPixx.png');
+Fig.LogoAx    	= axes('box','off','units','pixels','position', [10, 10, 246, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
 image(Fig.Logo);
 axis off;
 if ~exist('Datapixx.m','file')

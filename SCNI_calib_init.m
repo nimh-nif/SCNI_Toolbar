@@ -76,6 +76,8 @@ if c.LinuxDisplay == 1                                                          
     elseif c.UseSBS3D == 1
         c.MonkFixLocations = c.FixLocations + repmat(c.Display.Rect([3,1]), [c.NoLocations,1]);    % Add an additional display width offset for subject's screen  
     end
+else
+    c.MonkFixLocations = c.FixLocations;
 end
 for n = 1:size(c.FixLocations,1)                                                % For each fixation coordinate...
     c.FixRects{n}(1,:) = CenterRectOnPoint(c.FixmarkerRect, c.FixLocations(n,1), c.FixLocations(n,2));  % Generate PTB rect argument
@@ -185,8 +187,9 @@ if c.PhotodiodeOn == 1
             c.MonkeyDiodeRect(1,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1]) + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         	% Center a horizontally squashed fixation rectangle in a half screen rectangle
             c.MonkeyDiodeRect(2,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1])*1.5 + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         
         end
-    elseif c.LinuxDisplay == 0                            
-        c.MonkeyDiodeRect  = c.MonkeyDiodeRect;     
+    elseif c.LinuxDisplay == 0 
+        c.PhotodiodeOn = 0;
+        c.MonkeyDiodeRect  = [];     
     end
 end
 

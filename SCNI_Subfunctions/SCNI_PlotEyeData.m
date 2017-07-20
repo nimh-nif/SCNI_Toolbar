@@ -14,22 +14,16 @@ function [s,c] = SCNI_PlotEyeData(EyePos, s, c)
 %==========================================================================
 
 
-% if IsLinux == 1
-%     s.Fig.GazeWinPos = [66, 544, 910, 430];
-% elseif IsOSX
-%     s.Fig.GazeWinPos = [3840, 535, 900, 450];
-% end
-
-
-% global s
-% global c
-
+figure; plot(EyePos)
 
 %========= Check whether eye data figure window is already open
 if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
     s.Fig.Background    = [0.9,0.9,0.9];
     s.Fig.Fontsize      = 14;
     s.Fig.GazeWinPos    = [1, 400, 1100, 600];
+    if ismac && exist('c','var')
+        s.Fig.GazeWinPos = s.Fig.GazeWinPos+[c.Display.Rect(3)*2,0,0,0];
+    end
     s.Fig.Handle        = figure('name','SCNI_PlotEyeData','position',s.Fig.GazeWinPos,'color',s.Fig.Background);
     FirstPlot           = 1;
     
@@ -44,13 +38,16 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
     s.EpochNames        = {'Pre', 'Saccade', 'Fix'};
     s.Fig.ChangeInc     = 0.05;                             % Increment size when adjusting voltages with arrow keys (V)
     s.Fig.EpochInc  	= 10;                               % Increment size when adjusting time windows with arrow keys (ms)
+    
+    %========= 
     if nargin == 0
         c.adcRate           = 1000;                              % Default ADC smapling rate (Hz)
-        c.Display.Rect      = [1920, 1080];
+        c.Display.Rect      = [0,0,1920, 1080];
         c.Display.PixPerDeg	= [35, 35];
     end
-    
-    
+ 	c.EyeInvertX        = 0;
+    c.EyeInvertY        = 0;
+
     %========= Parse input EyePos
     if nargin > 0
         NoEyeChannels      	= min(size(EyePos));
@@ -74,14 +71,17 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
     end
        
     
-else
-    c.EyePos = EyePos;
-    FirstPlot = 0;                  % This is not the first trial to be plotted
+elseif isfield(s, 'Fig') && ishandle(s.Fig.Handle)
+    c.EyePos    = EyePos;         	% Update eye position for current trial
+    FirstPlot   = 0;              	% This is not the first trial to be plotted
     figure(s.Fig.Handle);           % Make figure window active
     delete(s.ph);                   % Delete plotted data from previous trial
+    for n = 1:numel(s.Fig.bph)      % For each box plot handle...
+        delete(s.Fig.bph{n});       % Delete box and whisker plots
+    end
 end
 
-c.Display.RectDeg   = c.Display.Rect./c.Display.PixPerDeg;
+c.Display.RectDeg   = c.Display.Rect([3,4])./c.Display.PixPerDeg;
 EpochWinSamples{1}  = (s.InitWinTimes(1)*c.adcRate)+1:(s.InitWinTimes(2)*c.adcRate);
 EpochWinSamples{2} 	= (s.SacWinTimes(1)*c.adcRate):(s.SacWinTimes(2)*c.adcRate);
 EpochWinSamples{3}  = (s.FixWinTimes(1)*c.adcRate):(s.FixWinTimes(2)*c.adcRate);
@@ -107,13 +107,15 @@ if nargin == 0
     EyePos      = EyePos+EyeOffset;
     c.EyeGain   = [6.2, 6.4];
     c.EyeOffset = [-0.5,0.8]; 
-    c.EyePos    = EyePos;
+
 else
     TargetDuration  = c.StimDuration;
     
 end
+c.EyePos            = EyePos;
 
-s.Fig.CalibFilename = 'Test_calib.mat';
+% s.Fig.CalibFilename = 'Test_calib.mat';
+s.Fig.CalibFilename = '/Volumes/projects/NIF/DataPixx/NIF/NIF_calib.mat';
 
 %=================== PLOT NEW DATA
 if FirstPlot == 1
@@ -158,9 +160,13 @@ if FirstPlot == 1
     h = DrawCircle([0,0], 1, [0 0 0], 1, 0);                        % Draw circle to mark center of screen (0 DVA)
     daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);             % Set aspect ratio of plot in DVA
     
+else
+    DVA_Xrange = (s.VoltageRange-c.EyeOffset(1))*c.EyeGain(1);      % Calculate range of possible DVA values from voltage range
+    DVA_Yrange = (s.VoltageRange-c.EyeOffset(2))*c.EyeGain(2);      % Calculate range of possible DVA values from voltage range
+    set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);      % Set axis limits based on calculated range
+    daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);             % Set aspect ratio of plot in DVA
 end
-
-
+    
 %=================== EYE POSITION TIME COURSE
 if FirstPlot == 1
     s.Fig.Axh(3) = subplot(2,3,2);
@@ -204,13 +210,14 @@ for n = 1:3
 	set(s.Fig.bph{n}(5), 'color', [0,0,0]);
 	set(s.Fig.bph{n}(6), 'color', [0,0,0], 'linewidth', 2);
 end
+set(gca, 'xlim',[0.5, 3.5]);
 if FirstPlot == 1
     grid on;
     ylabel('Distance from target (V)','fontsize', s.Fig.Fontsize)
     set(gca, 'xlim',[0.5, 3.5], 'xtick',1:3, 'xticklabel', s.EpochNames,'ylim',[0, s.VoltageRange(2)],'fontsize', s.Fig.Fontsize);
 end
 
-
+UpdatePlots;
 
 %% ========================= ADD GUI CONTROLS =============================
 if FirstPlot == 1
@@ -219,6 +226,8 @@ if FirstPlot == 1
     s.Fig.Labels        = {'Offset (V)','Gain (deg/V)', 'Range (V)'};
     s.Fig.EpochLabels   = {'Onset', 'Saccade', 'Fixation'};
     s.Fig.EpochValues   = {s.InitWinTimes, s.SacWinTimes, s.FixWinTimes};
+    s.Fig.ButtonLabels  = {'Invert X','Invert Y'};
+    s.Fig.ButtonValues  = {c.EyeInvertX, c.EyeInvertY};
     s.Fig.Values        = {c.EyeOffset, c.EyeGain, s.VoltageRange};
     s.Fig.PanelHandle   = uipanel('Title','Eye tracker calibration',...
                         'FontSize', s.Fig.Fontsize+2,...
@@ -227,14 +236,15 @@ if FirstPlot == 1
                         'Position',s.Fig.PannelPos,...
                         'Parent', s.Fig.Handle); 
 
-    uicontrol('Style', 'text','String', 'Method', 'Position', [20, 255, 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
-    uicontrol('Style', 'Popup','String', {'Manual','Automated (time)','Automated (position)'}, 'Position', [110, 255, 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeMethod});
-    uicontrol('Style', 'text','String', 'Select eye', 'Position', [20, 230, 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
-    s.Fig.EyeSelectH = uicontrol('Style', 'Popup','String', s.Fig.EyeStrings, 'Position', [110, 230, 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeEye},'value', s.CurrentEye);
-    uicontrol('Style', 'text','String', 'X', 'Position', [120, 200, 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
-    uicontrol('Style', 'text','String', 'Y', 'Position', [220, 200, 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
+   	YposStart = [280,255,230];
+    uicontrol('Style', 'text','String', 'Method', 'Position', [20, YposStart(1), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
+    uicontrol('Style', 'Popup','String', {'Manual','Automated (time)','Automated (position)'}, 'Position', [110, YposStart(1), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeMethod});
+    uicontrol('Style', 'text','String', 'Select eye', 'Position', [20, YposStart(2), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
+    s.Fig.EyeSelectH = uicontrol('Style', 'Popup','String', s.Fig.EyeStrings, 'Position', [110, YposStart(2), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeEye},'value', s.CurrentEye);
+    uicontrol('Style', 'text','String', 'X', 'Position', [120, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
+    uicontrol('Style', 'text','String', 'Y', 'Position', [220, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
 
-    Ypos = 180;
+    Ypos = YposStart(3)-20;
     for n = 1:numel(s.Fig.Labels)
         uicontrol('Style', 'text','String',s.Fig.Labels{n},'Position', [20, Ypos, 100, 20],'Parent',s.Fig.PanelHandle, 'HorizontalAlignment', 'left', 'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
         Xpos = 120;
@@ -261,6 +271,12 @@ if FirstPlot == 1
             Xpos = Xpos + 100;
         end
         Ypos = Ypos - 25;
+    end
+    
+    Xpos = 120;
+    for n = 1:numel(s.Fig.ButtonLabels)
+        s.Fig.ButtonH(n) = uicontrol('Style', 'ToggleButton', 'String', s.Fig.ButtonLabels{n}, 'value', s.Fig.ButtonValues{n} ,'Position', [Xpos,Ypos,80,20],'Parent',s.Fig.PanelHandle,'HorizontalAlignment', 'left','FontSize', s.Fig.Fontsize,'Callback',{@InvertAxis,n});
+        Xpos = Xpos + 100;
     end
     
     
@@ -299,14 +315,15 @@ if FirstPlot == 1
     uicontrol('Style', 'pushbutton','String','Save','Position', [140, Ypos, 100, 20],'Parent',s.Fig.PanelHandle3, 'HorizontalAlignment', 'left', 'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background, 'callback', {@CalibOutput, 2});
 end
 
-
+%============= Load previous calibration parameters
+LoadCalibration(s.Fig.CalibFilename);
 
 
 %% ========================== SUBFUNCTIONS ================================
 
     %================ Draw a filled circle
     function h = DrawCircle(xy, rad, rgb, alpha, filled)
-        h = rectangle('Position',[-rad,-rad,rad*2,rad*2]+[xy,xy],'Curvature',1);
+        h = rectangle('Position',[-rad,-rad,rad*2,rad*2]+[xy,0,0],'Curvature',1);
         if filled == 0
             set(h, 'edgecolor', [rgb, alpha]);
         elseif filled == 1
@@ -350,6 +367,26 @@ end
             end
         end
 
+    end
+
+    %================ INVERT EYE POSITION VOLTAGES
+    function InvertAxis(hObj, Event, Indx)
+        if Indx == 1
+            c.EyeInvertX = get(hObj,'value');
+        elseif Indx == 2
+            c.EyeInvertY = get(hObj,'value');
+        end
+        if c.EyeInvertX == 1
+            set(s.Fig.Axh(1), 'Xdir', 'reverse');
+        elseif c.EyeInvertX == 0
+            set(s.Fig.Axh(1), 'Xdir', 'normal');
+        end
+        if c.EyeInvertY == 1
+            set(s.Fig.Axh(1), 'Ydir', 'reverse');
+        elseif c.EyeInvertY == 0
+            set(s.Fig.Axh(1), 'Ydir', 'normal');
+        end 
+        
     end
 
     %================ UPDATE CALIBRATION VALUES
@@ -403,9 +440,9 @@ end
         daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);     % Set aspect ratio of plot in DVA
 
         %========= Update box plots
-        UpdateBoxPlot(1);
-        UpdateBoxPlot(2);
-        UpdateBoxPlot(3);
+%         UpdateBoxPlot(1);
+%         UpdateBoxPlot(2);
+%         UpdateBoxPlot(3);
     end
 
     %================ UPDATE PARAMETERS FOR AUTOMATED CALIBRATION
@@ -455,12 +492,13 @@ end
 
     %=============== UPDATE BOX PLOTS
     function UpdateBoxPlot(Indx)
+        axes(s.Fig.Axh(4));
         delete(s.Fig.bph{Indx});
         s.Fig.bph{Indx} = boxplot(EyePosDist(:,EpochWinSamples{Indx}),'Notch','on','boxstyle','filled','colors',s.EpochColors(Indx,:));
         for ch = 1:numel(s.Fig.bph{Indx})
             set(s.Fig.bph{Indx}(ch), 'Xdata', get(s.Fig.bph{Indx}(ch), 'Xdata')+Indx-1);
         end
-
+        set(s.Fig.Axh(4),'xlim',[0.5, 3.5]);
     end
 
 
@@ -477,6 +515,7 @@ end
 
             case 2  %============= Save calibration
                 [file, path] = uiputfile('*.mat','Save calibration', CalibFilename);
+                s.Fig.Handle = [];
                 if file ~= 0
                     CalibFilename = fullfile(path, file);
                     SaveCalibration(CalibFilename);
@@ -504,6 +543,15 @@ end
                 set(s.Fig.Edit(n, xy), 'String', sprintf('%.2f', s.Fig.Values{n}(xy)));
             end
         end
+        c.EyeInvertX = 0;
+        c.EyeInvertY = 0;
+        set(s.Fig.ButtonH(1),'value',c.EyeInvertX);
+        set(s.Fig.ButtonH(2),'value',c.EyeInvertY);
+
+      	c.EyeOffset    = s.Fig.Values{1};
+       	c.EyeGain      = s.Fig.Values{2};
+      	s.VoltageRange = s.Fig.Values{3};
+        
         UpdatePlots;
 
     end
