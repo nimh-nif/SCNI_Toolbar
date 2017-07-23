@@ -1,7 +1,7 @@
 
 %============================= SCNI_Toolbar.m =============================
 % This function opens the SCNI toolbar window, which allows users to execute
-% various functions either during or between experimental runs using the
+% various functions either during or between experimental runs using the 
 % Psychtoolbox + DataPixx setup.
 %
 % 2017-06-27 - Written by murphyap@nih.gov
@@ -13,6 +13,8 @@ global Fig Params Icon                                                      % De
 
 
 %================= Get parameters file for local machine
+GUIhandle = getappdata(0,'SCNI_Toolbar');                                   % Check if GUI window is already open
+if ishghandle(GUIhandle), figure(GUIhandle); return; end                 	% Bring current GUI window to front
 Fullmfilename   = mfilename('fullpath');                                    % Get m-filename
 [Path,~]       	= fileparts(Fullmfilename);                                 % Get path
 addpath(genpath(fullfile(Path, '..')));                                    	% Add SCNI_Datapixx directory and subfolders to Matlab path
@@ -30,8 +32,7 @@ Fig.ButtonSize      = [0,0,60,60];
 %================== Load toolbar icons
 Fullmfilename   = mfilename('fullpath');
 [Path,~]       	= fileparts(Fullmfilename);
-IconDir         = '/projects/SCNI/SCNI_Datapixx/SCNI_Subfunctions/Icons';%fullfile(Path, 'Icons');
-if ismac, IconDir = ['/Volumes', IconDir]; end
+IconDir         = fullfile(Path, '..','SCNI_Subfunctions','Icons');
 IconFiles       = wildcardsearch(IconDir, '*.png');
 ButtonOnImg     = fullfile(IconDir, 'ButtonOn.png');
 ButtonOffImg    = fullfile(IconDir, 'ButtonOff.png');
@@ -72,7 +73,7 @@ Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure w
                     'NumberTitle','off',...                     % Remove the figure number from the title
                     'Resize','off',...                          % Turn off resizing of figure
                     'Menu','none','Toolbar','none');            % Turn off toolbars and menu
-
+setappdata(0,'SCNI_Toolbar',Fig.Handle);                        % Make GUI handle accessible from other m-files
 Fig.PannelTitles    = {'Actions', 'Modes', 'Settings'};  
 Fig.ButtonsPPannel  = [4, 4, 6];
 Fig.FontSize        = 16;

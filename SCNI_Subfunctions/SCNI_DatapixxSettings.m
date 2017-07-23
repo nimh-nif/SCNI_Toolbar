@@ -17,37 +17,24 @@ function ParamsOut = SCNI_DatapixxSettings(ParamsFile, OpenGUI)
 
 persistent Params Fig;
 
-Params.Dir = '/projects/SCNI/SCNI_Datapixx/SCNI_Parameters';
-if ismac, Params.Dir = fullfile('/Volumes',Params.Dir); end
-if ~exist('ParamsFile','var') || isempty(ParamsFile)
-    [~, CompName] = system('hostname');
-	CompName(regexp(CompName, '\s')) = [];
-    Params.File = fullfile(Params.Dir, sprintf('%s.mat', CompName));
-else
-    Params.File = ParamsFile;
-end
+%============ Initialize GUI
+GUItag      = 'SCNI_DatapixxSettings';      % String to use as GUI window tag
+Fieldname   = 'DPx';                        % Params structure fieldname for DataPixx info
 if ~exist('OpenGUI','var')
     OpenGUI = 1;
 end
-if exist(Params.File,'file')
-    Params = load(Params.File);
-    if ~isfield(Params,'File')
-        Params.File = Params.Params.File;
-    end
-    if OpenGUI == 0
-        ParamsOut = Params;
-        return;
-    end
+if ~exist('ParamsFile','var')
+    ParamsFile = [];
 end
-if ~exist(Params.File,'file') || ~isfield(Params, 'DPx')
-    if ~exist(Params.File,'file')
-        WarningMsg = sprintf('The parameter file ''%s'' does not exist! Loading default parameters...', Params.File);
-    elseif exist(Params.File,'file') && ~isfield(Params, 'DPx')
-        WarningMsg = sprintf('The parameter file ''%s'' does not contain DataPixx parameters. Loading default parameters...', Params.File);
-    end
-    msgbox(WarningMsg,'Parameters not detected!','non-modal')
+[Params, Success]  = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
 
-    Params.DPx.TDTonDOUT        = 1;                                                         % Is DataPixx digital out DB25 connected to TDT digital in DB25?
+
+%=========== Load default parameters
+if Success < 1                              % If the parameters could not be loaded...
+    Params.DPx.TDTonDOUT        = 1;                                                            % Is DataPixx digital out DB25 connected to TDT digital in DB25?
+    Params.DPx.UseVideo         = 0;                                                            % Is the video signal being sent through the DataPixx2 box?
+    Params.DPx.UseAudio         = 0;                                                            % Is the audio signal being sent from the DataPixx2 box?
+    Params.DPx.AnalogRate       = 1000;                                                         % ADC sample rate (Hz)
     Params.DPx.AnalogInCh       = 0:15;
     Params.DPx.AnalogInNames    = {'Left eye X','Left eye Y','Left eye pupil','Right eye X','Right eye Y','Right eye pupil', 'Lever 1', 'Lever 2', 'Photodiode','Scanner TTL', 'None'};
     Params.DPx.AnalogInAssign   = [1,2,3,4,5,6,9,10,11,11,11,11,11,11,11,11];
@@ -65,14 +52,16 @@ if ~exist(Params.File,'file') || ~isfield(Params, 'DPx')
 end
 
 
-%========================= OPEN GUI WINDOW ================================
-Fig.Handle = figure;%(typecast(uint8('ENav'),'uint32'));               	% Assign GUI arbitrary integer        
-if strcmp('SCNI_DatapixxSettings', get(Fig.Handle, 'Tag')), return; end	% If figure already exists, return
+%========================= OPEN GUI WINDOW ================================          
+Fig.Handle          = figure;     
+setappdata(0,GUItag,Fig.Handle);
 Fig.FontSize        = 14;
 Fig.TitleFontSize   = 16;
 Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
 Fig.PannelSize      = [170, 650];                                       
 Fig.PannelElWidths  = [30, 120];
+Fig.MaxADCrate      = 200*10^3;                                         % Maximum sample rate of DataPixx2 ADC channels
+Fig.DataPixxURL   	= 'http://www.vpixx.com/manuals/psychtoolbox/html/intro.html';
 set(Fig.Handle,     'Name','SCNI: Datapixx settings',...              	% Open a figure window with specified title
                     'Tag','SCNI_DatapixxSettings',...                 	% Set figure tag
                     'Renderer','OpenGL',...                             % Use OpenGL renderer
@@ -89,11 +78,11 @@ Fig.Fields          = fieldnames(Params);                              	% Get pa
 %============= CREATE MAIN PANEL
 Fig.TopPanelHandle  = uipanel('BackgroundColor',Fig.Background,...       
                     'Units','pixels',...
-                    'Position',[20, Fig.Rect(4)-110, Fig.Rect(3)-40, 80],...
+                    'Position',[20, Fig.Rect(4)-120-20, Fig.Rect(3)-50, 110],...
                     'Parent',Fig.Handle); 
 Fig.Logo            = imread('Logo_VPixx.png');
-Fig.LogoAx          = axes('box','off','units','pixels','position', [10, 10, 246, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
-image(Fig.Logo);
+Fig.LogoAx          = axes('box','off','units','pixels','position', [10, 10+30, 246, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle,'ButtonDownFcn', @OpenWebpage);
+image(Fig.Logo,'ButtonDownFcn', @OpenWebpage);
 axis off;
 if ~exist('Datapixx.m','file')
     Params.DPx.Installed = 0;
@@ -106,16 +95,24 @@ else
         Params.DPx.Connected = 0;
     end
 end
-Fig.MainStrings     = {'DataPixx tools installed?','DataPixx box connected?','TDT connected via DB25?'};
-Fig.MainResults     = {Params.DPx.Installed, Params.DPx.Connected, Params.DPx.TDTonDOUT};
+Fig.MainStrings     = {'DataPixx tools installed?','DataPixx box connected?','TDT connected via DB25?','Enable video','Enable audio'};
+Fig.MainResults     = {Params.DPx.Installed, Params.DPx.Connected, Params.DPx.TDTonDOUT, Params.DPx.UseVideo, Params.DPx.UseAudio};
 Fig.DetectionColors = [1,0,0; 0,1,0];
 for n = 1:numel(Fig.MainStrings)
-    Ypos = 80-(20*n)-10;
-	Fig.Mh(n) = uicontrol('Style', 'checkbox','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [280,Ypos, 160,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left');
-    Fig.Mdh(n) = uicontrol('Style', 'text','String','','Position', [450,Ypos+2, 18,18],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','backgroundcolor', Fig.DetectionColors(Fig.MainResults{n}+1,:));
+    if n < 4
+        Ypos = 110-(20*n)-10;
+        Fig.Mh(n) = uicontrol('Style', 'checkbox','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [280,Ypos, 160,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left');
+        Fig.Mdh(n) = uicontrol('Style', 'text','String','','Position', [450,Ypos+2, 18,18],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','backgroundcolor', Fig.DetectionColors(Fig.MainResults{n}+1,:));
+    else
+        Ypos = 105-(20*4)-15;
+        Xpos = 10+(n-4)*90;
+        Fig.Mh(n) = uicontrol('Style', 'ToggleButton','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [Xpos,Ypos, 80,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left');
+    end
 end
 set(Fig.Mh(1:2),'enable','off');
-set(Fig.Mh(3), 'callback', {@ToggleTDTconnection});
+set(Fig.Mh(3), 'callback', {@ToggleTDTconnection, 1});
+set(Fig.Mh(4), 'callback', {@ToggleTDTconnection, 2});
+set(Fig.Mh(5), 'callback', {@ToggleTDTconnection, 3});
 
 %======== Set group controls positions
 Fig.UnusedChanCol           = [0.5,0.5,0.5];
@@ -130,15 +127,15 @@ Fig.AllPannelChannelAssign  = {'Params.DPx.AnalogInAssign','Params.DPx.AnalogOut
 for p = 1:numel(Fig.PannelNames)
     if p == 1
         BoxXpos(p) 	= Fig.Margin + (Fig.PannelSize(1)+Fig.Margin)*(p-1);
-        BoxYpos(p)  = Fig.Rect(4)-450-120;
-        PannelSize  = [Fig.PannelSize(1), 450];
+        BoxYpos(p)  = Fig.Rect(4)-470-150;
+        PannelSize  = [Fig.PannelSize(1), 470];
     elseif p == 2
         BoxXpos(p) 	= BoxXpos(1);
-        BoxYpos(p)  = BoxYpos(1)-180-20;
-        PannelSize  = [Fig.PannelSize(1), 180];
+        BoxYpos(p)  = BoxYpos(1)-160-20;
+        PannelSize  = [Fig.PannelSize(1), 160];
     else
       	BoxXpos(p) 	= Fig.Margin + (Fig.PannelSize(1)+Fig.Margin)*(p-2);
-        BoxYpos(p)  = Fig.Rect(4)-Fig.PannelSize(2)-120;
+        BoxYpos(p)  = Fig.Rect(4)-Fig.PannelSize(2)-150;
         PannelSize  = Fig.PannelSize;
     end
     PannelPos{p}    = [BoxXpos(p), BoxYpos(p), PannelSize]; 
@@ -161,6 +158,12 @@ for p = 1:numel(Fig.PannelNames)
         eval(sprintf('%s = ChannelAssign;', Fig.AllPannelChannelAssign{p}));
     end
     
+    if p == 1
+        uicontrol('Style', 'text','String','Sample rate (SPS)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
+        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set ADC sample rate (samples per second)');
+        Ypos = Ypos-25;
+    end
+    
     %============= CREATE FIELDS
     for n = 1:numel(ChannelList)
         Fig.ChH(p,n) = uicontrol('Style', 'text','String',num2str(ChannelList(n)),'Position', [Fig.Margin,Ypos,Fig.PannelElWidths(1),20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
@@ -172,8 +175,6 @@ for p = 1:numel(Fig.PannelNames)
         end
         Ypos = Ypos-25;
     end
-%     set(h(1:numel(SystemLabels)), 'BackgroundColor', Fig.Background);
-
 end
 if Params.DPx.TDTonDOUT == 1
     set(Fig.h(4,10:24), 'enable','off','TooltipString','Digital outs 9-23 in use for TDT communciation');    
@@ -181,36 +182,22 @@ end
 
 
 %================= OPTIONS PANEL
-uicontrol(  'Style', 'pushbutton',...
-            'String','Load',...
-            'parent', Fig.Handle,...
-            'tag','Load',...
-            'units','pixels',...
-            'Position', [Fig.Margin,20,100,30],...
-            'TooltipString', 'Use current inputs',...
-            'FontSize', Fig.FontSize, ...
-            'HorizontalAlignment', 'left',...
-            'Callback', {@OptionSelect, 1});   
-uicontrol(  'Style', 'pushbutton',...
-            'String','Save',...
-            'parent', Fig.Handle,...
-            'tag','Save',...
-            'units','pixels',...
-            'Position', [140,20,100,30],...
-            'TooltipString', 'Save current inputs to file',...
-            'FontSize', Fig.FontSize, ...
-            'HorizontalAlignment', 'left',...
-            'Callback', {@OptionSelect, 2});    
-uicontrol(  'Style', 'pushbutton',...
-            'String','Continue',...
-            'parent', Fig.Handle,...
-            'tag','Continue',...
-            'units','pixels',...
-            'Position', [260,20,100,30],...
-            'TooltipString', 'Exit',...
-            'FontSize', Fig.FontSize, ...
-            'HorizontalAlignment', 'left',...
-            'Callback', {@OptionSelect, 3});         
+Fig.OptionLabel     = {'Load','Save','Continue','Help'};
+Fig.OptionPosition  = {[Fig.Margin,20,100,30], [140,20,100,30],[260,20,100,30],[380,20,100,30]};
+Fig.OptionTip       = {'Load settings','Save settings','Exit','Open DataPixx help page'};
+for n = 1:numel(Fig.OptionLabel)
+    uicontrol(  'Style', 'pushbutton',...
+                'String',Fig.OptionLabel{n},...
+                'parent', Fig.Handle,...
+                'tag','Load',...
+                'units','pixels',...
+                'Position', Fig.OptionPosition{n},...
+                'TooltipString', Fig.OptionTip{n},...
+                'FontSize', Fig.FontSize, ...
+                'HorizontalAlignment', 'left',...
+                'Callback', {@OptionSelect, n});   
+end
+ 
 
 hs = guihandles(Fig.Handle);                                % get UI handles
 guidata(Fig.Handle, hs);                                    % store handles
@@ -252,19 +239,42 @@ ParamsOut = Params;
        
     end
 
+    %==================== Set ADC sample rate
+    function SetSampleRate(Obj, Event, Indx)
+        NewRate = str2num(get(Obj,'string'));
+        if NewRate < Fig.MaxADCrate
+            Params.DPx.AnalogRate = NewRate;
+        else
+            set(Obj,'string',Fig.MaxADCrate);
+            Params.DPx.AnalogRate = Fig.MaxADCrate;
+        end
+    end
+
+    function OpenWebpage(Obj, Event, Indx)
+        web(Fig.DataPixxURL);
+    end
+        
     %==================== TDT connected to digital out
     function ToggleTDTconnection(Obj, Event, Indx)
-        Params.DPx.TDTonDOUT = get(Obj, 'value');
-        set(Fig.Mdh(3),'backgroundcolor', Fig.DetectionColors(Params.DPx.TDTonDOUT+1,:));
-        if Params.DPx.TDTonDOUT == 1
-            Params.DPx.DigitalOutAssign(10:17) = find(~cellfun(@isempty, strfind(Params.DPx.DigitalOutNames, 'TDT port B')));
-            Params.DPx.DigitalOutAssign(18:24) = find(~cellfun(@isempty, strfind(Params.DPx.DigitalOutNames, 'TDT port C')));
-            set(Fig.ChH(4,10:24), 'BackgroundColor', Fig.UsedChanCol);
-            set(Fig.h(4,10:17), 'value', Params.DPx.DigitalOutAssign(10));
-            set(Fig.h(4,18:24), 'value', Params.DPx.DigitalOutAssign(18));
-            set(Fig.h(4,10:24), 'enable','off','TooltipString','Digital outs 9-23 in use for TDT communciation'); 
-        else
-            set(Fig.h(4,10:24), 'enable','on','TooltipString','');
+        switch Indx
+            case 1
+                Params.DPx.TDTonDOUT = get(Obj, 'value');
+                set(Fig.Mdh(3),'backgroundcolor', Fig.DetectionColors(Params.DPx.TDTonDOUT+1,:));
+                if Params.DPx.TDTonDOUT == 1
+                    Params.DPx.DigitalOutAssign(10:17) = find(~cellfun(@isempty, strfind(Params.DPx.DigitalOutNames, 'TDT port B')));
+                    Params.DPx.DigitalOutAssign(18:24) = find(~cellfun(@isempty, strfind(Params.DPx.DigitalOutNames, 'TDT port C')));
+                    set(Fig.ChH(4,10:24), 'BackgroundColor', Fig.UsedChanCol);
+                    set(Fig.h(4,10:17), 'value', Params.DPx.DigitalOutAssign(10));
+                    set(Fig.h(4,18:24), 'value', Params.DPx.DigitalOutAssign(18));
+                    set(Fig.h(4,10:24), 'enable','off','TooltipString','Digital outs 9-23 in use for TDT communciation'); 
+                else
+                    set(Fig.h(4,10:24), 'enable','on','TooltipString','');
+                end
+                
+            case 2
+                Params.DPx.UseVideo = get(Obj, 'value');
+            case 3
+                Params.DPx.UseAudio = get(Obj, 'value');
         end
     end
 
@@ -304,6 +314,9 @@ ParamsOut = Params;
                 ParamsOut = [];         % Clear params
                 close(Fig.Handle);      % Close GUI figure
                 return;
+                
+            case 4      %================ OPEN HELP PAGE
+                web(Fig.DataPixxURL);
         end
     end
 

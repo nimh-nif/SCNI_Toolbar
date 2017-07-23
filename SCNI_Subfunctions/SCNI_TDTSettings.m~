@@ -81,13 +81,8 @@ imh         	= image(Fig.Logo);
 alpha(imh, double(alphaMask/max(alphaMask(:))));
 axis off;
 
-Fig.SynapseURL  = 'http://www.tdt.com/files/manuals/SynapseAPIManual.pdf';
-Fig.OpenEXURL   = 
 if ~exist('SynapseAPI','file')
-    Params.TDT.SynapseTools = 0;
-else
-     Params.TDT.SynapseTools = 1;
-end
+    
 
 
 
