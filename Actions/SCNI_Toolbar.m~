@@ -9,14 +9,33 @@
 
 function [PDS, c, s] = SCNI_Toolbar(PDS, c, s)
 
-persistent Fig Params Icon                                                      % Declare global variables
+global Fig Params Icon                                                      % Declare global variables
 
 %============ Initialize GUI
 GUItag      = 'SCNI_Toolbar';                                               % String to use as GUI window tag
 Fieldname   = [];                             
-OpenGUI     = 1;
-[Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, [], OpenGUI);
-Params
+if ~exist('OpenGUI','var')
+    OpenGUI = 1;
+end
+if ~exist('ParamsFile','var')
+    ParamsFile = [];
+end
+[Params, Success]  = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+
+% %================= Get parameters file for local machine
+% GUIhandle = getappdata(0,'SCNI_Toolbar');                                   % Check if GUI window is already open
+% if ishghandle(GUIhandle), figure(GUIhandle); return; end                 	% Bring current GUI window to front
+% Fullmfilename   = mfilename('fullpath');                                    % Get m-filename
+% [Path,~]       	= fileparts(Fullmfilename);                                 % Get path
+% addpath(genpath(fullfile(Path, '..')));                                    	% Add SCNI_Datapixx directory and subfolders to Matlab path
+% Params.Dir      = fullfile(Path, '../SCNI_Parameters');                     % Get the directory containing parameter files
+% [~, CompName]   = system('hostname');                                       % Get the name of the local machine
+% CompName(regexp(CompName, '\s')) = [];                                      % Remove whitespace
+% Params.File     = fullfile(Params.Dir, sprintf('%s.mat', CompName));        % Construct the expected parameters filename for his machine
+% if ~exist(Params.File, 'file')                                              % Check whether expected parameters file exists...
+%     Params.File = [];                                                       % If not, set empty
+% end
+
 Fig.Background      = [0.6, 0.6, 0.6];                                      
 Fig.ButtonSize      = [0,0,60,60];
 
@@ -90,7 +109,7 @@ for p = 1:numel(Fig.PannelTitles)
                             'units','pixels',...
                             'position',[Fig.ButtonXPos(b), 10, 0, 0]+Fig.ButtonSize,...
                             'cdata', eval(sprintf('Icon.%s{1}',Fig.IconList{Fig.BIndx})),...
-                            'callback', {@RunFunction,Fig.BIndx},...
+                            'callback', {@TestFunction,Fig.BIndx},...
                             'TooltipString', Fig.ButtonTips{Fig.BIndx},...
                             'Parent',Fig.PannelHandle(p));
         Fig.BIndx = Fig.BIndx+1;
@@ -100,7 +119,8 @@ end
 
 
     %% ================== GUI BUTTON CALLBACK FUNCTIONS =======================
-    function RunFunction(hObj, event, indx)
+    function TestFunction(hObj, event, indx)
+        global Icon Fig Params
 
         %======= Toggle button icon
         if strcmpi(get(Fig.bh(indx), 'style'), 'togglebutton')
@@ -111,7 +131,6 @@ end
             end
         end
 
-        Params.File
         %======= Perform action
         eval(sprintf('%s(Params.File)', Fig.ButtonFunc{indx}));
 

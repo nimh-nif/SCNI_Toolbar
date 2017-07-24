@@ -27,12 +27,12 @@ if ~exist('ParamsFile','var')
 end
 [Params, Success]  = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
 
-
 %=========== Load default parameters
 if Success < 1                              % If the parameters could not be loaded...
     Params.TDT.UseSynapse           = 0;
     Params.TDT.UseOpenEX            = 1;
-    Params.TDT.IPaddress            = '159.40.249.29';
+    Params.TDT.Host_IP              = '159.40.249.29';
+    Params.TDT.RS4_IP               = '159.40.249.30';
     Params.TDT.Modes                = {'Idle','Standby','Preview','Record'};
   	Params.TDT.SubjectID            = 'Spice';
     Params.TDT.SpeciesIndx          = 3;
@@ -45,16 +45,19 @@ if Success < 1                              % If the parameters could not be loa
   	Params.TDT.Event.TrialEnd       = 8003;
     Params.TDT.Event.AutoReward     = 8004;
     Params.TDT.Event.ManualReward   = 8004;
+elseif Success > 1
+    return;
 end
 
 
 
+
 %========================= OPEN GUI WINDOW ================================
-Fig.Handle = figure;%(typecast(uint8('ENav'),'uint32'));               	% Assign GUI arbitrary integer   
+Fig.Handle          = figure;                                           % Assign GUI arbitrary integer   
 setappdata(0,GUItag,Fig.Handle);
-Fig.FontSize        = 14;
+Fig.FontSize        = 12;
 Fig.TitleFontSize   = 16;
-Fig.Rect            = [0 200 800 800];                               	% Specify figure window rectangle
+Fig.Rect            = [0 200 700 800];                               	% Specify figure window rectangle
 Fig.PannelSize      = [170, 650];                                       
 Fig.PannelElWidths  = [30, 120];
 set(Fig.Handle,     'Name','SCNI: TDT settings',...                     % Open a figure window with specified title
@@ -68,6 +71,8 @@ set(Fig.Handle,     'Name','SCNI: TDT settings',...                     % Open a
 Fig.Background  = get(Fig.Handle, 'Color');                           	% Get default figure background color
 Fig.Margin      = 20;                                                 	% Set margin between UI panels (pixels)                                 
 Fig.Fields      = fieldnames(Params);                                 	% Get parameter field names
+Fig.PannelNames	= {'', 'Synapse settings','Event codes'};
+Fig.PannelPos  	= {[],[20,140,340,500],[380,140,280,500]};
 
 
 %============= CREATE MAIN PANEL
@@ -82,29 +87,67 @@ alpha(imh, double(alphaMask/max(alphaMask(:))));
 axis off;
 
 Fig.SynapseURL  = 'http://www.tdt.com/files/manuals/SynapseAPIManual.pdf';
-Fig.OpenEXURL   = 
-if ~exist('SynapseAPI','file')
-    Params.TDT.SynapseTools = 0;
-else
-     Params.TDT.SynapseTools = 1;
-end
+Fig.OpenEXURL   = 'http://www.tdt.com/files/manuals/OpenDeveloper_Manual.pdf';
+Params.TDT.ClientSoftware = CheckClientSoftware;
 
 
-
-Fig.Labels  = {'Host software','Host IP address'};
-Fig.Options = {{'Synapse','OpenEX'}};
-Fig.Style   = {'PopupMenu','Edit','Text'};
-Fig.Values  = {Params.TDT.UseSynapse, Params.TDT.IPaddress, Params.TDT.CurrentMode};
+%============= Add uicontrols to main panel
+Fig.Detectionlabels = {'Not detected!','Detected'};
+Fig.Labels  = {'Host software','Host IP address','Client software','RS4 IP address'};
+Fig.Options = {{'Synapse','OpenEX'},Params.TDT.Host_IP, Fig.Detectionlabels{Params.TDT.ClientSoftware+1},Params.TDT.RS4_IP};
+Fig.Style   = {'PopupMenu','Edit','Text','Edit'};
+Fig.Values  = {Params.TDT.UseOpenEX+1, [], [], []};
 Fig.ModesColors = {[0.5,0.5,0.5],[1,0,0],[1,1,0],[0,1,0]};
 
+Ypos = 80;
 for n = 1:numel(Fig.Labels)
-    
-    
-    
+    uicontrol('Style', 'text','String', Fig.Labels{n}, 'position', [200, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.TopPanelHandle, 'Fontsize', Fig.FontSize);
+    Fig.P1.uih(n) = uicontrol('Style', Fig.Style{n},'String', Fig.Options{n}, 'value', Fig.Values{n}, 'position', [320, Ypos, 160, 20], 'HorizontalAlignment', 'left','callback',{@SystemSetting, n}, 'parent', Fig.TopPanelHandle, 'Fontsize', Fig.FontSize);
+    Ypos = Ypos-25;
 end
 
 
-Fig.PannelNames             = {'Host software',''};
+%============
+Fig.P2.Handle   = uipanel( 'Title',Fig.PannelNames{2},...
+                    'FontSize',Fig.TitleFontSize,...
+                    'BackgroundColor',Fig.Background,...
+                    'Units','pixels',...
+                    'Position', Fig.PannelPos{2},...
+                    'Parent',Fig.Handle); 
+Fig.P2.Labels   = {'Subject ID','Species','Server tank path'};
+Fig.P2.Strings  = {Params.TDT.SubjectID, Params.TDT.SpeciesList, Params.TDT.TankPath};
+Fig.P2.Values   = {[],Params.TDT.SpeciesIndx,[]};
+Fig.P2.Styles   = {'Edit','PopupMenu','Edit'};
+Ypos = 400;
+for n = 1:numel(Fig.P2.Labels)
+    uicontrol('Style', 'text','String', Fig.P2.Labels{n}, 'position', [20, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P2.Handle, 'Fontsize', Fig.FontSize);
+    Fig.P2.uih(n) = uicontrol('Style', Fig.P2.Styles{n},'String', Fig.P2.Strings{n}, 'value', Fig.P2.Values{n}, 'position', [160, Ypos, 160, 20], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P2.Handle, 'Fontsize', Fig.FontSize);
+    Ypos = Ypos-25;
+end
+
+
+%============
+Fig.P3.Handle   = uipanel( 'Title',Fig.PannelNames{3},...
+                    'FontSize',Fig.TitleFontSize,...
+                    'BackgroundColor',Fig.Background,...
+                    'Units','pixels',...
+                    'Position', Fig.PannelPos{3},...
+                    'Parent',Fig.Handle); 
+Fig.P3.Labels   = fieldnames(Params.TDT.Event);
+Fig.P3.Strings  = strtrim(cellstr(num2str((Params.TDT.StimRange(2)+(1:numel(Fig.P3.Labels))).')));
+Fig.P3.Values   = 1:numel(Fig.P3.Labels);
+Fig.P3.Styles   = 'PopupMenu';
+Ypos = 400;
+uicontrol('Style', 'text','String', 'Stimulus ID range', 'position', [20, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+Fig.P3.uih(1) = uicontrol('Style', 'Edit','String', num2str(Params.TDT.StimRange(1)), 'position', [160, Ypos, 50, 20], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+Fig.P3.uih(2) = uicontrol('Style', 'Edit','String', num2str(Params.TDT.StimRange(2)), 'position', [220, Ypos, 50, 20], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+Ypos = Ypos -25;
+for n = 1:numel(Fig.P3.Labels)
+    uicontrol('Style', 'text','String', Fig.P3.Labels{n}, 'position', [20, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+    Fig.P3.uih(n) = uicontrol('Style', Fig.P3.Styles,'String', Fig.P3.Strings, 'value', Fig.P3.Values(n), 'position', [160, Ypos, 100, 20], 'HorizontalAlignment', 'left','callback',{@EventCodes, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+    Ypos = Ypos-25;
+end
+
 
 
 %============= CREATE PANELS
@@ -189,35 +232,42 @@ ParamsOut = Params;
 
 
 %% ========================= UICALLBACK FUNCTIONS =========================
-    function ChannelUpdate(hObj, Evnt, Indx1, Indx2)
- 
-        %========== Update channel color code
-        Selection = get(hObj, 'value');
-        Channelnames = eval(Fig.AllPannelChannelnames{Indx1});
-        if strcmp(Channelnames{Selection},'None')
-            set(Fig.ChH(Indx1, Indx2), 'BackgroundColor', Fig.UnusedChanCol);
-        else
-            set(Fig.ChH(Indx1, Indx2), 'BackgroundColor', Fig.UsedChanCol);
-        end
+    function SystemSetting(hObj, Evnt, Indx)
         
-        %========== Update params
-        switch Indx1 
-            case 1  %========= ANALOG IN
-                Params.DPx.AnalogInAssign(Indx2) = Selection;
+        switch Indx
+            case 1      %==================== Change TDT host software
+                Params.TDT.UseOpenEX    = get(hObj, 'value')-1;
+                Params.TDT.UseSynapse   = ~Params.TDT.UseOpenEX;
+                Params.TDT.ClientSoftware  = CheckClientSoftware;
+                set(Fig.P1.uih(3), 'string', Fig.Detectionlabels{Params.TDT.ClientSoftware+1});
                 
-            case 2  %========= ANALOG OUT
-                Params.DPx.AnalogOutAssign(Indx2) = Selection;
-                
-            case 3  %========= DIGITAL IN
-                Params.DPx.DigitalInAssign(Indx2) = Selection;
-                
-            case 4  %========= DIGITAL OUT
-                Params.DPx.DigitalOutAssign(Indx2) = Selection;
-                
+            case 2
+                Params.TDT.Host_IP = get(hObj, 'string');
+            case 4
+                Params.TDT.RS4_IP = get(hObj, 'string');
         end
-       
     end
 
+    %================ Check whether client has necessary software
+    % installed for communication with server
+    function ClientSoftware = CheckClientSoftware
+        if ~exist('SynapseAPI','file')
+            Params.TDT.SoftwareTools(1) = 0;
+        else
+            Params.TDT.SoftwareTools(1) = 1;
+        end
+        if ~exist('actxcontrol','file')
+            Params.TDT.SoftwareTools(2) = 0;
+            if ~IsWin && Params.TDT.UseOpenEX == 1
+                WarningMsg = 'ActiveX server required for communication with TDT OpenEX is only available on Microsoft Windows!';
+                msgbox(WarningMsg,'Communication with OpenEX unavailable!','non-modal');
+            end
+        else
+            Params.TDT.SoftwareTools(2) = 1;
+        end
+        ClientSoftware = Params.TDT.SoftwareTools(Params.TDT.UseOpenEX+1);
+    end
+    
 
     %==================== OPTIONS
     function OptionSelect(Obj, Event, Indx)
@@ -255,7 +305,7 @@ ParamsOut = Params;
 
     %===============
     function Synapse(Params)
-        syn     = SynapseAPI(Params.TDT.IPaddress);                  	% create Synapse API connection
+        syn     = SynapseAPI(Params.TDT.Host_IP);                       % create Synapse API connection
         if syn.getMode() < 1,                                           % switch into a runtime mode (Preview in this case)
             syn.setMode(2);                                             % switch into a runtime mode (Preview in this case)
         end                       

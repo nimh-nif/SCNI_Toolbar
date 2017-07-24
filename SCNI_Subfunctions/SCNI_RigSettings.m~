@@ -111,6 +111,12 @@ else
     [~,ParamsFileName] = fileparts(Params.File);
 end     
 
+Logo    = imread('Logo_NIH.png');
+Fig.LogoH = axes('box','off','units','pixels','position', [20, 120, 110, 125],'color',Fig.Background,'parent',Fig.SystemHandle);
+image(Logo);
+alpha(Fig.LogoH, );
+axis off
+
 MissingDataColor    = [1,0,0];
 Xwidth              = [180, 260];
 Ypos                = BoxPos{1}(4)-Fig.Margin*2.5;

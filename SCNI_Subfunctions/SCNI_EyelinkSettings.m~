@@ -27,7 +27,9 @@ if ~exist('ParamsFile','var')
     ParamsFile = [];
 end
 [Params, Success]  = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
-
+if Success > 1
+    return;
+end
 
 if Success < 1
     Params.EL.active_eye                    = 'BOTH';                          	% set eye(s) to record
@@ -268,18 +270,7 @@ ParamsOut = Params;
         Eyelink('Shutdown');            % shut down tracker
     end
 
-    %========= Test EyeLink recording
-    function Success = TestEyelinkRecord()
-        Success = 0;
-        Eyelink('StartRecording');                              % Start EyeLink recording for test trial
-        WaitSecs(1);
-        if Eyelink('CheckRecording') ~=0                        % Check that EyeLink is recording
-            Eyelink('CheckRecording')
-            error('Problem with Eyelink!');
-            Success = ;
-        end
-        Eyelink('Stoprecording');                               % stop recording eye-movements
-    end
+
 
     %==================== DISPLAY EYE VIDEO IN PTB WINDOW
     function DisplayEye(win)
