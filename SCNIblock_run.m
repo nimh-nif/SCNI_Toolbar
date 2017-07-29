@@ -309,10 +309,10 @@ if c.UseDataPixx == 1
     PDS.Ts{c.Blocks.Number, c.Blocks.TrialNumber}       = NewDataTs;
     save(c.Matfilename, '-append', 'PDS','c','s');
     
-    if ~ishandle(s.fh)
-        s.fh = figure('name','Eye data');
-    end
-    PlotEyeData(NewData(1:6,:), s.fh);
+%     if ~isfield(s,'fh') || ~ishandle(s.fh)
+%         s.fh = figure('name','Eye data');
+%     end
+%     PlotEyeData(NewData(1:6,:), s.fh);
     
 end
 

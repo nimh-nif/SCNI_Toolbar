@@ -49,14 +49,18 @@ if Success < 1                              % If the parameters could not be loa
         Params.DPx.DigitalOutAssign = [1,5,5,5,5,5,5,5,5,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4];
     end
 elseif Success > 1
+    ParamsOut = Params;
     return;
 end
-
+if OpenGUI == 0
+    ParamsOut = Params;
+    return;
+end
 
 %========================= OPEN GUI WINDOW ================================          
 Fig.Handle          = figure;     
 setappdata(0,GUItag,Fig.Handle);
-Fig.FontSize        = 14;
+Fig.FontSize        = 12;
 Fig.TitleFontSize   = 16;
 Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
 Fig.PannelSize      = [170, 650];                                       

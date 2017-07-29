@@ -4,7 +4,7 @@ function [Params, Success] = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI
 % This function loads the requested parameter file if available, and
 % performs checks on GUI windows and filenames.
 
-Params          = [];
+Params.File   	= [];
 Success         = 0;
 GUIhandle       = getappdata(0,GUItag);                                  	% Check if GUI window is already open
 if ishghandle(GUIhandle)                                                    % If so...
@@ -34,13 +34,10 @@ if exist(Params.File,'file')                                                % If
     if OpenGUI == 0                                                         % If OpenGUI flag was zero...
         return;                                                             
     end
-else
-    Params.File = [];
 end
 if ~exist(Params.File,'file') || isempty(Fieldname) || ~isfield(Params, Fieldname)
     if ~exist(Params.File,'file')                                           
         WarningMsg = sprintf('The parameter file ''%s'' does not exist! Loading default parameters...', Params.File);
-        Params = [];
     elseif exist(Params.File,'file') && ~isfield(Params, Fieldname)
         WarningMsg = sprintf('The parameter file ''%s'' does not contain %s parameters. Loading default parameters...', Params.File, Fieldname);
         Success = -1;

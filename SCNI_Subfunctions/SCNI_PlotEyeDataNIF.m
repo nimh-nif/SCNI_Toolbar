@@ -13,11 +13,12 @@ function [s,c] = SCNI_PlotEyeData(EyePos, s, c)
 %
 %==========================================================================
 
-
-figure; plot(EyePos)
+persistent Cal
 
 %========= Check whether eye data figure window is already open
 if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
+    fprintf('First plot for SCNI_PlotEyeTrace.m\n')
+    StartTime = GetSecs;
     s.Fig.Background    = [0.9,0.9,0.9];
     s.Fig.Fontsize      = 14;
     s.Fig.GazeWinPos    = [1, 400, 1100, 600];
@@ -28,7 +29,7 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
     FirstPlot           = 1;
     
  	%========= Set default analysis parameters based on assumptions about reaction time
-    s.CurrentEye        = 1;                                % 1 = Left; 2 = Right; 3 = Version
+    c.Cal.CurrentEye        = 1;                                % 1 = Left; 2 = Right; 3 = Version
     s.Fig.EyeStrings    = {'Left eye','Right eye','Version (L+R)'};
     s.VoltageRange      = [-5, 5];                          % Range of ADC voltages (V)
     s.InitWinTimes      = [0, 0.1];                         % Time window of initial eye position (seconds from target onset)
@@ -45,9 +46,9 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
         c.Display.Rect      = [0,0,1920, 1080];
         c.Display.PixPerDeg	= [35, 35];
     end
- 	c.EyeInvertX        = 0;
-    c.EyeInvertY        = 0;
+ 	c.Cal.EyeInvert        = [0, 0];
 
+    
     %========= Parse input EyePos
     if nargin > 0
         NoEyeChannels      	= min(size(EyePos));
@@ -74,7 +75,7 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
 elseif isfield(s, 'Fig') && ishandle(s.Fig.Handle)
     c.EyePos    = EyePos;         	% Update eye position for current trial
     FirstPlot   = 0;              	% This is not the first trial to be plotted
-    figure(s.Fig.Handle);           % Make figure window active
+%     figure(s.Fig.Handle);           % Make figure window active
     delete(s.ph);                   % Delete plotted data from previous trial
     for n = 1:numel(s.Fig.bph)      % For each box plot handle...
         delete(s.Fig.bph{n});       % Delete box and whisker plots
@@ -85,6 +86,7 @@ c.Display.RectDeg   = c.Display.Rect([3,4])./c.Display.PixPerDeg;
 EpochWinSamples{1}  = (s.InitWinTimes(1)*c.adcRate)+1:(s.InitWinTimes(2)*c.adcRate);
 EpochWinSamples{2} 	= (s.SacWinTimes(1)*c.adcRate):(s.SacWinTimes(2)*c.adcRate);
 EpochWinSamples{3}  = (s.FixWinTimes(1)*c.adcRate):(s.FixWinTimes(2)*c.adcRate);
+
 
 
 %============== Generate simulated eye position data
@@ -105,17 +107,16 @@ if nargin == 0
     EyePos(:,601:(600+SaccadeDur)) = repmat(linspace(0, FinalOffset, SaccadeDur),[2,1]);
     EyePos(:,600+SaccadeDur+1:end) = (randn(2,(1000-600-SaccadeDur))*Variance)+repmat(FinalOffset, [2,(1000-600-SaccadeDur)]);
     EyePos      = EyePos+EyeOffset;
-    c.EyeGain   = [6.2, 6.4];
-    c.EyeOffset = [-0.5,0.8]; 
+    c.Cal.EyeGain   = [6.2, 6.4];
+    c.Cal.EyeOffset = [-0.5,0.8]; 
 
 else
     TargetDuration  = c.StimDuration;
     
 end
-c.EyePos            = EyePos;
+c.EyePosV            = EyePos;
 
-% s.Fig.CalibFilename = 'Test_calib.mat';
-s.Fig.CalibFilename = '/Volumes/projects/NIF/DataPixx/NIF/NIF_calib.mat';
+s.Fig.CalibFilename = 'NIF_calib.mat';
 
 %=================== PLOT NEW DATA
 if FirstPlot == 1
@@ -147,8 +148,8 @@ if FirstPlot == 1
     s.Fig.Axh(2).XColor = 'r';                                      % Set DVA axis color
     s.Fig.Axh(2).YColor = 'r';                                      % Set DVA axis color
   	axis tight                                                      
-    DVA_Xrange = (s.VoltageRange-c.EyeOffset(1))*c.EyeGain(1);      % Calculate range of possible DVA values from voltage range
-    DVA_Yrange = (s.VoltageRange-c.EyeOffset(2))*c.EyeGain(2);      % Calculate range of possible DVA values from voltage range
+    DVA_Xrange = (s.VoltageRange-c.Cal.EyeOffset(1))*c.Cal.EyeGain(1);      % Calculate range of possible DVA values from voltage range
+    DVA_Yrange = (s.VoltageRange-c.Cal.EyeOffset(2))*c.Cal.EyeGain(2);      % Calculate range of possible DVA values from voltage range
     set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);      % Set axis limits based on calculated range
   	xlabel(s.Fig.Axh(2),'X position (degrees)','fontsize', s.Fig.Fontsize);
     ylabel(s.Fig.Axh(2),'Y position (degrees)','fontsize', s.Fig.Fontsize);
@@ -161,8 +162,8 @@ if FirstPlot == 1
     daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);             % Set aspect ratio of plot in DVA
     
 else
-    DVA_Xrange = (s.VoltageRange-c.EyeOffset(1))*c.EyeGain(1);      % Calculate range of possible DVA values from voltage range
-    DVA_Yrange = (s.VoltageRange-c.EyeOffset(2))*c.EyeGain(2);      % Calculate range of possible DVA values from voltage range
+    DVA_Xrange = (s.VoltageRange-c.Cal.EyeOffset(1))*c.Cal.EyeGain(1);      % Calculate range of possible DVA values from voltage range
+    DVA_Yrange = (s.VoltageRange-c.Cal.EyeOffset(2))*c.Cal.EyeGain(2);      % Calculate range of possible DVA values from voltage range
     set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);      % Set axis limits based on calculated range
     daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);             % Set aspect ratio of plot in DVA
 end
@@ -200,7 +201,7 @@ if FirstPlot == 1
 else
     axes(s.Fig.Axh(4));
 end
-EyePosDist   = sqrt(c.EyePos(1,:).^2 + c.EyePos(2,:).^2);                      % Combine X and Y vectors into single position vector
+EyePosDist   = sqrt(c.EyePosV(1,:).^2 + c.EyePosV(2,:).^2);                      % Combine X and Y vectors into single position vector
 for n = 1:3
     s.Fig.bph{n} = boxplot(EyePosDist(:,EpochWinSamples{n}),'Notch','on','boxstyle','filled','colors',s.EpochColors(n,:));
     hold on
@@ -217,7 +218,7 @@ if FirstPlot == 1
     set(gca, 'xlim',[0.5, 3.5], 'xtick',1:3, 'xticklabel', s.EpochNames,'ylim',[0, s.VoltageRange(2)],'fontsize', s.Fig.Fontsize);
 end
 
-UpdatePlots;
+%UpdatePlots;
 
 %% ========================= ADD GUI CONTROLS =============================
 if FirstPlot == 1
@@ -227,8 +228,8 @@ if FirstPlot == 1
     s.Fig.EpochLabels   = {'Onset', 'Saccade', 'Fixation'};
     s.Fig.EpochValues   = {s.InitWinTimes, s.SacWinTimes, s.FixWinTimes};
     s.Fig.ButtonLabels  = {'Invert X','Invert Y'};
-    s.Fig.ButtonValues  = {c.EyeInvertX, c.EyeInvertY};
-    s.Fig.Values        = {c.EyeOffset, c.EyeGain, s.VoltageRange};
+    s.Fig.ButtonValues  = {c.Cal.EyeInvert(1), c.Cal.EyeInvert(2)};
+    s.Fig.Values        = {c.Cal.EyeOffset, c.Cal.EyeGain, s.VoltageRange};
     s.Fig.PanelHandle   = uipanel('Title','Eye tracker calibration',...
                         'FontSize', s.Fig.Fontsize+2,...
                         'BackgroundColor',s.Fig.Background,...
@@ -240,7 +241,7 @@ if FirstPlot == 1
     uicontrol('Style', 'text','String', 'Method', 'Position', [20, YposStart(1), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
     uicontrol('Style', 'Popup','String', {'Manual','Automated (time)','Automated (position)'}, 'Position', [110, YposStart(1), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeMethod});
     uicontrol('Style', 'text','String', 'Select eye', 'Position', [20, YposStart(2), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
-    s.Fig.EyeSelectH = uicontrol('Style', 'Popup','String', s.Fig.EyeStrings, 'Position', [110, YposStart(2), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeEye},'value', s.CurrentEye);
+    s.Fig.EyeSelectH = uicontrol('Style', 'Popup','String', s.Fig.EyeStrings, 'Position', [110, YposStart(2), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeEye},'value', c.Cal.CurrentEye);
     uicontrol('Style', 'text','String', 'X', 'Position', [120, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
     uicontrol('Style', 'text','String', 'Y', 'Position', [220, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
 
@@ -313,10 +314,19 @@ if FirstPlot == 1
     Ypos = Ypos - 25;
     uicontrol('Style', 'pushbutton','String','Load','Position', [20, Ypos, 100, 20],'Parent',s.Fig.PanelHandle3, 'HorizontalAlignment', 'left', 'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background, 'callback', {@CalibOutput, 1});
     uicontrol('Style', 'pushbutton','String','Save','Position', [140, Ypos, 100, 20],'Parent',s.Fig.PanelHandle3, 'HorizontalAlignment', 'left', 'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background, 'callback', {@CalibOutput, 2});
+
+    
+    
+    LoadCalibration(s.Fig.CalibFilename);   % Load previous calibration parameters
+    fprintf('First plot took %.2f seconds\n', GetSecs-StartTime);
+    
+elseif FirstPlot ~= 1 %======================== GET CURRENT PARAMETERS FROM GUI
+    
+%     [c,s] = UpdateValues(s);
+    UpdateValues
 end
 
-%============= Load previous calibration parameters
-% LoadCalibration(s.Fig.CalibFilename);
+
 
 
 %% ========================== SUBFUNCTIONS ================================
@@ -329,6 +339,20 @@ end
         elseif filled == 1
             set(h, 'facecolor', [rgb, alpha],'edgecolor','none');
         end
+    end
+
+    %================ Get current calibration parameters from GUI
+    function UpdateValues
+        for Indx1 = 1:3
+            for Indx2 = 1:2
+                s.Fig.Values{Indx1}(Indx2) = str2num(get(s.Fig.Edit(Indx1, Indx2), 'string'));
+            end
+        end
+        c.Cal.EyeOffset     = s.Fig.Values{1};
+        c.Cal.EyeGain       = s.Fig.Values{2};
+        s.VoltageRange      = s.Fig.Values{3};
+        c.Cal.EyeInvert  	= [get(s.Fig.ButtonH(1), 'value'), get(s.Fig.ButtonH(2), 'value')];
+        c.Cal.CurrentEye    = get(s.Fig.EyeSelectH, 'value');
     end
 
     %================ CHANGE METHOD
@@ -351,8 +375,8 @@ end
 
     %================ CHANGE EYE
     function ChangeEye(hObj, Event, Indx)
-        s.CurrentEye = get(hObj, 'value');
-        switch s.Fig.EyeStrings{s.CurrentEye}
+        c.Cal.CurrentEye = get(hObj, 'value');
+        switch s.Fig.EyeStrings{c.Cal.CurrentEye}
             case 'Left eye'
                 EyeData = EyePos(1:2,:);
             case 'Right eye'
@@ -371,36 +395,26 @@ end
 
     %================ INVERT EYE POSITION VOLTAGES
     function InvertAxis(hObj, Event, Indx)
-        if Indx == 1
-            c.EyeInvertX = get(hObj,'value');
-        elseif Indx == 2
-            c.EyeInvertY = get(hObj,'value');
-        end
-        if c.EyeInvertX == 1
+      	c.Cal.EyeInvert(Indx) = get(hObj,'value');
+        if c.Cal.EyeInvert(1) == 1
             set(s.Fig.Axh(1), 'Xdir', 'reverse');
-        elseif c.EyeInvertX == 0
+        elseif c.Cal.EyeInvert(1) == 0
             set(s.Fig.Axh(1), 'Xdir', 'normal');
         end
-        if c.EyeInvertY == 1
+        if c.Cal.EyeInvert(2) == 1
             set(s.Fig.Axh(1), 'Ydir', 'reverse');
-        elseif c.EyeInvertY == 0
+        elseif c.Cal.EyeInvert(2) == 0
             set(s.Fig.Axh(1), 'Ydir', 'normal');
         end 
         
     end
 
     %================ UPDATE CALIBRATION VALUES
-    function CalibUpdate(hObj, Event, Indx1, Indx2, Indx3)
+    function c = CalibUpdate(hObj, Event, Indx1, Indx2, Indx3)
         switch Indx1
              case 1     %============= New edit value was entered
                 String = get(hObj, 'String');
-    %             if Indx3 == 1 && str2num(String)< s.Fig.Values{Indx2}(2)
-    %                 s.Fig.Values{Indx2}(Indx3) = str2num(String);
-    %             elseif Indx3 == 2 && str2num(String)> s.Fig.Values{Indx2}(1)
-                    s.Fig.Values{Indx2}(Indx3) = str2num(String);
-    %             else
-    %                 
-    %             end
+              	s.Fig.Values{Indx2}(Indx3) = str2num(String);
 
              case 2     %============= Down arrow button was pressed
                 s.Fig.Values{Indx2}(Indx3) = s.Fig.Values{Indx2}(Indx3)-s.Fig.ChangeInc;
@@ -410,10 +424,11 @@ end
                 s.Fig.Values{Indx2}(Indx3) = s.Fig.Values{Indx2}(Indx3)+s.Fig.ChangeInc;
                 set(s.Fig.Edit(Indx2, Indx3), 'string', sprintf('%.2f', s.Fig.Values{Indx2}(Indx3)));
          end
-         c.EyeOffset    = s.Fig.Values{1};
-         c.EyeGain      = s.Fig.Values{2};
+         c.Cal.EyeOffset    = s.Fig.Values{1};
+         c.Cal.EyeGain      = s.Fig.Values{2};
          s.VoltageRange = s.Fig.Values{3};
          UpdatePlots;
+    
     end
 
     %================ UPDATE CALIBRATION PLOTS
@@ -429,8 +444,8 @@ end
         set(s.Fig.Axh(3), 'ylim', s.VoltageRange, 'ytick', VoltageTicks);
         set(s.Fig.Vcenter(1), 'xdata', s.VoltageRange);
         set(s.Fig.Vcenter(2), 'ydata', s.VoltageRange);
-        DVA_Xrange = (s.VoltageRange-c.EyeOffset(1))*c.EyeGain(1);
-        DVA_Yrange = (s.VoltageRange-c.EyeOffset(2))*c.EyeGain(2);
+        DVA_Xrange = (s.VoltageRange-c.Cal.EyeOffset(1))*c.Cal.EyeGain(1);
+        DVA_Yrange = (s.VoltageRange-c.Cal.EyeOffset(2))*c.Cal.EyeGain(2);
         set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);
         set(s.Fig.EpochH, 'Ydata', s.VoltageRange([1,2,2,1]));
         set(s.Fig.Axh(2), 'position', get(s.Fig.Axh(1),'position'));
@@ -478,10 +493,10 @@ end
         end
 
         if Indx2 == 3   % For fixation epoch update...
-            if s.CurrentEye <= 2
-                set(s.ph(7), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePos(s.Fig.EyeIndx{s.CurrentEye}(1),EpochWinSamples{3})),[1,2]));
-                set(s.ph(8), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePos(s.Fig.EyeIndx{s.CurrentEye}(2),EpochWinSamples{3})),[1,2]));
-            elseif s.CurrentEye == 3
+            if c.Cal.CurrentEye <= 2
+                set(s.ph(7), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePosV(s.Fig.EyeIndx{c.Cal.CurrentEye}(1),EpochWinSamples{3})),[1,2]));
+                set(s.ph(8), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePosV(s.Fig.EyeIndx{c.Cal.CurrentEye}(2),EpochWinSamples{3})),[1,2]));
+            elseif c.Cal.CurrentEye == 3
 
 
             end
@@ -494,11 +509,12 @@ end
     function UpdateBoxPlot(Indx)
         axes(s.Fig.Axh(4));
         delete(s.Fig.bph{Indx});
+        EyePosDist = sqrt(c.EyePosV(1,:).^2 + c.EyePosV(2,:).^2);
         s.Fig.bph{Indx} = boxplot(EyePosDist(:,EpochWinSamples{Indx}),'Notch','on','boxstyle','filled','colors',s.EpochColors(Indx,:));
         for ch = 1:numel(s.Fig.bph{Indx})
             set(s.Fig.bph{Indx}(ch), 'Xdata', get(s.Fig.bph{Indx}(ch), 'Xdata')+Indx-1);
         end
-        set(s.Fig.Axh(4),'xlim',[0.5, 3.5]);
+        set(s.Fig.Axh(4),'xlim',[0.5, 3.5],'ylim',[0, max(EyePosDist(:))],'xtick',1:3,'xticklabel',s.EpochNames);
     end
 
 
@@ -517,40 +533,34 @@ end
                 [file, path] = uiputfile('*.mat','Save calibration', CalibFilename);
                 s.Fig.Handle = [];
                 if file ~= 0
-                    CalibFilename = fullfile(path, file);
-                    SaveCalibration(CalibFilename);
+                    CalibFilename   = fullfile(path, file);
+                    UpdateValues;
+                    Cal.EyeGain     = c.Cal.EyeGain;
+                    Cal.EyeOffset   = c.Cal.EyeOffset;
+                    Cal.EyeInvert   = c.Cal.EyeInvert;
+                    Cal.CurrentEye  = c.Cal.CurrentEye;
+                    
+                    save(CalibFilename, 'Cal');
                 end
         end
 
     end
 
-    %=============== SAVE
-    function SaveCalibration(Filename)
-
-        save(Filename, 's','c');
-    end
-
     %=============== LOAD
     function LoadCalibration(Filename)
         set(s.Fig.MatfileH, 'string', Filename);
-        New = load(Filename);
-
-        s.CurrentEye        = New.s.CurrentEye;
-        set(s.Fig.EyeSelectH, 'value', s.CurrentEye);    
+        load(Filename);     
+        c.Cal = Cal;
+        s.Fig.Values = {c.Cal.EyeOffset, c.Cal.EyeGain, s.VoltageRange};
+        set(s.Fig.EyeSelectH, 'value', c.Cal.CurrentEye);    
         for n = 1:3
             for xy = 1:2
-                s.Fig.Values{n}(xy) = New.s.Fig.Values{n}(xy);
+                s.Fig.Values{n}(xy) = s.Fig.Values{n}(xy);
                 set(s.Fig.Edit(n, xy), 'String', sprintf('%.2f', s.Fig.Values{n}(xy)));
             end
         end
-        c.EyeInvertX = 0;
-        c.EyeInvertY = 0;
-        set(s.Fig.ButtonH(1),'value',c.EyeInvertX);
-        set(s.Fig.ButtonH(2),'value',c.EyeInvertY);
-
-      	c.EyeOffset    = s.Fig.Values{1};
-       	c.EyeGain      = s.Fig.Values{2};
-      	s.VoltageRange = s.Fig.Values{3};
+        set(s.Fig.ButtonH(1),'value',c.Cal.EyeInvert(1));
+        set(s.Fig.ButtonH(2),'value',c.Cal.EyeInvert(2));
         
         UpdatePlots;
 

@@ -16,7 +16,6 @@ GUItag      = 'SCNI_Toolbar';                                               % St
 Fieldname   = [];                             
 OpenGUI     = 1;
 [Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, [], OpenGUI);
-Params
 Fig.Background      = [0.6, 0.6, 0.6];                                      
 Fig.ButtonSize      = [0,0,60,60];
 
@@ -111,7 +110,6 @@ end
             end
         end
 
-        Params.File
         %======= Perform action
         eval(sprintf('%s(Params.File)', Fig.ButtonFunc{indx}));
 

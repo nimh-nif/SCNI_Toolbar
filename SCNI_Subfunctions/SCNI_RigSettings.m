@@ -173,9 +173,11 @@ TipStr = {  'Set the viewing distance in centimetres (distance from observer to 
             'Screen resolution per degree of visual angle', ...
             'Set the location to present a photodiode marker'};
 Tags        = {'VD','IPD','ScreenDim','Pixels','PixPerDeg','Photodiode'};
-Params.Rect         = Resolution;
-Params.PixPerCm   	= Params.Rect([3,4])./Params.ScreenDims;                         % Calculate number of pixels per centimetre
-Params.PixPerDeg 	= (Params.PixPerCm*Params.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
+if ~isfield(Params, 'Rect')
+    Params.Rect         = Resolution;
+    Params.PixPerCm   	= Params.Rect([3,4])./Params.ScreenDims;                         % Calculate number of pixels per centimetre
+    Params.PixPerDeg 	= (Params.PixPerCm*Params.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
+end
 PDpositions         = {'None','Bottom left','Top left','Top right','Bottom right'};
 DefaultAns          = {Params.ViewingDist,Params.IPD,Params.ScreenDims,Params.Rect([3,4]), Params.PixPerDeg,PDpositions};     
 
@@ -367,7 +369,7 @@ ParamsOut = Params;
 
             case {6,7}          %==============  Screen width/ height (pixels)
                 i = Indx-5;
-                Params.ScreenDims(i)    = str2num(get(hObj,'String'));
+                Params.Rect(i+2)        = str2num(get(hObj,'String'));
                 Params.PixPerCm(i)   	= Params.Rect(i+2)/Params.ScreenDims(i);                  % Calculate number of pixels per centimetre
                 Params.PixPerDeg(i)   	= (Params.PixPerCm(i)*Params.ViewingDist*tand(0.5))*2;  
                 set(Fig.GeomH{5}(i), 'string', num2str(Params.PixPerDeg(i)));
