@@ -448,6 +448,12 @@ if c.UseDataPixx == 1
     Datapixx('RegWrRd');                         % Synchronize Datapixx registers to local register cache
 
     %================== Start ADC for recording analog signals
+    Params              = SCNI_DatapixxSettings([],0);                                          % Load DataPixx parameters for this system
+    c.ADCchannels       = Params.DPx.AnalogInCh;                                                
+    c.ADCchannelLabels  = Params.DPx.AnalogInNames(Params.DPx.AnalogInAssign);                  % Get labels for all channels
+    UnusedIndx          = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'None')));   % Find ADC channels not assigned to inputs
+    c.ADCchannelsUsed   = find(Params.DPx.AnalogInAssign ~= UnusedIndx);                       	% Find ADC channels assigned to inputs
+    
 %     c.ADCchannels       = 5:13;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
 %     c.ADCchannelLabels  = {[],[],[],[],[],'Eye_X',[],[],[],'Eye_Y',[],[],[],'Eye_P',[],[],[],'Scanner'};  % Give each analog input a label
     c.ADCchannels       = 0:7;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 

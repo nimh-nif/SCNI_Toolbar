@@ -175,6 +175,7 @@ while GetSecs < c.StimOnTime + c.StimDuration
     StimOnTime = Screen('Flip', c.window);                                  % Present visual stimulus now
     if StimOn == 0                                                          % If stimulus was not previously on the screen...
         c.StimOnTime = StimOnTime;                                          % Record stimulus onset timestamp
+        SCNI_EventCode(c);
         StimOn = 1;                                                         % Change stimulus on flag
         fprintf('Stim on\n\n');
     end
