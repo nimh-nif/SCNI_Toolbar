@@ -35,16 +35,16 @@ if Success < 1                              % If the parameters could not be loa
     Params.DPx.UseAudio         = 0;                                                            % Is the audio signal being sent from the DataPixx2 box?
     Params.DPx.AnalogRate       = 1000;                                                         % ADC sample rate (Hz)
     Params.DPx.AnalogInCh       = 0:15;
-    Params.DPx.AnalogInNames    = {'Left eye X','Left eye Y','Left eye pupil','Right eye X','Right eye Y','Right eye pupil', 'Lever 1', 'Lever 2', 'Photodiode','Scanner TTL', 'None'};
+    Params.DPx.AnalogInNames    = {'Left eye X','Left eye Y','Left eye pupil','Right eye X','Right eye Y','Right eye pupil', 'Lever 1', 'Lever 2', 'Photodiode','Scanner TTL', 'None','Add new'};
     Params.DPx.AnalogInAssign   = [1,2,3,4,5,6,9,10,11,11,11,11,11,11,11,11];
     Params.DPx.AnalogOutCh      = 0:3;
-    Params.DPx.AnalogOutNames   = {'Reward','Audio','None'};
+    Params.DPx.AnalogOutNames   = {'Reward','Audio','None','Add new'};
     Params.DPx.AnalogOutAssign  = [1,3,3,3];
     Params.DPx.DigitalInCh      = 0:23;
-    Params.DPx.DigitalInNames   = {'Photodiode','Scanner TTL','Spikes','None'};
+    Params.DPx.DigitalInNames   = {'Photodiode','Scanner TTL','Spikes','None','Add new'};
     Params.DPx.DigitalInAssign  = [1,4,4,4];
     Params.DPx.DigitalOutCh     = 0:23;
-    Params.DPx.DigitalOutNames  = {'Reward','TDT port A','TDT port B','TDT port C','None'};
+    Params.DPx.DigitalOutNames  = {'Reward','TDT port A','TDT port B','TDT port C','None','Add new'};
     if Params.DPx.TDTonDOUT == 1
         Params.DPx.DigitalOutAssign = [1,5,5,5,5,5,5,5,5,3,3,3,3,3,3,3,3,4,4,4,4,4,4,4,4];
     end
@@ -162,7 +162,7 @@ for p = 1:numel(Fig.PannelNames)
         ChannelAssign(end+1:numel(ChannelList)) = NoneIndx;
         eval(sprintf('%s = ChannelAssign;', Fig.AllPannelChannelAssign{p}));
     end
-    
+     
     if p == 1
         uicontrol('Style', 'text','String','Sample rate (SPS)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
         uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set ADC sample rate (samples per second)');
@@ -224,6 +224,15 @@ ParamsOut = Params;
             set(Fig.ChH(Indx1, Indx2), 'BackgroundColor', Fig.UnusedChanCol);
         else
             set(Fig.ChH(Indx1, Indx2), 'BackgroundColor', Fig.UsedChanCol);
+        end
+        
+        %========== Add new option
+        if strcmpi(Fig.AllPannelChannelnames{Indx1}{Indx2},'Add new')
+            
+            
+            Fig.AllPannelChannelnames{Indx1}            = {Fig.AllPannelChannelnames{Indx1}(1:end-1), NewString, Fig.AllPannelChannelnames{Indx1}(end)};
+            Fig.AllPannelChannelAssign{Indx1}(Indx2)    = numel(Fig.AllPannelChannelnames{Indx1})-1;
+            set(Fig.h(Indx1, Indx2),'String',Fig.AllPannelChannelnames{Indx1},'value', Fig.AllPannelChannelAssign{Indx1}(Indx2));
         end
         
         %========== Update params
@@ -305,6 +314,7 @@ ParamsOut = Params;
                 if Filename == 0
                     return;
                 end
+
                 Params.File = fullfile(Pathname, Filename);
                 DPx     = Params.DPx;
                 File    = Params.File;

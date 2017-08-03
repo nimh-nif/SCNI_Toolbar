@@ -19,6 +19,7 @@ if ~exist('ParamsFile','var') || isempty(ParamsFile)                        % If
     [~, CompName] = system('hostname');                                     % Get the local computer's hostname
 	CompName(regexp(CompName, '\s')) = [];                                  % Remove white space
     Params.File = fullfile(Params.Dir, sprintf('%s.mat', CompName));        % Construct expected parameters filename
+    ParamsFile  = Params.File;
 else
     Params.File = ParamsFile;                                               
 end
@@ -27,20 +28,20 @@ if ~exist('OpenGUI','var')                                                  % If
 end
 if exist(Params.File,'file')                                                % If parameters file exists...
     Params      = load(Params.File);                                        % Load the parameters and assign to structure 'Params'
+    Params.File = ParamsFile;
     Success     = 1;
-    if ~isfield(Params,'File')                                              % If there is no 'file' field...
-        Params.File = Params.Params.File;                                   % Assign filename to field
-    end
     if OpenGUI == 0                                                         % If OpenGUI flag was zero...
         return;                                                             
     end
 end
-if ~exist(Params.File,'file') || isempty(Fieldname) || ~isfield(Params, Fieldname)
-    if ~exist(Params.File,'file')                                           
-        WarningMsg = sprintf('The parameter file ''%s'' does not exist! Loading default parameters...', Params.File);
-    elseif exist(Params.File,'file') && ~isfield(Params, Fieldname)
-        WarningMsg = sprintf('The parameter file ''%s'' does not contain %s parameters. Loading default parameters...', Params.File, Fieldname);
-        Success = -1;
+if ~isempty(Fieldname)
+    if ~exist(Params.File,'file') || ~isfield(Params, Fieldname)
+        if ~exist(Params.File,'file')                                           
+            WarningMsg = sprintf('The parameter file ''%s'' does not exist! Loading default parameters...', Params.File);
+        elseif exist(Params.File,'file') && ~isfield(Params, Fieldname)
+            WarningMsg = sprintf('The parameter file ''%s'' does not contain %s parameters. Loading default parameters...', Params.File, Fieldname);
+            Success = -1;
+        end
+        msgbox(WarningMsg,'Parameters not detected!','non-modal');
     end
-    msgbox(WarningMsg,'Parameters not detected!','non-modal');
 end
