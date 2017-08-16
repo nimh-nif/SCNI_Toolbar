@@ -1,1 +1,22 @@
-# SCNI Toolbox
+# SCNI Toolbar
+
+![SCNI Toolbar](https://user-images.githubusercontent.com/7523776/28806598-f6078df4-763e-11e7-8d4a-e6a2b8e97e10.png)
+
+The SCNI Toolbar is a library of Matlab / GNU Octave functions and graphical user interfaces (GUIs) that provide behavioural neurocientists with a simple and intuitive method of loading, editing, and saving parameters for a variety of systems involved in visual neurophysiology and neuroimaging experiments. More specifically, the toolbar is intended to be use din conjunction with experiments programmed using PsychToolbox extensions in Matlab/ GNU Octave, under the PLDAPS framework. Currently supported systems include:
+
+Visual stimulus presentation:
+
+* [PsychToolbox](http://psychtoolbox.org/)
+* [VPixx, DataPixx2](http://vpixx.com/products/tools-for-vision-sciences/display-drivers/datapixx2/)
+* [PLDAPS](https://github.com/HukLab/PLDAPS)
+
+Neurophysiology recording:
+
+* [Tucker Davis Technologies, OpenEx](http://www.tdt.com/openex.html)
+* [Tucker Davis Technologies, Synapse](http://www.tdt.com/Synapse/index.html)
+* [Open Ephys](http://www.open-ephys.org/)
+
+Behavioural control:
+
+* [SR Research, EyeLink](http://www.sr-research.com/)
+* [Arrington Research, ViewPoint](http://www.arringtonresearch.com/)
