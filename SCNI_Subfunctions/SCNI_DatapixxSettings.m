@@ -227,13 +227,13 @@ ParamsOut = Params;
         end
         
         %========== Add new option
-        if strcmpi(Fig.AllPannelChannelnames{Indx1}{Indx2},'Add new')
-            
-            
-            Fig.AllPannelChannelnames{Indx1}            = {Fig.AllPannelChannelnames{Indx1}(1:end-1), NewString, Fig.AllPannelChannelnames{Indx1}(end)};
-            Fig.AllPannelChannelAssign{Indx1}(Indx2)    = numel(Fig.AllPannelChannelnames{Indx1})-1;
-            set(Fig.h(Indx1, Indx2),'String',Fig.AllPannelChannelnames{Indx1},'value', Fig.AllPannelChannelAssign{Indx1}(Indx2));
-        end
+%         if strcmpi(Fig.AllPannelChannelnames{Indx1}{Indx2},'Add new')
+%             
+%             
+%             Fig.AllPannelChannelnames{Indx1}            = {Fig.AllPannelChannelnames{Indx1}(1:end-1), NewString, Fig.AllPannelChannelnames{Indx1}(end)};
+%             Fig.AllPannelChannelAssign{Indx1}(Indx2)    = numel(Fig.AllPannelChannelnames{Indx1})-1;
+%             set(Fig.h(Indx1, Indx2),'String',Fig.AllPannelChannelnames{Indx1},'value', Fig.AllPannelChannelAssign{Indx1}(Indx2));
+%         end
         
         %========== Update params
         switch Indx1 
