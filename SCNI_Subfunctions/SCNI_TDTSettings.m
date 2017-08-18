@@ -32,7 +32,7 @@ if Success < 1                              % If the parameters could not be loa
     Params.TDT.UseSynapse           = 0;
     Params.TDT.UseOpenEX            = 1;
     Params.TDT.Host_IP              = '156.40.249.112';
-    Params.TDT.RS4_IP               = '10.1.0.42';
+    Params.TDT.RS4_IP               = '156.40.249.101';
     Params.TDT.Modes                = {'Idle','Standby','Preview','Record'};
   	Params.TDT.SubjectID            = 'Spice';
     Params.TDT.SpeciesIndx          = 3;

@@ -68,7 +68,7 @@ Fig.Handle          = figure;
 setappdata(0,GUItag,Fig.Handle);
 Fig.FontSize        = 10;
 Fig.TitleFontSize   = 14;
-Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
+Fig.Rect            = [0 200 600 900];                               	% Specify figure window rectangle
 Fig.PannelSize      = [170, 650];                                       
 Fig.PannelElWidths  = [30, 120];
 Fig.MaxADCrate      = 200*10^3;                                         % Maximum sample rate of DataPixx2 ADC channels
@@ -143,7 +143,7 @@ for p = 1:numel(Fig.PannelNames)
     elseif p == 2
         BoxXpos(p) 	= BoxXpos(1);
         BoxYpos(p)  = BoxYpos(1)-160-20;
-        PannelSize  = [Fig.PannelSize(1), 170];
+        PannelSize  = [Fig.PannelSize(1), 160];
     else
       	BoxXpos(p) 	= Fig.Margin + (Fig.PannelSize(1)+Fig.Margin)*(p-2);
         BoxYpos(p)  = Fig.Rect(4)-Fig.PannelSize(2)-150;
@@ -170,12 +170,12 @@ for p = 1:numel(Fig.PannelNames)
     end
      
     if p == 1
-        uicontrol('Style', 'text','String','ADC rate (Hz)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
+        uicontrol('Style', 'text','String','ADC rate (SPS)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
         uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogInRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set ADC sample rate (samples per second)');
         Ypos = Ypos-25;
  	elseif p == 2
-        uicontrol('Style', 'text','String','DAC rate (Hz)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
-        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogOutRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set DAC sample rate (samples per second)');
+        uicontrol('Style', 'text','String','DAC rate (SPS)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
+        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogOutRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set ADC sample rate (samples per second)');
         Ypos = Ypos-25;
     end
     

@@ -3,7 +3,7 @@ function SCNI_SetBitsTDT(val)
 %========================= SCNI_SetBitsTDT.m ==============================
 % This function sets the appropriate bits on the digital output port of the
 % DataPixx2 in order to send event codes to the TDT RZ2 digital input when
-% the two are connected by a straight-through DB25 cable.
+% the two are directly connected by a straight-through DB25 cable.
 %
 % INPUTS:
 %   val:    an integer in the range 0 - (2^13)-1

@@ -436,8 +436,7 @@ end
 
 %===================== PREPARE DATAPIXX DAC
 if c.UseDataPixx == 1
-    Params = SCNI_DataPixxInit([]);
-
+    Params = SCNI_Data
     
     Datapixx('Open');
     Datapixx('StopAllSchedules');

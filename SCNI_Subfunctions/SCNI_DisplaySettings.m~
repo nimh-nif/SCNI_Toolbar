@@ -400,13 +400,19 @@ ParamsOut = Params;
     function SetExpColor(hObj, Evnt, Indx1, Indx2)
         Fields = fieldnames(Params.Display.Exp);
         switch Indx1
-            case 1 	%================ Toggle component visibility
+            case 1          %================ Toggle component visibility
+                Params.Display.ColorOn = get(hObj,'Value');
+                
+            case {2,4,6,8} 	%================ Update component color
+              
                 eval(sprintf('Params.Display.Exp.%s = get(hObj,''Value'');', Fields{Indx2}));
  
-            case 2  %================ Update component color
+            case {3,5,7,9}  %================ Update component value
+                ColorIndx = find([3,5,7,9]==Indx);
                 Color = uisetcolor;
                 set(hObj, 'Background', Color);
-                eval(sprintf('Params.Display.Exp.%s = Color;', Fields{(Indx1-1)*4+Indx2}));
+                Fields = fieldnames(Params.Display.Exp);
+                eval(sprintf('Params.Display.Exp.%s = Color;', Fields{ColorIndx}));
                 
         end
         Params.Display.Exp
