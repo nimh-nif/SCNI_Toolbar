@@ -29,7 +29,8 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
     FirstPlot           = 1;
     
  	%========= Set default analysis parameters based on assumptions about reaction time
-    c.Cal.CurrentEye        = 1;                                % 1 = Left; 2 = Right; 3 = Version
+    c.Cal.CurrentEye  	= 1;                                % 1 = Left; 2 = Right; 3 = Version
+    c.Cal.PlotStatus    = 1;                                % 1 = no plot updates; 2 = update every N trials; 3 = update every trial
     s.Fig.EyeStrings    = {'Left eye','Right eye','Version (L+R)'};
     s.VoltageRange      = [-5, 5];                          % Range of ADC voltages (V)
     s.InitWinTimes      = [0, 0.1];                         % Time window of initial eye position (seconds from target onset)
@@ -124,14 +125,15 @@ if FirstPlot == 1
 else
     axes(s.Fig.Axh(1));
 end
-
-s.ph(1) = plot(EyePos(1,:), EyePos(2,:),'-k','color', [0.5, 0.5, 0.5]);
-hold on;
-for n = 1:3
-    s.ph(n+1) = plot(EyePos(1,EpochWinSamples{n}), EyePos(2,EpochWinSamples{n}),'-k','color', [s.EpochColors(n,:),0.5]);
+if FirstPlot == 1 || c.Cal.PlotStatus ~= 1
+    s.ph(1) = plot(EyePos(1,:), EyePos(2,:),'-k','color', [0.5, 0.5, 0.5]);
+    hold on;
+    for n = 1:3
+        s.ph(n+1) = plot(EyePos(1,EpochWinSamples{n}), EyePos(2,EpochWinSamples{n}),'-k','color', [s.EpochColors(n,:),0.5]);
+    end
+    MedianFix = [median(EyePos(1,EpochWinSamples{n})), median(EyePos(2,EpochWinSamples{n}))];
+    s.ph(n+2) = DrawCircle(MedianFix, 0.5, [0 1 0], 0.3, 1);
 end
-MedianFix = [median(EyePos(1,EpochWinSamples{n})), median(EyePos(2,EpochWinSamples{n}))];
-s.ph(n+2) = DrawCircle(MedianFix, 0.5, [0 1 0], 0.3, 1);
 
 if FirstPlot == 1
     legend(s.ph(2:4), s.EpochNames, 'location', 'northwest','fontsize', s.Fig.Fontsize);
@@ -145,27 +147,27 @@ if FirstPlot == 1
     
     %========== Plot in DVA
     s.Fig.Axh(2) = axes('Position',get(s.Fig.Axh(1),'position'),'XAxisLocation','top','YAxisLocation','right','Color','none','tickdir','out');
-    s.Fig.Axh(2).XColor = 'r';                                      % Set DVA axis color
-    s.Fig.Axh(2).YColor = 'r';                                      % Set DVA axis color
+    s.Fig.Axh(2).XColor = 'r';                                              % Set DVA axis color
+    s.Fig.Axh(2).YColor = 'r';                                              % Set DVA axis color
   	axis tight                                                      
     DVA_Xrange = (s.VoltageRange-c.Cal.EyeOffset(1))*c.Cal.EyeGain(1);      % Calculate range of possible DVA values from voltage range
     DVA_Yrange = (s.VoltageRange-c.Cal.EyeOffset(2))*c.Cal.EyeGain(2);      % Calculate range of possible DVA values from voltage range
-    set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);      % Set axis limits based on calculated range
+    set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);              % Set axis limits based on calculated range
   	xlabel(s.Fig.Axh(2),'X position (degrees)','fontsize', s.Fig.Fontsize);
     ylabel(s.Fig.Axh(2),'Y position (degrees)','fontsize', s.Fig.Fontsize);
     grid on                                                         
     s.Fig.DisplayFrame = rectangle('position', [0,0,c.Display.RectDeg]-[c.Display.RectDeg,0,0]/2,'edgecolor',[1 0 0],'linewidth',2);
     hold on
-    s.Fig.DVAcenter(1) = plot(DVA_Xrange, [0 0], '--r');            % Draw cross-hairs to mark center of display (DVA)
-    s.Fig.DVAcenter(2) = plot([0 0], DVA_Yrange, '--r');            % Draw cross-hairs to mark center of display (DVA)
-    h = DrawCircle([0,0], 1, [0 0 0], 1, 0);                        % Draw circle to mark center of screen (0 DVA)
-    daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);             % Set aspect ratio of plot in DVA
+    s.Fig.DVAcenter(1) = plot(DVA_Xrange, [0 0], '--r');                    % Draw cross-hairs to mark center of display (DVA)
+    s.Fig.DVAcenter(2) = plot([0 0], DVA_Yrange, '--r');                    % Draw cross-hairs to mark center of display (DVA)
+    h = DrawCircle([0,0], 1, [0 0 0], 1, 0);                                % Draw circle to mark center of screen (0 DVA)
+    daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);                     % Set aspect ratio of plot in DVA
     
 else
     DVA_Xrange = (s.VoltageRange-c.Cal.EyeOffset(1))*c.Cal.EyeGain(1);      % Calculate range of possible DVA values from voltage range
     DVA_Yrange = (s.VoltageRange-c.Cal.EyeOffset(2))*c.Cal.EyeGain(2);      % Calculate range of possible DVA values from voltage range
-    set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);      % Set axis limits based on calculated range
-    daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);             % Set aspect ratio of plot in DVA
+    set(s.Fig.Axh(2), 'xlim', DVA_Xrange, 'ylim', DVA_Yrange);              % Set axis limits based on calculated range
+    daspect([1, diff(DVA_Yrange)/diff(DVA_Xrange), 1]);                     % Set aspect ratio of plot in DVA
 end
     
 %=================== EYE POSITION TIME COURSE
@@ -174,13 +176,15 @@ if FirstPlot == 1
 else
     axes(s.Fig.Axh(3));
 end
-s.Fig.TimeStamps = (1:size(EyePos,2))*c.adcRate/1000;
+if FirstPlot == 1 || c.Cal.PlotStatus ~= 1
+    s.Fig.TimeStamps = (1:size(EyePos,2))*c.adcRate/1000;
 
-s.ph(5) = plot(s.Fig.TimeStamps, EyePos(1,:),'-r','color',[1,0.5,0.5]);
-hold on;
-s.ph(6) = plot(s.Fig.TimeStamps, EyePos(2,:),'-b','color',[0.5,0.5,1]);
-s.ph(7) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(1,EpochWinSamples{3})),[1,2]),'-r','linewidth',2);
-s.ph(8) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(2,EpochWinSamples{3})),[1,2]),'-b','linewidth',2);
+    s.ph(5) = plot(s.Fig.TimeStamps, EyePos(1,:),'-r','color',[1,0.5,0.5]);
+    hold on;
+    s.ph(6) = plot(s.Fig.TimeStamps, EyePos(2,:),'-b','color',[0.5,0.5,1]);
+    s.ph(7) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(1,EpochWinSamples{3})),[1,2]),'-r','linewidth',2);
+    s.ph(8) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(2,EpochWinSamples{3})),[1,2]),'-b','linewidth',2);
+end
 if FirstPlot == 1
     xlabel('Time (ms)','fontsize', s.Fig.Fontsize);
     ylabel('Voltage (V)','fontsize', s.Fig.Fontsize);
@@ -201,21 +205,23 @@ if FirstPlot == 1
 else
     axes(s.Fig.Axh(4));
 end
-EyePosDist   = sqrt(c.EyePosV(1,:).^2 + c.EyePosV(2,:).^2);                      % Combine X and Y vectors into single position vector
-for n = 1:3
-    s.Fig.bph{n} = boxplot(EyePosDist(:,EpochWinSamples{n}),'Notch','on','boxstyle','filled','colors',s.EpochColors(n,:));
-    hold on
-    for ch = 1:numel(s.Fig.bph{n})
-        set(s.Fig.bph{n}(ch), 'Xdata', get(s.Fig.bph{n}(ch), 'Xdata')+n-1);
+if FirstPlot == 1 || c.Cal.PlotStatus ~= 1
+    EyePosDist   = sqrt(c.EyePosV(1,:).^2 + c.EyePosV(2,:).^2);                      % Combine X and Y vectors into single position vector
+    for n = 1:3
+        s.Fig.bph{n} = boxplot(EyePosDist(:,EpochWinSamples{n}),'Notch','on','boxstyle','filled','colors',s.EpochColors(n,:));
+        hold on
+        for ch = 1:numel(s.Fig.bph{n})
+            set(s.Fig.bph{n}(ch), 'Xdata', get(s.Fig.bph{n}(ch), 'Xdata')+n-1);
+        end
+        set(s.Fig.bph{n}(5), 'color', [0,0,0]);
+        set(s.Fig.bph{n}(6), 'color', [0,0,0], 'linewidth', 2);
     end
-	set(s.Fig.bph{n}(5), 'color', [0,0,0]);
-	set(s.Fig.bph{n}(6), 'color', [0,0,0], 'linewidth', 2);
-end
-set(gca, 'xlim',[0.5, 3.5]);
-if FirstPlot == 1
-    grid on;
-    ylabel('Distance from target (V)','fontsize', s.Fig.Fontsize)
-    set(gca, 'xlim',[0.5, 3.5], 'xtick',1:3, 'xticklabel', s.EpochNames,'ylim',[0, s.VoltageRange(2)],'fontsize', s.Fig.Fontsize);
+    set(gca, 'xlim',[0.5, 3.5]);
+    if FirstPlot == 1
+        grid on;
+        ylabel('Distance from target (V)','fontsize', s.Fig.Fontsize)
+        set(gca, 'xlim',[0.5, 3.5], 'xtick',1:3, 'xticklabel', s.EpochNames,'ylim',[0, s.VoltageRange(2)],'fontsize', s.Fig.Fontsize);
+    end
 end
 
 %UpdatePlots;
@@ -237,15 +243,17 @@ if FirstPlot == 1
                         'Position',s.Fig.PannelPos,...
                         'Parent', s.Fig.Handle); 
 
-   	YposStart = [280,255,230];
+   	YposStart = [280,255,230,205];
     uicontrol('Style', 'text','String', 'Method', 'Position', [20, YposStart(1), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
     uicontrol('Style', 'Popup','String', {'Manual','Automated (time)','Automated (position)'}, 'Position', [110, YposStart(1), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeMethod});
     uicontrol('Style', 'text','String', 'Select eye', 'Position', [20, YposStart(2), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
     s.Fig.EyeSelectH = uicontrol('Style', 'Popup','String', s.Fig.EyeStrings, 'Position', [110, YposStart(2), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangeEye},'value', c.Cal.CurrentEye);
-    uicontrol('Style', 'text','String', 'X', 'Position', [120, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
-    uicontrol('Style', 'text','String', 'Y', 'Position', [220, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
+    uicontrol('Style', 'text','String', 'Plot update', 'Position', [20, YposStart(3), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'backgroundcolor', s.Fig.Background);
+    uicontrol('Style', 'Popup','String', {'Off','Every 10 trials','Every trial'}, 'Position', [110, YposStart(3), 160, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize,'Callback',{@ChangePlotUdpate});
+    uicontrol('Style', 'text','String', 'X', 'Position', [120, YposStart(4), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
+    uicontrol('Style', 'text','String', 'Y', 'Position', [220, YposStart(4), 80, 20], 'HorizontalAlignment', 'left', 'Parent', s.Fig.PanelHandle,'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
 
-    Ypos = YposStart(3)-20;
+    Ypos = YposStart(4)-20;
     for n = 1:numel(s.Fig.Labels)
         uicontrol('Style', 'text','String',s.Fig.Labels{n},'Position', [20, Ypos, 100, 20],'Parent',s.Fig.PanelHandle, 'HorizontalAlignment', 'left', 'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
         Xpos = 120;
@@ -279,6 +287,9 @@ if FirstPlot == 1
         s.Fig.ButtonH(n) = uicontrol('Style', 'ToggleButton', 'String', s.Fig.ButtonLabels{n}, 'value', s.Fig.ButtonValues{n} ,'Position', [Xpos,Ypos,80,20],'Parent',s.Fig.PanelHandle,'HorizontalAlignment', 'left','FontSize', s.Fig.Fontsize,'Callback',{@InvertAxis,n});
         Xpos = Xpos + 100;
     end
+  	set(s.Fig.Edit, 'enable', 'on');
+    set(s.Fig.Arrow, 'enable', 'on');
+    set(s.Fig.TimeRange, 'enable', 'off');
     
     
     %============= STATUS PANNEL
@@ -298,6 +309,7 @@ if FirstPlot == 1
         s.Fig.StatusString(n) = uicontrol('Style', 'text','String',sprintf(s.Fig.StringFormat{n}, s.Fig.Values2{n}),'Position', [150, Ypos, 100, 20],'Parent',s.Fig.PanelHandle2, 'HorizontalAlignment', 'left', 'FontSize', s.Fig.Fontsize, 'backgroundcolor', s.Fig.Background);
         Ypos = Ypos - 25;
     end
+    
     
     %============= OUTPUT PANNEL
     s.Fig.PannelPos3    = [0.66,0.02,0.33,0.15];
@@ -323,7 +335,9 @@ if FirstPlot == 1
 elseif FirstPlot ~= 1 %======================== GET CURRENT PARAMETERS FROM GUI
     
 %     [c,s] = UpdateValues(s);
-    UpdateValues
+    if c.Cal.PlotStatus ~= 1
+        UpdateValues
+    end
 end
 
 
@@ -392,6 +406,21 @@ end
         end
 
     end
+
+    %================ 
+    function ChangePlotUdpate(hObj, Event, Indx)
+        c.Cal.PlotStatus = get(hObj, 'value');
+        switch c.Cal.PlotStatus
+            case 1  %================= Plot updates off
+                set(s.Fig.Axh, 'visible','off');
+            case 2  %================= Update plot every N trials
+                
+            case 3  %================= Update plot every trial
+                set(s.Fig.Axh, 'visible','on');
+        end
+        
+    end
+
 
     %================ INVERT EYE POSITION VOLTAGES
     function InvertAxis(hObj, Event, Indx)

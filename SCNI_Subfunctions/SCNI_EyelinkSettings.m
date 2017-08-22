@@ -276,7 +276,6 @@ ParamsOut = Params;
         if Eyelink('CheckRecording') ~=0                        % Check that EyeLink is recording
             Eyelink('CheckRecording')
             error('Problem with Eyelink!');
-            Success = ;
         end
         Eyelink('Stoprecording');                               % stop recording eye-movements
     end
