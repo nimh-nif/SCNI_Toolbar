@@ -26,7 +26,9 @@ end
 if ~exist('ParamsFile','var')
     ParamsFile = [];
 end
-[Params, Success]  = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+[Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+Fig.ScreenSize    	= get(0,'screensize');
+Fig.DisplayScale    = Fig.ScreenSize(4)/1080;
 
 %=========== Load default parameters
 if Success < 1                              % If the parameters could not be loaded...
@@ -66,11 +68,16 @@ end
 %========================= OPEN GUI WINDOW ================================          
 Fig.Handle          = figure;     
 setappdata(0,GUItag,Fig.Handle);
-Fig.FontSize        = 10;
-Fig.TitleFontSize   = 14;
-Fig.Rect            = [0 200 600 860];                               	% Specify figure window rectangle
-Fig.PannelSize      = [170, 650];                                       
-Fig.PannelElWidths  = [30, 120];
+if Fig.DisplayScale <= 1
+    Fig.FontSize        = 10;
+    Fig.TitleFontSize   = 14;
+else
+	Fig.FontSize        = 18;
+    Fig.TitleFontSize   = 24;
+end
+Fig.Rect            = [0 200 600 860]*Fig.DisplayScale;              	% Specify figure window rectangle
+Fig.PannelSize      = [170, 650]*Fig.DisplayScale;                                       
+Fig.PannelElWidths  = [20, 120]*Fig.DisplayScale;
 Fig.MaxADCrate      = 200*10^3;                                         % Maximum sample rate of DataPixx2 ADC channels
 Fig.DataPixxURL   	= 'http://www.vpixx.com/manuals/psychtoolbox/html/intro.html';
 set(Fig.Handle,     'Name','SCNI: Datapixx settings',...              	% Open a figure window with specified title
@@ -82,17 +89,17 @@ set(Fig.Handle,     'Name','SCNI: Datapixx settings',...              	% Open a 
                     'Menu','none',...                                   % Turn off memu
                     'Toolbar','none');                                  % Turn off toolbars to save space
 Fig.Background      = get(Fig.Handle, 'Color');                      	% Get default figure background color
-Fig.Margin          = 20;                                             	% Set margin between UI panels (pixels)                                 
+Fig.Margin          = 20*Fig.DisplayScale;                            	% Set margin between UI panels (pixels)                                 
 Fig.Fields          = fieldnames(Params);                              	% Get parameter field names
 
 
 %============= CREATE MAIN PANEL
 Fig.TopPanelHandle  = uipanel('BackgroundColor',Fig.Background,...       
                     'Units','pixels',...
-                    'Position',[20, Fig.Rect(4)-120-20, Fig.Rect(3)-50, 110],...
+                    'Position',[20*Fig.DisplayScale, Fig.Rect(4)-(120+20)*Fig.DisplayScale, Fig.Rect(3)-50*Fig.DisplayScale, 110*Fig.DisplayScale],...
                     'Parent',Fig.Handle); 
 Fig.Logo            = imread('Logo_VPixx.png');
-Fig.LogoAx          = axes('box','off','units','pixels','position', [10, 10+30, 246, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle,'ButtonDownFcn', @OpenWebpage);
+Fig.LogoAx          = axes('box','off','units','pixels','position', [10, 10+30, 246, 60]*Fig.DisplayScale,'color',Fig.Background, 'Parent', Fig.TopPanelHandle,'ButtonDownFcn', @OpenWebpage);
 image(Fig.Logo,'ButtonDownFcn', @OpenWebpage);
 axis off;
 if ~exist('Datapixx.m','file')
@@ -111,13 +118,13 @@ Fig.MainResults     = {Params.DPx.Installed, Params.DPx.Connected, Params.DPx.TD
 Fig.DetectionColors = [1,0,0; 0,1,0];
 for n = 1:numel(Fig.MainStrings)
     if n < 4
-        Ypos = 110-(20*n)-10;
-        Fig.Mh(n) = uicontrol('Style', 'checkbox','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [280,Ypos, 200,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','fontsize', Fig.FontSize);
-        Fig.Mdh(n) = uicontrol('Style', 'text','String','','Position', [490,Ypos+2, 18,18],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','backgroundcolor', Fig.DetectionColors(Fig.MainResults{n}+1,:));
+        Ypos = 110*Fig.DisplayScale-(20*n*Fig.DisplayScale)-10*Fig.DisplayScale;
+        Fig.Mh(n) = uicontrol('Style', 'checkbox','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [280*Fig.DisplayScale,Ypos, 200*Fig.DisplayScale,20*Fig.DisplayScale],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','fontsize', Fig.FontSize);
+        Fig.Mdh(n) = uicontrol('Style', 'text','String','','Position', [490*Fig.DisplayScale,Ypos+2*Fig.DisplayScale, 18*Fig.DisplayScale,18*Fig.DisplayScale],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','backgroundcolor', Fig.DetectionColors(Fig.MainResults{n}+1,:));
     else
-        Ypos = 105-(20*4)-15;
-        Xpos = 10+(n-4)*130;
-        Fig.Mh(n) = uicontrol('Style', 'ToggleButton','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [Xpos,Ypos, 120,20],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left');
+        Ypos = [105-(20*4)-15]*Fig.DisplayScale;
+        Xpos = [10+(n-4)*130]*Fig.DisplayScale;
+        Fig.Mh(n) = uicontrol('Style', 'ToggleButton','String',Fig.MainStrings{n},'value', Fig.MainResults{n},'Position', [Xpos,Ypos, 120*Fig.DisplayScale,20*Fig.DisplayScale],'Parent',Fig.TopPanelHandle,'HorizontalAlignment', 'left','fontsize', Fig.FontSize);
     end
 end
 set(Fig.Mh(1:2),'enable','off');
@@ -138,15 +145,15 @@ Fig.AllPannelChannelAssign  = {'Params.DPx.AnalogInAssign','Params.DPx.AnalogOut
 for p = 1:numel(Fig.PannelNames)
     if p == 1
         BoxXpos(p) 	= Fig.Margin + (Fig.PannelSize(1)+Fig.Margin)*(p-1);
-        BoxYpos(p)  = Fig.Rect(4)-470-150;
-        PannelSize  = [Fig.PannelSize(1), 470];
+        BoxYpos(p)  = Fig.Rect(4)-(470+150)*Fig.DisplayScale;
+        PannelSize  = [Fig.PannelSize(1), 470*Fig.DisplayScale];
     elseif p == 2
         BoxXpos(p) 	= BoxXpos(1);
-        BoxYpos(p)  = BoxYpos(1)-160-20;
-        PannelSize  = [Fig.PannelSize(1), 170];
+        BoxYpos(p)  = BoxYpos(1)-(160+20)*Fig.DisplayScale;
+        PannelSize  = [Fig.PannelSize(1), 170*Fig.DisplayScale];
     else
       	BoxXpos(p) 	= Fig.Margin + (Fig.PannelSize(1)+Fig.Margin)*(p-2);
-        BoxYpos(p)  = Fig.Rect(4)-Fig.PannelSize(2)-150;
+        BoxYpos(p)  = Fig.Rect(4)-Fig.PannelSize(2)-150*Fig.DisplayScale;
         PannelSize  = Fig.PannelSize;
     end
     PannelPos{p}    = [BoxXpos(p), BoxYpos(p), PannelSize]; 
@@ -170,25 +177,25 @@ for p = 1:numel(Fig.PannelNames)
     end
      
     if p == 1
-        uicontrol('Style', 'text','String','ADC rate (Hz)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
-        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogInRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set ADC sample rate (samples per second)');
-        Ypos = Ypos-25;
+        uicontrol('Style', 'text','String','ADC rate (Hz)', 'Position', [Fig.Margin,Ypos,100*Fig.DisplayScale,20*Fig.DisplayScale],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','fontsize', Fig.FontSize);
+        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogInRate),'Position', [Fig.Margin+90*Fig.DisplayScale,Ypos,50*Fig.DisplayScale,20*Fig.DisplayScale],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set ADC sample rate (samples per second)','fontsize', Fig.FontSize);
+        Ypos = Ypos-25*Fig.DisplayScale;
  	elseif p == 2
-        uicontrol('Style', 'text','String','DAC rate (Hz)', 'Position', [Fig.Margin,Ypos,100,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
-        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogOutRate),'Position', [Fig.Margin+90,Ypos,50,20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set DAC sample rate (samples per second)');
-        Ypos = Ypos-25;
+        uicontrol('Style', 'text','String','DAC rate (Hz)', 'Position', [Fig.Margin,Ypos,100*Fig.DisplayScale,20*Fig.DisplayScale],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','fontsize', Fig.FontSize);
+        uicontrol('Style', 'edit','String',num2str(Params.DPx.AnalogOutRate),'Position', [Fig.Margin+90*Fig.DisplayScale,Ypos,50*Fig.DisplayScale,20*Fig.DisplayScale],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','callback',@SetSampleRate,'Tooltip','Set DAC sample rate (samples per second)','fontsize', Fig.FontSize);
+        Ypos = Ypos-25*Fig.DisplayScale;
     end
     
     %============= CREATE FIELDS
     for n = 1:numel(ChannelList)
-        Fig.ChH(p,n) = uicontrol('Style', 'text','String',num2str(ChannelList(n)),'Position', [Fig.Margin,Ypos,Fig.PannelElWidths(1),20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left');
-        Fig.h(p,n) = uicontrol('Style', 'popup','String',ChannelNames,'value', ChannelAssign(n), 'Position', [Fig.PannelElWidths(1)+10,Ypos,Fig.PannelElWidths(2),20],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','Callback',{@ChannelUpdate,p,n});
+        Fig.ChH(p,n) = uicontrol('Style', 'text','String',num2str(ChannelList(n)),'Position', [Fig.Margin,Ypos,Fig.PannelElWidths(1),20*Fig.DisplayScale],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','fontsize', Fig.FontSize);
+        Fig.h(p,n) = uicontrol('Style', 'popup','String',ChannelNames,'value', ChannelAssign(n), 'Position', [Fig.Margin+Fig.PannelElWidths(1),Ypos,Fig.PannelElWidths(2),20*Fig.DisplayScale],'Parent',Fig.PanelHandle(p),'HorizontalAlignment', 'left','Callback',{@ChannelUpdate,p,n},'fontsize', Fig.FontSize);
         if strfind(ChannelNames{ChannelAssign(n)}, 'None')
             set(Fig.ChH(p,n), 'BackgroundColor', Fig.UnusedChanCol);
         else
             set(Fig.ChH(p,n), 'BackgroundColor', Fig.UsedChanCol);
         end
-        Ypos = Ypos-25;
+        Ypos = Ypos-25*Fig.DisplayScale;
     end
 end
 if Params.DPx.TDTonDOUT == 1
@@ -198,7 +205,7 @@ end
 
 %================= OPTIONS PANEL
 Fig.OptionLabel     = {'Load','Save','Continue','Help'};
-Fig.OptionPosition  = {[Fig.Margin,20,100,30], [140,20,100,30],[260,20,100,30],[380,20,100,30]};
+Fig.OptionPosition  = {[20,20,100,30], [140,20,100,30],[260,20,100,30],[380,20,100,30]};
 Fig.OptionTip       = {'Load settings','Save settings','Exit','Open DataPixx help page'};
 for n = 1:numel(Fig.OptionLabel)
     uicontrol(  'Style', 'pushbutton',...
@@ -206,7 +213,7 @@ for n = 1:numel(Fig.OptionLabel)
                 'parent', Fig.Handle,...
                 'tag','Load',...
                 'units','pixels',...
-                'Position', Fig.OptionPosition{n},...
+                'Position', Fig.OptionPosition{n}*Fig.DisplayScale,...
                 'TooltipString', Fig.OptionTip{n},...
                 'FontSize', Fig.FontSize, ...
                 'HorizontalAlignment', 'left',...

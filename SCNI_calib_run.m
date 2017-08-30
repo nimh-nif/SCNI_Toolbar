@@ -252,7 +252,7 @@ if c.UseDataPixx == 1
     PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
     save(c.Matfilename, '-append', 'PDS','c','s');
     
-    [s, c] = SCNI_PlotEyeData(NewData(4:5,:), s, c);
+    [s, c] = SCNI_PlotEyeDataNIF(NewData(4:5,:), s, c);
     %[s, c] = PlotEyeData(NewData(1:6,:), s, c);
 end
 

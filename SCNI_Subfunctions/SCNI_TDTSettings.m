@@ -25,7 +25,9 @@ end
 if ~exist('ParamsFile','var')
     ParamsFile = [];
 end
-[Params, Success]  = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+[Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+Fig.ScreenSize    	= get(0,'screensize');
+Fig.DisplayScale    = Fig.ScreenSize(4)/1080;
 
 %=========== Load default parameters
 if Success < 1                              % If the parameters could not be loaded...
@@ -55,11 +57,16 @@ end
 %========================= OPEN GUI WINDOW ================================
 Fig.Handle          = figure;                                           % Assign GUI arbitrary integer   
 setappdata(0,GUItag,Fig.Handle);
-Fig.FontSize        = 12;
-Fig.TitleFontSize   = 16;
-Fig.Rect            = [0 200 700 800];                               	% Specify figure window rectangle
-Fig.PannelSize      = [170, 650];                                       
-Fig.PannelElWidths  = [30, 120];
+if Fig.DisplayScale <= 1
+    Fig.FontSize        = 12;
+    Fig.TitleFontSize   = 16;
+else
+    Fig.FontSize        = 18;
+    Fig.TitleFontSize   = 24;
+end
+Fig.Rect            = [0 200 700 800]*Fig.DisplayScale;              	% Specify figure window rectangle
+Fig.PannelSize      = [170, 650]*Fig.DisplayScale;                                       
+Fig.PannelElWidths  = [30, 120]*Fig.DisplayScale;
 set(Fig.Handle,     'Name','SCNI: TDT settings',...                     % Open a figure window with specified title
                     'Tag','SCNI_TDTSettings',...                        % Set figure tag
                     'Renderer','OpenGL',...                             % Use OpenGL renderer
@@ -69,7 +76,7 @@ set(Fig.Handle,     'Name','SCNI: TDT settings',...                     % Open a
                     'Menu','none',...                                   % Turn off memu
                     'Toolbar','none');                                  % Turn off toolbars to save space
 Fig.Background  = get(Fig.Handle, 'Color');                           	% Get default figure background color
-Fig.Margin      = 20;                                                 	% Set margin between UI panels (pixels)                                 
+Fig.Margin      = 20*Fig.DisplayScale;                               	% Set margin between UI panels (pixels)                                 
 Fig.Fields      = fieldnames(Params);                                 	% Get parameter field names
 Fig.PannelNames	= {'', 'Synapse settings','Event codes'};
 Fig.PannelPos  	= {[],[20,140,340,500],[380,140,280,500]};
@@ -78,10 +85,10 @@ Fig.PannelPos  	= {[],[20,140,340,500],[380,140,280,500]};
 %============= CREATE MAIN PANEL
 Fig.TopPanelHandle  = uipanel('BackgroundColor',Fig.Background,...       
                     'Units','pixels',...
-                    'Position',[20, Fig.Rect(4)-120-20, Fig.Rect(3)-50, 110],...
+                    'Position',[Fig.Margin, Fig.Rect(4)-(120+20)*Fig.DisplayScale, Fig.Rect(3)-50*Fig.DisplayScale, 110*Fig.DisplayScale],...
                     'Parent',Fig.Handle); 
 [Fig.Logo, cm, alphaMask] = imread('Logo_TDT.png');
-Fig.LogoAx    	= axes('box','off','units','pixels','position', [20, 20, 156, 60],'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
+Fig.LogoAx    	= axes('box','off','units','pixels','position', [20, 20, 156, 60]*Fig.DisplayScale,'color',Fig.Background, 'Parent', Fig.TopPanelHandle);
 imh         	= image(Fig.Logo);
 alpha(imh, double(alphaMask/max(alphaMask(:))));
 axis off;
@@ -99,11 +106,11 @@ Fig.Style   = {'PopupMenu','Edit','Text','Edit'};
 Fig.Values  = {Params.TDT.UseOpenEX+1, [], [], []};
 Fig.ModesColors = {[0.5,0.5,0.5],[1,0,0],[1,1,0],[0,1,0]};
 
-Ypos = 80;
+Ypos = 80*Fig.DisplayScale;
 for n = 1:numel(Fig.Labels)
-    uicontrol('Style', 'text','String', Fig.Labels{n}, 'position', [200, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.TopPanelHandle, 'Fontsize', Fig.FontSize);
-    Fig.P1.uih(n) = uicontrol('Style', Fig.Style{n},'String', Fig.Options{n}, 'value', Fig.Values{n}, 'position', [320, Ypos, 160, 20], 'HorizontalAlignment', 'left','callback',{@SystemSetting, n}, 'parent', Fig.TopPanelHandle, 'Fontsize', Fig.FontSize);
-    Ypos = Ypos-25;
+    uicontrol('Style', 'text','String', Fig.Labels{n}, 'position', [200*Fig.DisplayScale, Ypos, 120*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.TopPanelHandle, 'Fontsize', Fig.FontSize);
+    Fig.P1.uih(n) = uicontrol('Style', Fig.Style{n},'String', Fig.Options{n}, 'value', Fig.Values{n}, 'position', [320*Fig.DisplayScale, Ypos, 160*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','callback',{@SystemSetting, n}, 'parent', Fig.TopPanelHandle, 'Fontsize', Fig.FontSize);
+    Ypos = Ypos-25*Fig.DisplayScale;
 end
 
 
@@ -112,17 +119,17 @@ Fig.P2.Handle   = uipanel( 'Title',Fig.PannelNames{2},...
                     'FontSize',Fig.TitleFontSize,...
                     'BackgroundColor',Fig.Background,...
                     'Units','pixels',...
-                    'Position', Fig.PannelPos{2},...
+                    'Position', Fig.PannelPos{2}*Fig.DisplayScale,...
                     'Parent',Fig.Handle); 
 Fig.P2.Labels   = {'Subject ID','Species','Server tank path'};
 Fig.P2.Strings  = {Params.TDT.SubjectID, Params.TDT.SpeciesList, Params.TDT.TankPath};
 Fig.P2.Values   = {[],Params.TDT.SpeciesIndx,[]};
 Fig.P2.Styles   = {'Edit','PopupMenu','Edit'};
-Ypos = 400;
+Ypos = 400*Fig.DisplayScale;
 for n = 1:numel(Fig.P2.Labels)
-    uicontrol('Style', 'text','String', Fig.P2.Labels{n}, 'position', [20, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P2.Handle, 'Fontsize', Fig.FontSize);
-    Fig.P2.uih(n) = uicontrol('Style', Fig.P2.Styles{n},'String', Fig.P2.Strings{n}, 'value', Fig.P2.Values{n}, 'position', [160, Ypos, 160, 20], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P2.Handle, 'Fontsize', Fig.FontSize);
-    Ypos = Ypos-25;
+    uicontrol('Style', 'text','String', Fig.P2.Labels{n}, 'position', [20*Fig.DisplayScale, Ypos, 120*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P2.Handle, 'Fontsize', Fig.FontSize);
+    Fig.P2.uih(n) = uicontrol('Style', Fig.P2.Styles{n},'String', Fig.P2.Strings{n}, 'value', Fig.P2.Values{n}, 'position', [160*Fig.DisplayScale, Ypos, 160*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P2.Handle, 'Fontsize', Fig.FontSize);
+    Ypos = Ypos-25*Fig.DisplayScale;
 end
 
 
@@ -131,21 +138,21 @@ Fig.P3.Handle   = uipanel( 'Title',Fig.PannelNames{3},...
                     'FontSize',Fig.TitleFontSize,...
                     'BackgroundColor',Fig.Background,...
                     'Units','pixels',...
-                    'Position', Fig.PannelPos{3},...
+                    'Position', Fig.PannelPos{3}*Fig.DisplayScale,...
                     'Parent',Fig.Handle); 
 Fig.P3.Labels   = fieldnames(Params.TDT.Event);
 Fig.P3.Strings  = strtrim(cellstr(num2str((Params.TDT.StimRange(2)+(1:numel(Fig.P3.Labels))).')));
 Fig.P3.Values   = 1:numel(Fig.P3.Labels);
 Fig.P3.Styles   = 'PopupMenu';
-Ypos = 400;
-uicontrol('Style', 'text','String', 'Stimulus ID range', 'position', [20, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
-Fig.P3.uih(1) = uicontrol('Style', 'Edit','String', num2str(Params.TDT.StimRange(1)), 'position', [160, Ypos, 50, 20], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
-Fig.P3.uih(2) = uicontrol('Style', 'Edit','String', num2str(Params.TDT.StimRange(2)), 'position', [220, Ypos, 50, 20], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
-Ypos = Ypos -25;
+Ypos = 400*Fig.DisplayScale;
+uicontrol('Style', 'text','String', 'Stimulus ID range', 'position', [20*Fig.DisplayScale, Ypos, 120*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+Fig.P3.uih(1) = uicontrol('Style', 'Edit','String', num2str(Params.TDT.StimRange(1)), 'position', [160*Fig.DisplayScale, Ypos, 50*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+Fig.P3.uih(2) = uicontrol('Style', 'Edit','String', num2str(Params.TDT.StimRange(2)), 'position', [220*Fig.DisplayScale, Ypos, 50*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','callback',{@SynapseSetting, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+Ypos = Ypos -25*Fig.DisplayScale;
 for n = 1:numel(Fig.P3.Labels)
-    uicontrol('Style', 'text','String', Fig.P3.Labels{n}, 'position', [20, Ypos, 120, 20], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
-    Fig.P3.uih(n) = uicontrol('Style', Fig.P3.Styles,'String', Fig.P3.Strings, 'value', Fig.P3.Values(n), 'position', [160, Ypos, 100, 20], 'HorizontalAlignment', 'left','callback',{@EventCodes, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
-    Ypos = Ypos-25;
+    uicontrol('Style', 'text','String', Fig.P3.Labels{n}, 'position', [20*Fig.DisplayScale, Ypos, 120*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','backgroundcolor',Fig.Background, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+    Fig.P3.uih(n) = uicontrol('Style', Fig.P3.Styles,'String', Fig.P3.Strings, 'value', Fig.P3.Values(n), 'position', [160*Fig.DisplayScale, Ypos, 100*Fig.DisplayScale, 20*Fig.DisplayScale], 'HorizontalAlignment', 'left','callback',{@EventCodes, n}, 'parent', Fig.P3.Handle, 'Fontsize', Fig.FontSize);
+    Ypos = Ypos-25*Fig.DisplayScale;
 end
 
 
@@ -195,7 +202,7 @@ uicontrol(  'Style', 'pushbutton',...
             'parent', Fig.Handle,...
             'tag','Load',...
             'units','pixels',...
-            'Position', [Fig.Margin,20,100,30],...
+            'Position', [Fig.Margin,20*Fig.DisplayScale,100*Fig.DisplayScale,30*Fig.DisplayScale],...
             'TooltipString', 'Use current inputs',...
             'FontSize', Fig.FontSize, ...
             'HorizontalAlignment', 'left',...
@@ -205,7 +212,7 @@ uicontrol(  'Style', 'pushbutton',...
             'parent', Fig.Handle,...
             'tag','Save',...
             'units','pixels',...
-            'Position', [140,20,100,30],...
+            'Position', [140,20,100,30]*Fig.DisplayScale,...
             'TooltipString', 'Save current inputs to file',...
             'FontSize', Fig.FontSize, ...
             'HorizontalAlignment', 'left',...
@@ -215,7 +222,7 @@ uicontrol(  'Style', 'pushbutton',...
             'parent', Fig.Handle,...
             'tag','Continue',...
             'units','pixels',...
-            'Position', [260,20,100,30],...
+            'Position', [260,20,100,30]*Fig.DisplayScale,...
             'TooltipString', 'Exit',...
             'FontSize', Fig.FontSize, ...
             'HorizontalAlignment', 'left',...

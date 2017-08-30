@@ -77,9 +77,11 @@ elseif isfield(s, 'Fig') && ishandle(s.Fig.Handle)
     c.EyePos    = EyePos;         	% Update eye position for current trial
     FirstPlot   = 0;              	% This is not the first trial to be plotted
 %     figure(s.Fig.Handle);           % Make figure window active
-    delete(s.ph);                   % Delete plotted data from previous trial
-    for n = 1:numel(s.Fig.bph)      % For each box plot handle...
-        delete(s.Fig.bph{n});       % Delete box and whisker plots
+    if c.Cal.PlotStatus ~= 1
+        delete(s.ph);                   % Delete plotted data from previous trial
+        for n = 1:numel(s.Fig.bph)      % For each box plot handle...
+            delete(s.Fig.bph{n});       % Delete box and whisker plots
+        end
     end
 end
 
@@ -329,7 +331,7 @@ if FirstPlot == 1
 
     
     
-    LoadCalibration(s.Fig.CalibFilename);   % Load previous calibration parameters
+    %LoadCalibration(s.Fig.CalibFilename);   % Load previous calibration parameters
     fprintf('First plot took %.2f seconds\n', GetSecs-StartTime);
     
 elseif FirstPlot ~= 1 %======================== GET CURRENT PARAMETERS FROM GUI
