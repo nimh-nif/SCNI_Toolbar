@@ -13,7 +13,7 @@ function SCNI_SendEventCode(event, Params)
 %
 %==========================================================================
 
-if isdouble(event)      %================== Event input is a double
+if isa(event,'double')      %================== Event input is a double
     EventNumber     = event;
     if EventNumber > 8000	
         EventIndx       = [Params.EventCodes.Number] == EventNumber;
@@ -26,10 +26,10 @@ elseif ischar(event)    %================== Event input is a string
     if ~isfield(Params,'EventCodes')                                    % If event codes were not already loaded...
         Params.EventCodes  = SCNI_LoadEventCodes;                       % Load standard event codes
     end
-    EventNumber = find(~cellfun(@isempty, strfind(lower({EventCodes.String}), lower(event))));
+    EventNumber = find(~cellfun(@isempty, strfind(lower({Params.EventCodes.String}), lower(event))));
     if isempty(EventNumber)                                             % If the provided string does not match a standard event string...
         EventString = strfind(EventString, '_');                        % Try removing whitespace and underscores from input string
-        EventNumber	= find(~cellfun(@isempty, strfind(lower({EventCodes.String}), lower(event))));
+        EventNumber	= find(~cellfun(@isempty, strfind(lower({Params.EventCodes.String}), lower(event))));
         if isempty(EventNumber) 
             error('''%s'' is not a recognized event string!', event);   
         end

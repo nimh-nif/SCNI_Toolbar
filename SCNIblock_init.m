@@ -17,18 +17,19 @@
 
 %% ============== Load SCNI viewing geometry parameters
 addpath(genpath(fileparts(mfilename('fullpath'))))          % Add subfunctions folder to path
-c.Display           = SCNI_initsettings;                   	% Get SCNI parameters
+%c.Display           = SCNI_initsettings;                   	% Get SCNI parameters
+temp                = SCNI_DisplaySettings([],0);           % Load display parameters
+c.Display           = temp.Display;                         
 c.Display.gamma     = 2.2;                                  % Set gamma value
 c.OverlayMode       = 'PTB';                                % Options are 'M16','L48','PTB'. Use 'PTB' is video is NOT going through the DataPixx
 c.UseDataPixx       = 1;                                    % Use DataPixx2 box for analog/ digital I/O?
 c.LinuxDisplay      = IsLinux;                              % Are we using Linux display arrangement for dual display?
-c.UseSBS3D          = 1;                                    % Use side-by-side stereoscopic 3D?
 c.SqueezedSBS       = 1;                                    % If using SBS 3D, are images squeezed?
 c.AnalogReward      = 0;                                    % 0 = use digital out channel 1; 1 = use analog out channel 1
 c.Display.ExpRect   = c.Display.Rect;
 c.Display.MonkRect  = c.Display.ExpRect([3,2,3,4]).*[1,1,2,1]; 
 
-
+c.EventCodes = SCNI_LoadEventCodes;                         % Load SCNI event codes
 
 %% ============== Initialize color lookup tables
 % CLUTs may be customized as needed. CLUTS also need to be defined before initializing DataPixx
@@ -113,9 +114,9 @@ c.StimRect  = CenterRect([0,0,c.ImgSize], c.Display.Rect);                      
 if c.LinuxDisplay == 1                                                                          % If using dual displays on Linux...
     c.MonkeyStimRect = c.StimRect + c.Display.Rect([3,1,3,1]);                                	% Specify subject's portion of the screen
     c.MonkeyGazeRect = c.GazeRect + c.Display.Rect([3,1,3,1]);     
-    if c.UseSBS3D == 0 
+    if c.Display.UseSBS3D == 0 
         c.MonkeyFixRect(1,:)  = CenterRect(c.FixRect, c.MonkeyStimRect);  
-    elseif c.UseSBS3D == 1                                                                      % For presenting side-by-side stereoscopic 3D images...
+    elseif c.Display.UseSBS3D == 1                                                                      % For presenting side-by-side stereoscopic 3D images...
         c.MonkeyHalfRect      = c.MonkeyStimRect([1,2,1,4])+[0,0,diff(c.MonkeyStimRect([1,3]))/2,0]; % Calculate screen coordinates of left half of subject's display
         c.MonkeyFixRect(1,:)  = CenterRect([0,0,c.Fix_MarkerSize*c.Display.PixPerDeg]./[1,1,2,1], c.MonkeyHalfRect);             % Center a horizontally squashed fixation rectangle in a half screen rectangle
         c.MonkeyFixRect(2,:)  = CenterRect([0,0,c.Fix_MarkerSize*c.Display.PixPerDeg]./[1,1,2,1], [c.MonkeyHalfRect([3,2]), c.MonkeyStimRect([3,4])]);
@@ -158,7 +159,7 @@ end
 c.Meridians     = [c.Display.ExpRect([3,3])/2, 0, c.Display.ExpRect(3); 0, c.Display.ExpRect(4), c.Display.ExpRect([4,4])/2];
 c.TextBoxDims   = [300 200];
 c.TextPos       = 'TopLeft';
-if c.UseSBS3D == 1
+if c.Display.UseSBS3D == 1
 	c.LoadingTextPosX = c.Display.ExpRect(3)/2;
 else
     c.LoadingTextPosX = 'center';
@@ -176,7 +177,7 @@ end
 %========== Preapre photodiode marker
 if c.PhotodiodeOn == 1
     if c.LinuxDisplay == 1                                                                                  % If using dual displays on Linux...
-        if c.UseSBS3D == 0  
+        if c.Display.UseSBS3D == 0  
              switch c.PhotodiodePos
                 case 'BottomLeft'
                     c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]) - c.PhotdiodeSize([1,4,1,4]);	% Specify subject's portion of the screen 
@@ -187,7 +188,7 @@ if c.PhotodiodeOn == 1
              	case 'BottomRight'
                   	c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]).*[2,1,2,1] - c.PhotdiodeSize([3,4,3,4]);
             end
-        elseif c.UseSBS3D == 1                                                                              % For presenting side-by-side stereoscopic 3D images...
+        elseif c.Display.UseSBS3D == 1                                                                              % For presenting side-by-side stereoscopic 3D images...
             c.MonkeyDiodeRect(1,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1]) + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         	% Center a horizontally squashed fixation rectangle in a half screen rectangle
             c.MonkeyDiodeRect(2,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1])*1.5 + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         
         end
@@ -409,6 +410,7 @@ switch c.OverlayMode
         % actually set the two DataPixx screens to act as a single screen,
         % and draw separately into each half of that screen, as we do for 
         % haploscopes.
+        c.Display.ScreenID = 1;
         PsychImaging('PrepareConfiguration'); 
         PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');                                       % Configure PsychToolbox imaging pipeline to use 32-bit floating point numbers                    
         PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'SimpleGamma');            % Apply inverse gamma for correction of display gamma
@@ -419,6 +421,7 @@ switch c.OverlayMode
             PsychImaging('AddTask', 'General', 'DualWindowStereo', c.Display.ScreenID+1);
             c.Display.Stereomode = 4;
         elseif IsLinux == 1
+            c.Display.ScreenID = 1;
             c.Display.Stereomode = 0;
         end
         c.Display
@@ -436,52 +439,52 @@ end
 
 %===================== PREPARE DATAPIXX DAC
 if c.UseDataPixx == 1
-    Params = SCNI_DataPixxInit([]);
+    c = SCNI_DataPixxInit([],c);
 
     
-    Datapixx('Open');
-    Datapixx('StopAllSchedules');
-    Datapixx('DisableDinDebounce');
-    Datapixx('SetDinLog');
-    Datapixx('StartDinLog');
-    Datapixx('SetDoutValues',0);
-    Datapixx('RegWrRd');
-    Datapixx('DisableDacAdcLoopback');
-	Datapixx('DisableAdcFreeRunning');           % For microsecond-precise sample windows
-    Datapixx('RegWrRd');                         % Synchronize Datapixx registers to local register cache
-
-    %================== Start ADC for recording analog signals
-    Params              = SCNI_DatapixxSettings([],0);                                          % Load DataPixx parameters for this system
-    c.ADCchannels       = Params.DPx.AnalogInCh;                                                
-    c.ADCchannelLabels  = Params.DPx.AnalogInNames(Params.DPx.AnalogInAssign);                  % Get labels for all channels
-    UnusedIndx          = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'None')));   % Find ADC channels not assigned to inputs
-    c.ADCchannelsUsed   = find(Params.DPx.AnalogInAssign ~= UnusedIndx);                       	% Find ADC channels assigned to inputs
-    
-%     c.ADCchannels       = 5:13;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
-%     c.ADCchannelLabels  = {[],[],[],[],[],'Eye_X',[],[],[],'Eye_Y',[],[],[],'Eye_P',[],[],[],'Scanner'};  % Give each analog input a label
-    c.ADCchannels       = 0:7;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
-    c.ADCchannelLabels  = {'Eye_Right_X','Eye_Right_Y','Eye_Right_P','Eye_Left_X','Eye_Left_Y','Eye_Left_P','Test1','Test2'};      
-    NoChannels          = numel(c.ADCchannelLabels);                    % How many channels?
-    c.adcRate        	= 1000;                                         % Acquire ADC data at 1 kS/s
-    c.nAdcLocalBuffSpls	= c.adcRate*c.MaxTrialDur;                      % Preallocate a local buffer
-    c.EyeXY             = zeros(NoChannels, c.nAdcLocalBuffSpls);     	% Preallocate matrix for ADC storage
-	c.adcBuffBaseAddr  	= 4e6;                                          % Set DataPixx internal buffer address
-    
-    
-    %================== Set DAC schedule for reward delivery
-    c.Reward_Volt      	= 5.0;                                          % Set output voltage for reward trigger (Volts)
-    c.Reward_pad      	= 0.01;                                         % Pad pulse on either side with zeros (seconds)
-    c.Wave_time       	= c.Reward_TTLDur+c.Reward_pad;             	% Calculate wave duration (seconds)
-    c.Dacrate        	= 1000;                                         % Set DAC sample rate
-    c.reward_Voltages   = [zeros(1,round(c.Dacrate*c.Reward_pad/2)), c.Reward_Volt*ones(1,int16(c.Dacrate*c.Reward_TTLDur)), zeros(1,round(c.Dacrate*c.Reward_pad/2))];
-    c.ndacsamples       = floor(c.Dacrate*c.Wave_time);                   
-    c.dacBuffAddr       = 0;
-    c.RewardChnl        = 0;
-    Datapixx('RegWrRd');
-    Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
-    nChannels = Datapixx('GetDacNumChannels');
-    Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
-    
+%     Datapixx('Open');
+%     Datapixx('StopAllSchedules');
+%     Datapixx('DisableDinDebounce');
+%     Datapixx('SetDinLog');
+%     Datapixx('StartDinLog');
+%     Datapixx('SetDoutValues',0);
+%     Datapixx('RegWrRd');
+%     Datapixx('DisableDacAdcLoopback');
+% 	Datapixx('DisableAdcFreeRunning');           % For microsecond-precise sample windows
+%     Datapixx('RegWrRd');                         % Synchronize Datapixx registers to local register cache
+% 
+%     %================== Start ADC for recording analog signals
+%     Params              = SCNI_DatapixxSettings([],0);                                          % Load DataPixx parameters for this system
+%     c.ADCchannels       = Params.DPx.AnalogInCh;                                                
+%     c.ADCchannelLabels  = Params.DPx.AnalogInNames(Params.DPx.AnalogInAssign);                  % Get labels for all channels
+%     UnusedIndx          = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'None')));   % Find ADC channels not assigned to inputs
+%     c.ADCchannelsUsed   = find(Params.DPx.AnalogInAssign ~= UnusedIndx);                       	% Find ADC channels assigned to inputs
+%     
+% %     c.ADCchannels       = 5:13;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
+% %     c.ADCchannelLabels  = {[],[],[],[],[],'Eye_X',[],[],[],'Eye_Y',[],[],[],'Eye_P',[],[],[],'Scanner'};  % Give each analog input a label
+%     c.ADCchannels       = 0:7;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
+%     c.ADCchannelLabels  = {'Eye_Right_X','Eye_Right_Y','Eye_Right_P','Eye_Left_X','Eye_Left_Y','Eye_Left_P','Test1','Test2'};      
+%     NoChannels          = numel(c.ADCchannelLabels);                    % How many channels?
+%     c.adcRate        	= 1000;                                         % Acquire ADC data at 1 kS/s
+%     c.nAdcLocalBuffSpls	= c.adcRate*c.MaxTrialDur;                      % Preallocate a local buffer
+%     c.EyeXY             = zeros(NoChannels, c.nAdcLocalBuffSpls);     	% Preallocate matrix for ADC storage
+% 	c.adcBuffBaseAddr  	= 4e6;                                          % Set DataPixx internal buffer address
+%     
+%     
+%     %================== Set DAC schedule for reward delivery
+%     c.Reward_Volt      	= 5.0;                                          % Set output voltage for reward trigger (Volts)
+%     c.Reward_pad      	= 0.01;                                         % Pad pulse on either side with zeros (seconds)
+%     c.Wave_time       	= c.Reward_TTLDur+c.Reward_pad;             	% Calculate wave duration (seconds)
+%     c.Dacrate        	= 1000;                                         % Set DAC sample rate
+%     c.reward_Voltages   = [zeros(1,round(c.Dacrate*c.Reward_pad/2)), c.Reward_Volt*ones(1,int16(c.Dacrate*c.Reward_TTLDur)), zeros(1,round(c.Dacrate*c.Reward_pad/2))];
+%     c.ndacsamples       = floor(c.Dacrate*c.Wave_time);                   
+%     c.dacBuffAddr       = 0;
+%     c.RewardChnl        = 0;
+%     Datapixx('RegWrRd');
+%     Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
+%     nChannels = Datapixx('GetDacNumChannels');
+%     Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
+%     
 end
 
 

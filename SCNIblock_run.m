@@ -35,7 +35,7 @@ if c.UseDataPixx == 1
         AdcStatus = Datapixx('GetAdcStatus');
         WaitSecs(0.01);
     end
-    Datapixx('SetAdcSchedule', 0, c.adcRate, c.nAdcLocalBuffSpls, c.ADCchannels, c.adcBuffBaseAddr, c.nAdcLocalBuffSpls);
+    Datapixx('SetAdcSchedule', 0, c.Params.DPx.AnalogInRate, c.Params.DPx.nAdcLocalBuffSpls, c.Params.DPx.AnalogInCh, c.Params.DPx.adcBuffBaseAddr, c.Params.DPx.nAdcLocalBuffSpls);
     Datapixx('StartAdcSchedule');
     Datapixx('RegWrRd');                                                % Make sure a DAC schedule is not running before setting a new schedule
 
@@ -150,9 +150,9 @@ while GetSecs < c.StimOnTime + c.StimDuration
                 if c.BackgroundTexH ~=0                                                     % If stimulus has a background texture..
                     Screen('DrawTexture', c.window, c.BackgroundTexH, [], c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);  % Draw background
                 end
-                if c.UseSBS3D == 0 
+                if c.Display.UseSBS3D == 0 
                     Screen('DrawTexture', c.window, c.ImageTexH, [], c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);
-                elseif c.UseSBS3D == 1
+                elseif c.Display.UseSBS3D == 1
                     Screen('DrawTexture', c.window, c.ImageTexH, c.ExpStimRect, c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);
                 end
             end
@@ -175,7 +175,7 @@ while GetSecs < c.StimOnTime + c.StimDuration
     StimOnTime = Screen('Flip', c.window);                                  % Present visual stimulus now
     if StimOn == 0                                                          % If stimulus was not previously on the screen...
         c.StimOnTime = StimOnTime;                                          % Record stimulus onset timestamp
-        SCNI_EventCode(c);
+        SCNI_SendEventCode('Stim_On',c);
         StimOn = 1;                                                         % Change stimulus on flag
         fprintf('Stim on\n\n');
     end
@@ -303,7 +303,7 @@ if c.UseDataPixx == 1
     Datapixx('RegWrRd');                                                            % Update registers for GetAdcStatus
     status = Datapixx('GetAdcStatus');                                              
     nReadSpls = status.newBufferFrames;                                             % How many samples can we read?
-    [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.adcBuffBaseAddr); 	% Read all available samples from ADCs
+    [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
 	Datapixx('StopAdcSchedule'); 
     PDS.EyeXYP{c.Blocks.Number, c.Blocks.TrialNumber}	= NewData(1:6,:);
     PDS.AnalogIn{c.Blocks.Number, c.Blocks.TrialNumber}	= NewData(7:8,:);           
@@ -398,7 +398,7 @@ function [ValidTrial] = FindFixBreak(EyeData, c)
     FixBreakIndx    = find(diff(InFix)==-1);                                % Find samples at which gaze left fixation window
     FixReturnIndx   = find(diff(InFix)==1);                                 % Find samples at which gaze entered fixation window
     FixAbsentSmpls  = FixReturnIndx-FixBreakIndx;                           % Calculate duration of each fixation break period (samples)
-    MaxBreakSamples = c.Eye_BlinkDuration*c.adcRate;                        % Calculate maximum acceptable number of samples gaze can leave fixation window without being penalized
+    MaxBreakSamples = c.Eye_BlinkDuration*c.Params.DPx.AnalogInRate;                        % Calculate maximum acceptable number of samples gaze can leave fixation window without being penalized
     if any(FixAbsentSmpls > MaxBreakSamples)                                % If any fixation breaks exceeded permitted duration...
         ValidTrial = 0;                                                     % Invalid trial!
     else

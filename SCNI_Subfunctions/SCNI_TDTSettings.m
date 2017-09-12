@@ -25,9 +25,7 @@ end
 if ~exist('ParamsFile','var')
     ParamsFile = [];
 end
-[Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
-Fig.ScreenSize    	= get(0,'screensize');
-Fig.DisplayScale    = Fig.ScreenSize(4)/1080;
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
 
 %=========== Load default parameters
 if Success < 1                              % If the parameters could not be loaded...
@@ -57,13 +55,6 @@ end
 %========================= OPEN GUI WINDOW ================================
 Fig.Handle          = figure;                                           % Assign GUI arbitrary integer   
 setappdata(0,GUItag,Fig.Handle);
-if Fig.DisplayScale <= 1
-    Fig.FontSize        = 12;
-    Fig.TitleFontSize   = 16;
-else
-    Fig.FontSize        = 18;
-    Fig.TitleFontSize   = 24;
-end
 Fig.Rect            = [0 200 700 800]*Fig.DisplayScale;              	% Specify figure window rectangle
 Fig.PannelSize      = [170, 650]*Fig.DisplayScale;                                       
 Fig.PannelElWidths  = [30, 120]*Fig.DisplayScale;

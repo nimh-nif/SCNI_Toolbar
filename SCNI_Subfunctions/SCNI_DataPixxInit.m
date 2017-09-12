@@ -1,4 +1,4 @@
-function c = SCNI_DataPixxInit(Params)
+function c = SCNI_DataPixxInit(Params, c)
 
 %======================= SCNI_DataPixxInit.m ==============================
 % 
@@ -28,29 +28,32 @@ Datapixx('DisableDacAdcLoopback');
 Datapixx('DisableAdcFreeRunning');                  % For microsecond-precise sample windows
 Datapixx('RegWrRd');                                % Synchronize Datapixx registers to local register cache
 
-%================== Prepare ADC for recording analog signals
-c.ADCchannels       = Params.DPx.AnalogInCh;                                                
-UnusedIndx          = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'None')));   % Find ADC channels not assigned to inputs
-c.ADCchannelsUsed   = find(Params.DPx.AnalogInAssign ~= UnusedIndx);                        % Find ADC channels assigned to inputs 
-c.adcRate        	= Params.DPx.AnalogRate;                                                % ADC data sample rate
-c.nAdcLocalBuffSpls	= c.adcRate*c.MaxTrialDur;                                              % Preallocate a local buffer
-c.EyeXY             = zeros(numel(c.ADCchannelLabels), c.nAdcLocalBuffSpls);                % Preallocate matrix for ADC storage
-c.adcBuffBaseAddr  	= 4e6;                                                                  % Set DataPixx internal buffer address
+%================== Prepare ADC for recording analog signals                                            
+UnusedIndx                  = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'None')));   % Find ADC channels not assigned to inputs
+Params.DPx.ADCchannelsUsed 	= find(Params.DPx.AnalogInAssign ~= UnusedIndx);                        % Find ADC channels assigned to inputs 
+Params.DPx.nAdcLocalBuffSpls= Params.DPx.AnalogInRate*c.MaxTrialDur;                            	% Preallocate a local buffer
+Params.DPx.adcBuffBaseAddr  = 4e6;                                                                  % Set DataPixx internal buffer address
 
 
-%================== Prepare DAC schedule for reward delivery?
-if Params.DPx.TDTonDOUT == 1
-    
-end
-c.Reward_Volt      	= 5.0;                                                                  % Set output voltage for reward trigger (Volts)
-c.Reward_pad      	= 0.01;                                                                 % Pad pulse on either side with zeros (seconds)
-c.Wave_time       	= c.Reward_TTLDur+c.Reward_pad;                                         % Calculate wave duration (seconds)
-c.Dacrate        	= 1000;                                                                 % Set DAC sample rate
-c.reward_Voltages   = [zeros(1,round(c.Dacrate*c.Reward_pad/2)), c.Reward_Volt*ones(1,int16(c.Dacrate*c.Reward_TTLDur)), zeros(1,round(c.Dacrate*c.Reward_pad/2))];
-c.ndacsamples       = floor(c.Dacrate*c.Wave_time);                   
+%================== Prepare DAC schedule for reward delivery
+c.Reward_Volt      	= 5.0;                                                                          % Set output voltage for reward trigger (Volts)
+c.Reward_pad      	= 0.01;                                                                         % Pad pulse on either side with zeros (seconds)
+c.Wave_time       	= c.Reward_TTLDur+c.Reward_pad;                                                 % Calculate wave duration (seconds)
+c.reward_Voltages   = [zeros(1,round(Params.DPx.AnalogOutRate*c.Reward_pad/2)), c.Reward_Volt*ones(1,int16(Params.DPx.AnalogOutRate*c.Reward_TTLDur)), zeros(1,round(Params.DPx.AnalogOutRate*c.Reward_pad/2))];
+c.ndacsamples       = floor(Params.DPx.AnalogOutRate*c.Wave_time);                   
 c.dacBuffAddr       = 0;
-c.RewardChnl        = 0;
+c.RewardChnl        = find(~cellfun(@isempty, strfind(Params.DPx.AnalogOutNames,'Reward')))-1;       % Find DAC channel to send reward TTL on                                                                         % Which DAC channel to 
+
 Datapixx('RegWrRd');
 Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
 nChannels = Datapixx('GetDacNumChannels');
 Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);                           % Set all DAC channels to 0V
+
+
+%================== Prepare digital outputs for serial communciation with TDT?
+if Params.DPx.TDTonDOUT == 1                                                                
+    
+    
+end
+
+c.Params = Params;  

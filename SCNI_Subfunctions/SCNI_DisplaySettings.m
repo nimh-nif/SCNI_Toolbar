@@ -15,7 +15,7 @@
 %
 %==========================================================================
 
-function ParamsOut = SCNI_DisplaySettings(ParamsFile)
+function ParamsOut = SCNI_DisplaySettings(ParamsFile, OpenGUI)
 
 persistent Params Fig;
 
@@ -28,10 +28,9 @@ end
 if ~exist('ParamsFile','var')
     ParamsFile = [];
 end
-[Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
-Fig.ScreenSize    	= get(0,'screensize');
-Fig.DisplayScale    = Fig.ScreenSize(4)/1080;
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
 
+%=========== Load default parameters
 if Success < 1
     Params.Display.Stereomode           = 6;
     Params.Display.ViewingDist          = 50;
@@ -40,6 +39,8 @@ if Success < 1
     Params.Display.ClippingPlanes       = [-20, 20];
     Params.Display.Perspective          = 1;
     Params.Display.LightingOn           = 1;
+    Params.Display.UseSBS3D             = 1;                           	% Use side-by-side stereoscopic 3D?
+    Params.Display.SqueezedSBS          = 1;                            % If using SBS 3D, are images squeezed?
     Params.Display.Exp.GridOn           = 1;
     Params.Display.Exp.EyeOn            = 1;
     Params.Display.Exp.GazeWinOn        = 1;
@@ -53,7 +54,12 @@ if Success < 1
     Params.Display.Exp.GazeWinAlpha     = 1;
     Params.Display.PD.Position          = 2;
 elseif Success > 1
+    ParamsOut = Params;
 	return;
+end
+if OpenGUI == 0
+    ParamsOut = Params;
+    return;
 end
 
 
@@ -61,13 +67,6 @@ end
 %========================= OPEN GUI WINDOW ================================
 Fig.Handle          = figure;                                       	% Open new figure window         
 setappdata(0,GUItag,Fig.Handle);                                        % Assign tag
-if Fig.DisplayScale <= 1
-    Fig.FontSize        = 10;
-    Fig.TitleFontSize   = 14;
-else
-	Fig.FontSize        = 18;
-    Fig.TitleFontSize   = 24;
-end
 Fig.PanelYdim       = 130*Fig.DisplayScale;
 Fig.Rect            = [0 200 500 900]*Fig.DisplayScale;              	% Specify figure window rectangle
 set(Fig.Handle,     'Name','SCNI: Rig settings',...                     % Open a figure window with specified title
@@ -111,6 +110,7 @@ else
     PTBversion  = 'Not detected!';
     NoXscreens  = 'Unknown!';
     Resolution  = get(0,'screensize');
+    RefreshRate = 'Unknown!';
 end
 if ~isfield(Params, 'File') || ~exist(Params.File,'file')
 	ParamsFileName = 'No params file!';
@@ -144,7 +144,7 @@ Fig.GeometryHandle = uipanel( 'Title','Viewing Geometry',...
                 'Parent',Fig.Handle);  
             
 Ypos    = 170*Fig.DisplayScale;           
-Xwidth  = [150, 180]*Fig.DisplayScale;
+Xwidth  = [170, 180]*Fig.DisplayScale;
 %=================== STEREO MODE SELECTION
 TipStr = 'Select a stereoscopic viewing method.';
 RenderMethods = {'Monocular','Shutter glasses','Split-screen: top-bottom','Split-screen: bottom-top','Split-screen: free fusion','Split-screen: cross fusion',...
@@ -161,7 +161,7 @@ uicontrol(  'Style', 'popup',...
             'Background', 'white',...
             'Tag', 'Method', ...
             'String', RenderMethods,...
-            'Position', [198*Fig.DisplayScale,Ypos,Xwidth(2),Fig.Margin],...
+            'Position', [218*Fig.DisplayScale,Ypos,Xwidth(2),Fig.Margin],...
             'parent',Fig.GeometryHandle,...
             'TooltipString', TipStr,...
             'Callback', {@SetGeometry, 1},...
@@ -192,9 +192,9 @@ DefaultAns          = {Params.Display.ViewingDist,Params.Display.IPD,Params.Disp
 
 %================== OTHER GEOMERTY PARAMETER CONTROLS
 Indx = 2;
-Xpos = [200, 290]*Fig.DisplayScale;
+Xpos = [220, 310]*Fig.DisplayScale;
 for n = 1:numel(ViewPortStrings)
-    LabelH(n) = uicontrol(  'Style', 'text','String',ViewPortStrings{n},'Position', [Fig.Margin,Ypos,160*Fig.DisplayScale,20*Fig.DisplayScale],...
+    LabelH(n) = uicontrol(  'Style', 'text','String',ViewPortStrings{n},'Position', [Fig.Margin,Ypos,180*Fig.DisplayScale,20*Fig.DisplayScale],...
                 'TooltipString', TipStr{n},'Parent',Fig.GeometryHandle,'HorizontalAlignment', 'left', 'FontSize', Fig.FontSize);
     if ismember(n,[3,4,5])
         
@@ -254,13 +254,13 @@ for n = 1:numel(ColorLabels)
                 'FontSize', Fig.FontSize);
     uicontrol(  'Style', 'text',...
                 'String', SettingsLabels{n},...
-                'Position',[190*Fig.DisplayScale,Ypos,100*Fig.DisplayScale,20*Fig.DisplayScale],...
+                'Position',[190*Fig.DisplayScale,Ypos,120*Fig.DisplayScale,20*Fig.DisplayScale],...
                 'HorizontalAlignment', 'left',...
                 'Parent',Fig.ColorHandle,...
                 'FontSize', Fig.FontSize);
     uicontrol(  'Style', 'edit',...
                 'String', SettingsVals{n},...
-                'Position',[300*Fig.DisplayScale,Ypos,50*Fig.DisplayScale,20*Fig.DisplayScale],...
+                'Position',[320*Fig.DisplayScale,Ypos,50*Fig.DisplayScale,20*Fig.DisplayScale],...
                 'Parent',Fig.ColorHandle,...
                 'Callback', {@SetExpVal, n},...
                 'FontSize', Fig.FontSize);

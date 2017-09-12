@@ -15,11 +15,9 @@ persistent Fig Params Icon                                                      
 GUItag      = 'SCNI_Toolbar';                                               % String to use as GUI window tag
 Fieldname   = [];                             
 OpenGUI     = 1;
-[Params, Success]   = SCNI_InitGUI(GUItag, Fieldname, [], OpenGUI);
-Fig.ScreenSize    	= get(0,'screensize');
-Fig.DisplayScale    = Fig.ScreenSize(4)/1080;
-Fig.Background      = [0.6, 0.6, 0.6];                                      
-Fig.ButtonSize      = [0,0,60,60]*Fig.DisplayScale;
+[Params, Success, Fig]  = SCNI_InitGUI(GUItag, Fieldname, [], OpenGUI);
+Fig.Background          = [0.6, 0.6, 0.6];                                      
+Fig.ButtonSize          = [0,0,60,60]*Fig.DisplayScale;
 
 
 %================== Load toolbar icons
@@ -69,11 +67,6 @@ Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure w
 setappdata(0, GUItag, Fig.Handle);                              % Make GUI handle accessible from other m-files
 Fig.PannelTitles    = {'Actions', 'Modes', 'Settings'};  
 Fig.ButtonsPPannel  = [4, 4, 6];
-if Fig.DisplayScale <= 1
-    Fig.FontSize        = 16;
-elseif Fig.DisplayScale > 1
-    Fig.FontSize        = 24;
-end
 Fig.BIndx           = 1;
 
 for p = 1:numel(Fig.PannelTitles)
@@ -84,7 +77,7 @@ for p = 1:numel(Fig.PannelTitles)
     end
     Fig.PannelPos(p,:) 	= [Xpos, 10*Fig.DisplayScale, (Fig.ButtonSize(3)+10*Fig.DisplayScale)*Fig.ButtonsPPannel(p)+10*Fig.DisplayScale, Fig.ButtonSize(4)+30*Fig.DisplayScale];
     Fig.PannelHandle(p) = uipanel(  'Title',Fig.PannelTitles{p},...
-                                    'FontSize',Fig.FontSize,...
+                                    'FontSize',Fig.TitleFontSize,...
                                     'BackgroundColor',Fig.Background,...
                                     'Units','pixels',...
                                     'Position',Fig.PannelPos(p,:),...

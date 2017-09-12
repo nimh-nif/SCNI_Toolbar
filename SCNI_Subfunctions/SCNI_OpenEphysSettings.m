@@ -1,3 +1,5 @@
+function SCNI_OpenEphysSettings()
+
 % SCNI_OpenEphysSettings.m
 
 Record = 1;
