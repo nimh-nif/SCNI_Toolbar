@@ -69,6 +69,16 @@ Fig.PannelTitles    = {'Actions', 'Modes', 'Settings'};
 Fig.ButtonsPPannel  = [4, 4, 6];
 Fig.BIndx           = 1;
 
+
+% Fig.SCNIh = uicontrol('style','pushbutton',...
+%             'units','pixels',...
+%             'position',[10, 10, 100, Fig.ButtonSize(4)+20],...
+%             'cdata', imread('Logo_SCNI_Toolbar.png'),...
+%             'callback', @OpenWiki,...
+%             'TooltipString', 'Wiki',...
+%             'Parent',Fig.Handle);
+
+
 for p = 1:numel(Fig.PannelTitles)
     if p == 1
         Xpos = 10*Fig.DisplayScale;
@@ -112,6 +122,10 @@ end
         %======= Perform action
         eval(sprintf('%s(Params.File)', Fig.ButtonFunc{indx}));
 
+    end
+
+    function OpenWiki(hObj, event, indx)
+        web('https://github.com/MonkeyGone2Heaven/SCNI_Toolbar/wiki');
     end
 
 end

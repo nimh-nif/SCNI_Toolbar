@@ -18,18 +18,13 @@
 
 %% ============== Load SCNI viewing geometry parameters
 addpath(genpath(fileparts(mfilename('fullpath'))))          % Add subfunctions folder to path
-c.Display           = SCNI_initsettings;                   	% Get SCNI parameters
+temp                = SCNI_DisplaySettings([],0);           % Load display parameters
+c.Display           = temp.Display;                         
 c.Display.gamma     = 2.2;                                  % Set gamma value
 c.OverlayMode       = 'PTB';                                % Options are 'M16','L48','PTB'. Use 'PTB' is video is NOT going through the DataPixx
 c.UseDataPixx       = 1;                                    % Use DataPixx2 box for analog/ digital I/O?
-c.LinuxDisplay      = IsLinux;                              % Are we using Linux display arrangement for dual display?
-c.UseSBS3D          = 0;                                    % Use side-by-side stereoscopic 3D?
-c.SqueezedSBS       = 0;                                    % If using SBS 3D, are images squeezed?
-c.AnalogReward      = 0;                                    % 0 = use digital out channel 1; 1 = use analog out channel 1
-c.Display.ExpRect   = c.Display.Rect;
-c.Display.MonkRect  = c.Display.ExpRect([3,2,3,4]).*[1,1,2,1]; 
-
-
+c.Stim_Fullscreen   = 0;
+c.EventCodes        = SCNI_LoadEventCodes;               	% Load SCNI event codes
 
 %% ============== Initialize color lookup tables
 % CLUTs may be customized as needed. CLUTS also need to be defined before initializing DataPixx
@@ -39,7 +34,7 @@ c.Display.MonkRect  = c.Display.ExpRect([3,2,3,4]).*[1,1,2,1];
 c.SimulateEyes  = 0;            % Use mouse cursor position to simulate eye position?
 c.EyeGain       = [1,1];        % Gain for converting degrees to volts
 c.EyeOffset     = [0,0];        % Offset (in Volts) for making central fixation equal to 0V
-c = init_DataPixx(c);
+c               = init_DataPixx(c);
 
 
 %% ============= Settings for block design
@@ -70,10 +65,10 @@ c.GazeSourceRect    = [0, 0, c.Fix_WinRadius*2*c.Display.PixPerDeg];
 c.FixLocDirections  = [0,0; 1,1; 1,0; 1,-1; 0,-1; -1,-1; -1,0; -1,1; 0,1];      % Specify XY locations for 9-point grid
 c.FixLocations      = c.FixLocDirections*c.FixEccentricity.*repmat(c.Display.PixPerDeg,[c.NoLocations,1]);	% Scale grid to specified eccentricity (pixels)
 c.FixLocations      = c.FixLocations + repmat(c.Display.Rect([3,4])/2, [c.NoLocations,1]);  % Add half a display width and height offsets to center locations
-if c.LinuxDisplay == 1                                                          % If using dual displays on Linux...
-    if c.UseSBS3D == 0                                                          
+if IsLinux == 1                                                          % If using dual displays on Linux...
+    if c.Display.UseSBS3D == 0                                                          
         c.MonkFixLocations = c.FixLocations + repmat(c.Display.Rect([3,1]), [c.NoLocations,1]);    % Add an additional display width offset for subject's screen  
-    elseif c.UseSBS3D == 1
+    elseif c.Display.UseSBS3D == 1
         c.MonkFixLocations = c.FixLocations + repmat(c.Display.Rect([3,1]), [c.NoLocations,1]);    % Add an additional display width offset for subject's screen  
     end
 else
@@ -82,7 +77,7 @@ end
 for n = 1:size(c.FixLocations,1)                                                % For each fixation coordinate...
     c.FixRects{n}(1,:) = CenterRectOnPoint(c.FixmarkerRect, c.FixLocations(n,1), c.FixLocations(n,2));  % Generate PTB rect argument
     c.GazeRect{n}(1,:) = CenterRectOnPoint(c.GazeSourceRect, c.FixLocations(n,1), c.FixLocations(n,2));  %
-    if c.UseSBS3D == 1
+    if c.Display.UseSBS3D == 1
     	c.MonkeyFixRect{n}(1,:)  = CenterRectOnPoint(c.FixmarkerRect./[1,1,2,1], c.MonkFixLocations(n,1), c.MonkFixLocations(n,2)); 	% Center a horizontally squashed fixation rectangle in a half screen rectangle
         c.MonkeyFixRect{n}(2,:)  = CenterRectOnPoint(c.FixmarkerRect./[1,1,2,1], c.MonkFixLocations(n,1), c.MonkFixLocations(n,2)); 
     else
@@ -91,37 +86,8 @@ for n = 1:size(c.FixLocations,1)                                                
 end
 
 
-%% ================= Prepare experimenter display components
-% c.CondColors    = jet(c.NoCond)*255;                                                            % Get RGB color for each block condition
-% if c.FixAfterEachBlock==1 %choose the color for the fixation block if requested
-%     c.CondColors(1,:)=[255 255 255];
-% end
-% c.BlockImg      = reshape(c.CondColors(c.Blocks.Order,:),[1,numel(c.Blocks.Order),3]);          % Generate color image of block design
-% c.BlockImg      = imresize(c.BlockImg, [100,200],'nearest');                                    % Resize image with nearest neighbour interpolation
-% c.BlockImgRect  = [100, c.Display.Rect(4)-100, 600, c.Display.Rect(4)-50];                      % Specify onscreen position to draw block design
-% c.BlockImgLen   = c.BlockImgRect(3)-c.BlockImgRect(1);                                          % Calculate length of block design rect
-% c.BlockImgTex   = Screen('MakeTexture', c.window, c.BlockImg);                                  % Generate texture handle for block design image
-% ProgOverlay     = zeros(size(c.BlockImg));                                                      % Generate a dark progress bar to overlay on block design
-% ProgOverlay(:,:,4) = 127;                                                                       % Set progress bar overlay opacity (0-255)
-% c.BlockProgTex  = Screen('MakeTexture', c.window, ProgOverlay);                                 % Create a texture handle for overlay
-
-% %% ================= Calculate screen coordinates
-% if c.LinuxDisplay == 1                                                                          % If using dual displays on Linux...
-%     c.MonkeyStimRect = c.StimRect + c.Display.Rect([3,1,3,1]);                                	% Specify subject's portion of the screen
-%     c.MonkeyGazeRect = c.GazeRect + c.Display.Rect([3,1,3,1]);     
-%     if c.UseSBS3D == 0 
-%         c.MonkeyFixRect(1,:)  = CenterRect(c.FixRect, c.MonkeyStimRect);  
-%     elseif c.UseSBS3D == 1                                                                      % For presenting side-by-side stereoscopic 3D images...
-%         c.MonkeyHalfRect      = c.MonkeyStimRect([1,2,1,4])+[0,0,diff(c.MonkeyStimRect([1,3]))/2,0]; % Calculate screen coordinates of left half of subject's display
-%         c.MonkeyFixRect(1,:)  = CenterRect([0,0,c.Fix_MarkerSize*c.Display.PixPerDeg]./[1,1,2,1], c.MonkeyHalfRect);             % Center a horizontally squashed fixation rectangle in a half screen rectangle
-%         c.MonkeyFixRect(2,:)  = CenterRect([0,0,c.Fix_MarkerSize*c.Display.PixPerDeg]./[1,1,2,1], [c.MonkeyHalfRect([3,2]), c.MonkeyStimRect([3,4])]);
-%     end
-% elseif c.LinuxDisplay == 0
-% 	c.MonkeyStimRect = c.StimRect;                                
-%     c.MonkeyFixRect  = c.FixRect;     
-%     c.MonkeyGazeRect = c.GazeRect;   
-% end
-% c.ExpStimRect = c.StimRect./[1,1,2,1];
+%% ================= Calculate screen coordinates
+c = SCNI_InitScreenCoords(c);
 
 %% ================= Draw fixation marker to texture
 FixSize         = round(c.Fix_MarkerSize*c.Display.PixPerDeg);
@@ -154,7 +120,7 @@ end
 c.Meridians     = [c.Display.ExpRect([3,3])/2, 0, c.Display.ExpRect(3); 0, c.Display.ExpRect(4), c.Display.ExpRect([4,4])/2];
 c.TextBoxDims   = [300 200];
 c.TextPos       = 'TopLeft';
-if c.UseSBS3D == 1
+if c.Display.UseSBS3D == 1
 	c.LoadingTextPosX = c.Display.ExpRect(3)/2;
 else
     c.LoadingTextPosX = 'center';
@@ -171,8 +137,8 @@ end
 
 %========== Prepare photodiode marker
 if c.PhotodiodeOn == 1
-    if c.LinuxDisplay == 1                                                                                  % If using dual displays on Linux...
-        if c.UseSBS3D == 0  
+    if IsLinux == 1                                                                                  % If using dual displays on Linux...
+        if c.Display.UseSBS3D == 0  
             switch c.PhotodiodePos
                 case 'BottomLeft'
                     c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]) - c.PhotdiodeSize([1,4,1,4]);	% Specify subject's portion of the screen 
@@ -183,11 +149,11 @@ if c.PhotodiodeOn == 1
              	case 'BottomRight'
                   	c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]).*[2,1,2,1] - c.PhotdiodeSize([3,4,3,4]);
             end
-        elseif c.UseSBS3D == 1                                                                              % For presenting side-by-side stereoscopic 3D images...
+        elseif c.Display.UseSBS3D == 1                                                                              % For presenting side-by-side stereoscopic 3D images...
             c.MonkeyDiodeRect(1,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1]) + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         	% Center a horizontally squashed fixation rectangle in a half screen rectangle
             c.MonkeyDiodeRect(2,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1])*1.5 + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         
         end
-    elseif c.LinuxDisplay == 0 
+    elseif IsLinux == 0 
         c.PhotodiodeOn = 0;
         c.MonkeyDiodeRect  = [];     
     end
@@ -374,70 +340,15 @@ switch c.OverlayMode
         % actually set the two DataPixx screens to act as a single screen,
         % and draw separately into each half of that screen, as we do for 
         % haploscopes.
-        PsychImaging('PrepareConfiguration'); 
-        PsychImaging('AddTask', 'General', 'FloatingPoint32Bit');                                       % Configure PsychToolbox imaging pipeline to use 32-bit floating point numbers                    
-        PsychImaging('AddTask', 'FinalFormatting', 'DisplayColorCorrection', 'SimpleGamma');            % Apply inverse gamma for correction of display gamma
-        if IsOSX == 1
-            PsychImaging('AddTask', 'General', 'DualWindowStereo', c.Display.ScreenID+1);
-            c.Display.Stereomode = 10;
-        elseif IsWin == 1
-            PsychImaging('AddTask', 'General', 'DualWindowStereo', c.Display.ScreenID+1);
-            c.Display.Stereomode = 4;
-        elseif IsLinux == 1
-            c.Display.Stereomode = 0;
-        end
-        c.Display
-        %DisplayRect = [0,0,c.Display.ExpRect(3)*2,c.Display.ExpRect(4)];
-        [c.window, c.screenRect] = PsychImaging('OpenWindow', c.Display.ScreenID, c.Col_bckgrndRGB(1), [], [], [], c.Display.Stereomode); 	% Open a PTB window
-        Screen('BlendFunction', c.window, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                        % Enable alpha channel
-        %PsychColorCorrection('SetEncodingGamma', c.window, 1/c.Display.gamma);     
-        c.ExperimenterBuffer    = 0;
-        c.MonkeyBuffer          = 1;
-        Screen('TextSize', c.window, 30);
-        Screen('TextFont', c.window, 'Arial');
+        c = SCNI_InitPTBwin(c);
+
     otherwise
         error('Unrecognized DataPixx/ PTB overlay mode ''%s''!', OverlayMode);
 end
 
 %===================== PREPARE DATAPIXX DAC
 if c.UseDataPixx == 1
-    Datapixx('Open');
-    Datapixx('StopAllSchedules');
-    Datapixx('DisableDinDebounce');
-    Datapixx('SetDinLog');
-    Datapixx('StartDinLog');
-    Datapixx('SetDoutValues',0);
-    Datapixx('RegWrRd');
-    Datapixx('DisableDacAdcLoopback');
-	Datapixx('DisableAdcFreeRunning');           % For microsecond-precise sample windows
-    Datapixx('RegWrRd');                         % Synchronize Datapixx registers to local register cache
-
-    %================== Start ADC for recording analog signals
-%     c.ADCchannels       = 5:13;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
-%     c.ADCchannelLabels  = {[],[],[],[],[],'Eye_X',[],[],[],'Eye_Y',[],[],[],'Eye_P',[],[],[],'Scanner'};  % Give each analog input a label
-    c.ADCchannels       = 0:7;                                         % Channel numbering (Range 0-15; **must be consecutive numbers!**) 
-    c.ADCchannelLabels  = {'Eye_Right_X','Eye_Right_Y','Eye_Right_P','Eye_Left_X','Eye_Left_Y','Eye_Left_P','Test1','Test2'};      
-    NoChannels          = numel(c.ADCchannelLabels);                    % How many channels?
-    c.adcRate        	= 1000;                                         % Acquire ADC data at 1 kS/s
-    c.nAdcLocalBuffSpls	= c.adcRate*c.MaxTrialDur;                      % Preallocate a local buffer
-    c.EyeXY             = zeros(NoChannels, c.nAdcLocalBuffSpls);     	% Preallocate matrix for ADC storage
-	c.adcBuffBaseAddr  	= 4e6;                                          % Set DataPixx internal buffer address
-    
-    
-    %================== Set DAC schedule for reward delivery
-    c.Reward_Volt      	= 5.0;                                          % Set output voltage for reward trigger (Volts)
-    c.Reward_pad      	= 0.01;                                         % Pad pulse on either side with zeros (seconds)
-    c.Wave_time       	= c.Reward_TTLDur+c.Reward_pad;             	% Calculate wave duration (seconds)
-    c.Dacrate        	= 1000;                                         % Set DAC sample rate
-    c.reward_Voltages   = [zeros(1,round(c.Dacrate*c.Reward_pad/2)), c.Reward_Volt*ones(1,int16(c.Dacrate*c.Reward_TTLDur)), zeros(1,round(c.Dacrate*c.Reward_pad/2))];
-    c.ndacsamples       = floor(c.Dacrate*c.Wave_time);                   
-    c.dacBuffAddr       = 0;
-    c.RewardChnl        = 0;
-    Datapixx('RegWrRd');
-    Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
-    nChannels = Datapixx('GetDacNumChannels');
-    Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
-    
+   c = SCNI_DataPixxInit([],c);
 end
 
 

@@ -87,7 +87,7 @@ while GetSecs < c.StimOnTime + c.StimDuration
     
     %% ============== Draw overlay
     %=========== Draw to monkey's screen
-    if ~c.LinuxDisplay
+    if ~IsLinux
         currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer);     % Draw to monkey's screen first
     end
     Screen('FillRect', c.window, c.Col_bckgrndRGB);                                     % Clear previous frame
@@ -101,7 +101,7 @@ while GetSecs < c.StimOnTime + c.StimDuration
     end
 
     %=========== Draw to experimenter's screen
-    if ~c.LinuxDisplay
+    if ~IsLinux
         currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
         Screen('FillRect', c.window, c.Col_bckgrndRGB);
     end
@@ -204,7 +204,7 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
             DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.L48background);
         case 'PTB'
             %=========== Draw to monkey's screen
-            if ~c.LinuxDisplay
+            if ~IsLinux
                 currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer); % Draw to monkey's screen first
             end
             Screen('FillRect', c.window, c.Col_bckgrndRGB);                             % Clear previous frame
@@ -215,7 +215,7 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
             end
             
             %=========== Draw to experimenter's screen
-            if ~c.LinuxDisplay
+            if ~IsLinux
                 currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
                 Screen('FillRect', c.window, c.Col_bckgrndRGB);                       	% Clear previous frame
             end
