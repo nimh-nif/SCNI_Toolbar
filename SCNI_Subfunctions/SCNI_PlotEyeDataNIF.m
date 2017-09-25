@@ -43,7 +43,7 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(s.Fig.Handle)
     
     %========= 
     if nargin == 0
-        c.adcRate           = 1000;                              % Default ADC smapling rate (Hz)
+        c.Params.DPx.AnalogInRate           = 1000;       	% Default ADC smapling rate (Hz)
         c.Display.Rect      = [0,0,1920, 1080];
         c.Display.PixPerDeg	= [35, 35];
     end
@@ -86,9 +86,9 @@ elseif isfield(s, 'Fig') && ishandle(s.Fig.Handle)
 end
 
 c.Display.RectDeg   = c.Display.Rect([3,4])./c.Display.PixPerDeg;
-EpochWinSamples{1}  = (s.InitWinTimes(1)*c.adcRate)+1:(s.InitWinTimes(2)*c.adcRate);
-EpochWinSamples{2} 	= (s.SacWinTimes(1)*c.adcRate):(s.SacWinTimes(2)*c.adcRate);
-EpochWinSamples{3}  = (s.FixWinTimes(1)*c.adcRate):(s.FixWinTimes(2)*c.adcRate);
+EpochWinSamples{1}  = (s.InitWinTimes(1)*c.Params.DPx.AnalogInRate)+1:(s.InitWinTimes(2)*c.Params.DPx.AnalogInRate);
+EpochWinSamples{2} 	= (s.SacWinTimes(1)*c.Params.DPx.AnalogInRate):(s.SacWinTimes(2)*c.Params.DPx.AnalogInRate);
+EpochWinSamples{3}  = (s.FixWinTimes(1)*c.Params.DPx.AnalogInRate):(s.FixWinTimes(2)*c.Params.DPx.AnalogInRate);
 
 
 
@@ -179,13 +179,13 @@ else
     axes(s.Fig.Axh(3));
 end
 if FirstPlot == 1 || c.Cal.PlotStatus ~= 1
-    s.Fig.TimeStamps = (1:size(EyePos,2))*c.adcRate/1000;
+    s.Fig.TimeStamps = (1:size(EyePos,2))*c.Params.DPx.AnalogInRate/1000;
 
     s.ph(5) = plot(s.Fig.TimeStamps, EyePos(1,:),'-r','color',[1,0.5,0.5]);
     hold on;
     s.ph(6) = plot(s.Fig.TimeStamps, EyePos(2,:),'-b','color',[0.5,0.5,1]);
-    s.ph(7) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(1,EpochWinSamples{3})),[1,2]),'-r','linewidth',2);
-    s.ph(8) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(2,EpochWinSamples{3})),[1,2]),'-b','linewidth',2);
+    s.ph(7) = plot(s.FixWinTimes*c.Params.DPx.AnalogInRate, repmat(mean(EyePos(1,EpochWinSamples{3})),[1,2]),'-r','linewidth',2);
+    s.ph(8) = plot(s.FixWinTimes*c.Params.DPx.AnalogInRate, repmat(mean(EyePos(2,EpochWinSamples{3})),[1,2]),'-b','linewidth',2);
 end
 if FirstPlot == 1
     xlabel('Time (ms)','fontsize', s.Fig.Fontsize);
@@ -193,10 +193,10 @@ if FirstPlot == 1
     grid on;
     legend(s.ph(7:8),{'X','Y'},'fontsize', s.Fig.Fontsize);
     Ylims = s.VoltageRange;
-    s.Fig.EpochH(1) = patch(s.InitWinTimes([1,1,2,2])*c.adcRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(1,:),'facealpha', 0.3,'edgecolor', 'none');
-    s.Fig.EpochH(2) = patch(s.SacWinTimes([1,1,2,2])*c.adcRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(2,:),'facealpha', 0.3,'edgecolor', 'none');
-    s.Fig.EpochH(3) = patch(s.FixWinTimes([1,1,2,2])*c.adcRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(3,:),'facealpha', 0.3,'edgecolor', 'none');
-    plot([0, TargetDuration*c.adcRate], [0 0], '-k', 'linewidth', 4);
+    s.Fig.EpochH(1) = patch(s.InitWinTimes([1,1,2,2])*c.Params.DPx.AnalogInRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(1,:),'facealpha', 0.3,'edgecolor', 'none');
+    s.Fig.EpochH(2) = patch(s.SacWinTimes([1,1,2,2])*c.Params.DPx.AnalogInRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(2,:),'facealpha', 0.3,'edgecolor', 'none');
+    s.Fig.EpochH(3) = patch(s.FixWinTimes([1,1,2,2])*c.Params.DPx.AnalogInRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(3,:),'facealpha', 0.3,'edgecolor', 'none');
+    plot([0, TargetDuration*c.Params.DPx.AnalogInRate], [0 0], '-k', 'linewidth', 4);
     uistack(s.Fig.EpochH, 'bottom')
 end
 
@@ -513,20 +513,20 @@ end
                 end
 
         end
-        set(s.Fig.EpochH(Indx2), 'xdata', s.Fig.EpochValues{Indx2}([1,1,2,2])*c.adcRate);     % Update epoch patch location
+        set(s.Fig.EpochH(Indx2), 'xdata', s.Fig.EpochValues{Indx2}([1,1,2,2])*c.Params.DPx.AnalogInRate);     % Update epoch patch location
 
         %========== Update epoch stats
         s.InitWinTimes  = s.Fig.EpochValues{1};
         s.SacWinTimes   = s.Fig.EpochValues{2};
         s.FixWinTimes   = s.Fig.EpochValues{3};
         for n = 1:3
-            EpochWinSamples{n}  = round(s.Fig.EpochValues{n}(1)*c.adcRate)+1:round(s.Fig.EpochValues{n}(2)*c.adcRate);
+            EpochWinSamples{n}  = round(s.Fig.EpochValues{n}(1)*c.Params.DPx.AnalogInRate)+1:round(s.Fig.EpochValues{n}(2)*c.Params.DPx.AnalogInRate);
         end
 
         if Indx2 == 3   % For fixation epoch update...
             if c.Cal.CurrentEye <= 2
-                set(s.ph(7), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePosV(s.Fig.EyeIndx{c.Cal.CurrentEye}(1),EpochWinSamples{3})),[1,2]));
-                set(s.ph(8), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePosV(s.Fig.EyeIndx{c.Cal.CurrentEye}(2),EpochWinSamples{3})),[1,2]));
+                set(s.ph(7), 'Xdata', s.FixWinTimes*c.Params.DPx.AnalogInRate, 'Ydata', repmat(mean(c.EyePosV(s.Fig.EyeIndx{c.Cal.CurrentEye}(1),EpochWinSamples{3})),[1,2]));
+                set(s.ph(8), 'Xdata', s.FixWinTimes*c.Params.DPx.AnalogInRate, 'Ydata', repmat(mean(c.EyePosV(s.Fig.EyeIndx{c.Cal.CurrentEye}(2),EpochWinSamples{3})),[1,2]));
             elseif c.Cal.CurrentEye == 3
 
 

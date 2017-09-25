@@ -31,7 +31,11 @@ elseif s.StimNumber >= c.StimPerTrial                                       % If
 end
 
 if ~isfield(c, 'CompletedRun') || c.CompletedRun ~= 1                      	% If this is not the very first trial...
-    s.CondNo      = c.LocationOrder((s.TrialNumber*c.StimPerTrial)+s.StimNumber);  % Get the condition number for the current block
+    if c.CenterOnly == 0
+        s.CondNo      = c.LocationOrder((s.TrialNumber*c.StimPerTrial)+s.StimNumber);  % Get the condition number for the current block
+    elseif c.CenterOnly == 1
+        s.CondNo = 1;
+    end
 
     if ~isfield(c,'Run') || ~isfield(c.Run, 'StartTime')
         c.Run.StartTime = GetSecs;

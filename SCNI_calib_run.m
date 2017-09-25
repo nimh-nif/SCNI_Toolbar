@@ -35,25 +35,25 @@ if c.UseDataPixx == 1
         AdcStatus = Datapixx('GetAdcStatus');
         WaitSecs(0.01);
     end
-    Datapixx('SetAdcSchedule', 0, c.adcRate, c.nAdcLocalBuffSpls, c.ADCchannels, c.adcBuffBaseAddr, c.nAdcLocalBuffSpls);
+    Datapixx('SetAdcSchedule', 0, c.Params.DPx.AnalogInRate, c.Params.DPx.nAdcLocalBuffSpls, c.Params.DPx.AnalogInCh, c.Params.DPx.adcBuffBaseAddr, c.Params.DPx.nAdcLocalBuffSpls);
     Datapixx('StartAdcSchedule');
     Datapixx('RegWrRd');                                                % Make sure a DAC schedule is not running before setting a new schedule
 
     %================== Set DAC schedule for reward delivery
-    if c.AnalogReward == 1
+    if c.Params.DPx.AnalogReward == 1
         Dacstatus = Datapixx('GetDacStatus');                               % Check DAC status
         while Dacstatus.scheduleRunning == 1
             Datapixx('RegWrRd');
             Dacstatus = Datapixx('GetDacStatus');
         end
         Datapixx('RegWrRd');
-        Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
+        Datapixx('WriteDacBuffer', c.Params.DPx.reward_Voltages, c.Params.DPx.dacBuffAddr, c.Params.DPx.RewardChnl);
         nChannels = Datapixx('GetDacNumChannels');
         Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
     end
 end
 
-
+c.MaxBreakSamples   = c.MaxFixBreakDur/1000*c.Params.DPx.AnalogInRate;  
 
 %% =================== Run main experiment loop ===========================
 StimOn = 0;                     % Stimulus is not currently presented
@@ -233,49 +233,83 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
         c.StimOffTime = StimOffTime;                                      	% Record stimulus onset timestamp
         StimOn = 0;                                                         % Change stimulus on flag
         fprintf('Stim off\n\n');
+        
+        %================= Read continuously sampled Eye data
+        if c.UseDataPixx == 1
+            Datapixx('RegWrRd');                                                            % Update registers for GetAdcStatus
+            status = Datapixx('GetAdcStatus');                                              
+            nReadSpls = status.newBufferFrames;                                             % How many samples can we read?
+            [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
+            Datapixx('StopAdcSchedule'); 
+            PDS.EyeXYP{s.TrialNumber, s.StimNumber}     = NewData(c.Params.DPx.ADCchannelsUsed(1:3),:);
+            PDS.AnalogIn{s.TrialNumber, s.StimNumber}	= NewData(c.Params.DPx.ADCchannelsUsed(4),:);           
+            PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
+            save(c.Matfilename, '-append', 'PDS','c','s');
+
+            [s, c] = SCNI_PlotEyeDataNIF(NewData(c.Params.DPx.ADCchannelsUsed(1:2),:), s, c);   
+        end
+        
+        %================ Reward animal?
+        if c.Reward_MustFix == 1                    %========== If fixation is required for reward
+            Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}(1:2,:), c, s);       % Check whether fixation criteria were met for this trial
+            Valid
+            if Valid == 1
+                c.RewardEarned = 1;
+            else
+                c.RewardEarned = 0;
+            end
+        end
+        if c.Reward_MustFix == 0 || c.RewardEarned == 1                                 % If fixation is not required OR fixation requirement has been met...                                 % Deliver reward
+               [PDS,c,s] = SCNI_givejuice(PDS, c, s);
+        end
+        
     end
     CheckPress(PDS, c, s);                                                  % Check experimenter's input
     
 end
                                                           
 
-
-%================= Read continuously sampled Eye data
-if c.UseDataPixx == 1
-    Datapixx('RegWrRd');                                                            % Update registers for GetAdcStatus
-    status = Datapixx('GetAdcStatus');                                              
-    nReadSpls = status.newBufferFrames;                                             % How many samples can we read?
-    [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.adcBuffBaseAddr); 	% Read all available samples from ADCs
-	Datapixx('StopAdcSchedule'); 
-    PDS.EyeXYP{s.TrialNumber, s.StimNumber}     = NewData(1:6,:);
-    PDS.AnalogIn{s.TrialNumber, s.StimNumber}	= NewData(7:8,:);           
-    PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
-    save(c.Matfilename, '-append', 'PDS','c','s');
-    
-    [s, c] = SCNI_PlotEyeDataNIF(NewData(4:5,:), s, c);
-    %[s, c] = PlotEyeData(NewData(1:6,:), s, c);
-end
-
-%================ Reward animal?
-if c.Reward_MustFix == 1                    %========== If fixation is required for reward
-	Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}, c);       % Check whether fixation criteria were met for this trial
-    if Valid == 1
-        c.RewardEarned = 1;
-    else
-        c.RewardEarned = 0;
-    end
-end
-
-if c.Reward_MustFix == 0 || c.RewardEarned == 1                                 % If fixation is not required OR fixation requirement has been met...
-%     if GetSecs >= s.LastReward + c.NextRewardInt                                % If the time since the last automated reward exceeds the reward interval
-%         SCNI_DigitalOutJuice(c.Reward_TTLDur);                                  % Deliver reward
-%         disp('SCNI digital juice out')
-%         s.RewardCount   = s.RewardCount + 1;
-%         s.LastReward    = GetSecs;                                              % Record time of last automated reward delivery
-%         c.NextRewardInt = c.Reward_MeanDur+rand(1)*c.Reward_RandDur;            % Generate random interval for next automated rward delivery
-%         c.RewardEarned  = 0;
+% 
+% %================= Read continuously sampled Eye data
+% if c.UseDataPixx == 1
+%     Datapixx('RegWrRd');                                                                        % Update registers for GetAdcStatus
+%     status      = Datapixx('GetAdcStatus');                                              
+%     nReadSpls   = status.newBufferFrames;                                                       % How many samples can we read?
+%     [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
+% 	Datapixx('StopAdcSchedule'); 
+%     PDS.EyeXYP{s.TrialNumber, s.StimNumber}     = NewData(1:6,:);
+%     PDS.AnalogIn{s.TrialNumber, s.StimNumber}	= NewData(7:8,:);           
+%     PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
+%     
+%     Fig = s.Fig;
+%     s   = rmfield(s, 'Fig');
+%     save(c.Matfilename, '-append', 'PDS','c','s');
+%     s.Fig = Fig;
+%     
+%     [s, c] = SCNI_PlotEyeDataNIF(NewData(4:5,:), s, c);
+%     %[s, c] = PlotEyeData(NewData(1:6,:), s, c);
+% end
+% 
+% %================ Reward animal?
+% if c.Reward_MustFix == 1                    %========== If fixation is required for reward
+% 	Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}, c);       % Check whether fixation criteria were met for this trial
+%     if Valid == 1
+%         c.RewardEarned = 1;
+%     else
+%         c.RewardEarned = 0;
 %     end
-end
+% end
+% 
+% if c.Reward_MustFix == 0 || c.RewardEarned == 1                                 % If fixation is not required OR fixation requirement has been met...
+% %     if GetSecs >= s.LastReward + c.NextRewardInt                                % If the time since the last automated reward exceeds the reward interval
+% %         SCNI_DigitalOutJuice(c.Reward_TTLDur);                                  % Deliver reward
+% %         disp('SCNI digital juice out')
+% %         s.RewardCount   = s.RewardCount + 1;
+% %         s.LastReward    = GetSecs;                                              % Record time of last automated reward delivery
+% %         c.NextRewardInt = c.Reward_MeanDur+rand(1)*c.Reward_RandDur;            % Generate random interval for next automated rward delivery
+% %         c.RewardEarned  = 0;
+% %     end
+% end
 
 
 
@@ -334,30 +368,52 @@ end
 
 %================= Check subject's gaze is within specified window
 function [In, Dist] = CheckFixation(s, c)
-    Dist = sqrt(s.EyeXc^2 + s.EyeYc^2);                   % Gaze distance from center of screen (pixels)
-    if Dist <= c.Fix_WinRadius*c.Display.PixPerDeg          % Is gaze within specified radius?
-        In = 1;
+ 	EyeXoffset  = diff([s.EyeX,c.FixLocations(s.CondNo,1)]);               	% Calculate horizontal distance between gaze location and target location
+    EyeYoffset  = diff([s.EyeY,c.FixLocations(s.CondNo,2)]);               	% Calculate vertical distance between gaze location and target location
+    Dist        = sqrt(EyeXoffset^2 + EyeYoffset^2);                      	% Gaze distance from center of target (pixels)
+    if Dist <= mean(c.Fix_WinRadius*c.Display.PixPerDeg)                  	% Is gaze within specified radius of target?
+        In = 1;                                                                     
     else
         In = 0;
     end
 end
 
+
 %================= Check gaze period 
-function [ValidTrial] = FindFixBreak(EyeData, c)
-    Dists           = sqrt(EyeData(1,:).^2 + EyeData(2,:).^2);           	% Calculate gaze distance from center of screen (pixels)
+function [ValidTrial] = FindFixBreak(EyeData, c, s)
+    for n = 1:2
+        EyeDataDVA(n,:)     = (EyeData(n,:) + c.Cal.EyeOffset(n))*c.Cal.EyeGain(n)*round(~c.Cal.EyeInvert(n)-0.5); 	% Convert volts into degrees of visual angle
+    end
+    EyeOffset(1,:)  = EyeDataDVA(1,:) - repmat(c.FixLocationsDeg(s.CondNo,1),[1, size(EyeDataDVA, 2)]);
+    EyeOffset(2,:)  = EyeDataDVA(2,:) - repmat(c.FixLocationsDeg(s.CondNo,2),[1, size(EyeDataDVA, 2)]);
+    Dists           = sqrt(EyeOffset(1,:).^2 + EyeOffset(2,:).^2);       	% Calculate gaze distance from center of screen (degrees)
     InFix           = zeros(1, numel(Dists));                           	% Preallocate vector
-    InFix(find(Dists <= mean(c.Fix_WinRadius*c.Display.PixPerDeg))) = 1;  	% If gaze was within specified radius, code as 1
+    InFix(find(Dists <= mean(c.Fix_WinRadius))) = 1;                        % If gaze was within specified radius, code as 1    
     ProportionIn    = numel(find(InFix==1))/numel(InFix);                   % Calculate proportion of samples that gaze position was within fixation window
-    FixBreakIndx    = find(diff(InFix)==-1);                                % Find samples at which gaze left fixation window
-    FixReturnIndx   = find(diff(InFix)==1);                                 % Find samples at which gaze entered fixation window
-    FixAbsentSmpls  = FixReturnIndx-FixBreakIndx;                           % Calculate duration of each fixation break period (samples)
-    MaxBreakSamples = c.Eye_BlinkDuration*c.adcRate;                        % Calculate maximum acceptable number of samples gaze can leave fixation window without being penalized
-    if any(FixAbsentSmpls > MaxBreakSamples)                                % If any fixation breaks exceeded permitted duration...
+    FixAbsentSmpls  = numel(find(InFix==0));
+    if FixAbsentSmpls > c.MaxBreakSamples                                   % If any fixation breaks exceeded permitted duration...
         ValidTrial = 0;                                                     % Invalid trial!
     else
         ValidTrial = 1;                                                     % Valid trial!
     end
 end
+
+% %================= Check gaze period (old version - untested)
+% function [ValidTrial] = FindFixBreak(EyeData, c)
+%     Dists           = sqrt(EyeData(1,:).^2 + EyeData(2,:).^2);           	% Calculate gaze distance from center of screen (pixels)
+%     InFix           = zeros(1, numel(Dists));                           	% Preallocate vector
+%     InFix(find(Dists <= mean(c.Fix_WinRadius*c.Display.PixPerDeg))) = 1;  	% If gaze was within specified radius, code as 1
+%     ProportionIn    = numel(find(InFix==1))/numel(InFix);                   % Calculate proportion of samples that gaze position was within fixation window
+%     FixBreakIndx    = find(diff(InFix)==-1);                                % Find samples at which gaze left fixation window
+%     FixReturnIndx   = find(diff(InFix)==1);                                 % Find samples at which gaze entered fixation window
+%     FixAbsentSmpls  = FixReturnIndx-FixBreakIndx;                           % Calculate duration of each fixation break period (samples)
+%     MaxBreakSamples = c.Eye_BlinkDuration*c.Params.DPx.AnalogInRate;     	% Calculate maximum acceptable number of samples gaze can leave fixation window without being penalized
+%     if any(FixAbsentSmpls > MaxBreakSamples)                                % If any fixation breaks exceeded permitted duration...
+%         ValidTrial = 0;                                                     % Invalid trial!
+%     else
+%         ValidTrial = 1;                                                     % Valid trial!
+%     end
+% end
 
 %================= Update statistics for experimenter display =============
 function c = UpdateStats(c, s)
@@ -417,7 +473,7 @@ function [EyeX,EyeY,V] = GetEyePix(c)
         if TestWithFunctionGen == 1
             EyeChannels = [8,7];
         else
-            EyeChannels = [1,2];
+            EyeChannels = c.Params.DPx.ADCchannelsUsed([1,2]);
         end
         Datapixx('RegWrRd');                                                % Update registers for GetAdcStatus
         status = Datapixx('GetAdcStatus');          

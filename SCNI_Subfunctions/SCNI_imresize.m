@@ -1,7 +1,7 @@
 function newimg = NIF_imresize(img,nw,nh)
 
 %=========================== NIF_imresize.m ===============================
-% Called when the Image Processing Toolbox's 'imresize.m' ius not available.
+% Called when the Image Processing Toolbox's 'imresize.m' is not available.
 % Resizes an image using bicubic interpolation
 %
 % 	NEWIMG = NIF_IMRESIZE(IMG,NW,NH) Given input image IMG,
@@ -14,7 +14,7 @@ if nargin ~= 3
         nh = nw(2);
         nw = nw(1);
     end
-end;
+end
 
 ht_scale    = size(img,1) / nh;
 wid_scale   = size(img,2) / nw;

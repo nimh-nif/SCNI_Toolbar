@@ -40,14 +40,14 @@ if c.UseDataPixx == 1
     Datapixx('RegWrRd');                                                % Make sure a DAC schedule is not running before setting a new schedule
 
     %================== Set DAC schedule for reward delivery
-    if c.AnalogReward == 1
+    if c.Params.DPx.AnalogReward == 1
         Dacstatus = Datapixx('GetDacStatus');                               % Check DAC status
         while Dacstatus.scheduleRunning == 1
             Datapixx('RegWrRd');
             Dacstatus = Datapixx('GetDacStatus');
         end
         Datapixx('RegWrRd');
-        Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
+        Datapixx('WriteDacBuffer', Params.DPx.reward_Voltages, Params.DPx.dacBuffAddr, Params.DPx.RewardChnl);
         nChannels = Datapixx('GetDacNumChannels');
         Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
     end

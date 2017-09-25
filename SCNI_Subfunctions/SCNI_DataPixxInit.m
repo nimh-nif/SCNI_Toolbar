@@ -33,23 +33,25 @@ UnusedIndx                  = find(~cellfun(@isempty, strfind(Params.DPx.AnalogI
 Params.DPx.ADCchannelsUsed 	= find(Params.DPx.AnalogInAssign ~= UnusedIndx);                        % Find ADC channels assigned to inputs 
 Params.DPx.nAdcLocalBuffSpls= Params.DPx.AnalogInRate*c.MaxTrialDur;                            	% Preallocate a local buffer
 Params.DPx.adcBuffBaseAddr  = 4e6;                                                                  % Set DataPixx internal buffer address
-
+Params.DPx.EyeChannels      = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'Eye')));    % Find ADC channels recording eye X and Y position
 
 %================== Prepare DAC schedule for reward delivery
-c.AnalogReward      = any(Params.DPx.AnalogOutAssign==find(~cellfun(@isempty,strfind(Params.DPx.AnalogOutLabels,'Reward'))));
-if c.AnalogReward == 1
-    c.Reward_Volt      	= 5.0;                                                                          % Set output voltage for reward trigger (Volts)
-    c.Reward_pad      	= 0.01;                                                                         % Pad pulse on either side with zeros (seconds)
-    c.Wave_time       	= c.Reward_TTLDur+c.Reward_pad;                                                 % Calculate wave duration (seconds)
-    c.reward_Voltages   = [zeros(1,round(Params.DPx.AnalogOutRate*c.Reward_pad/2)), c.Reward_Volt*ones(1,int16(Params.DPx.AnalogOutRate*c.Reward_TTLDur)), zeros(1,round(Params.DPx.AnalogOutRate*c.Reward_pad/2))];
-    c.ndacsamples       = floor(Params.DPx.AnalogOutRate*c.Wave_time);                   
-    c.dacBuffAddr       = 0;
-    c.RewardChnl        = find(~cellfun(@isempty, strfind(Params.DPx.AnalogOutNames,'Reward')))-1;       % Find DAC channel to send reward TTL on                                                                         % Which DAC channel to 
+Params.DPx.AnalogReward      = any(Params.DPx.AnalogOutAssign==find(~cellfun(@isempty,strfind(Params.DPx.AnalogOutLabels,'Reward'))));
+if Params.DPx.AnalogReward == 1
+    Reward_Volt      	= 5.0;                                                                          % Set output voltage for reward trigger (Volts)
+    Reward_pad      	= 0.01;                                                                         % Pad pulse on either side with zeros (seconds)
+    Wave_time       	= c.Reward_TTLDur+Reward_pad;                                                   % Calculate wave duration (seconds)
+    Params.DPx.reward_Voltages   = [zeros(1,round(Params.DPx.AnalogOutRate*Reward_pad/2)), Reward_Volt*ones(1,int16(Params.DPx.AnalogOutRate*c.Reward_TTLDur)), zeros(1,round(Params.DPx.AnalogOutRate*Reward_pad/2))];
+    Params.DPx.ndacsamples      = floor(Params.DPx.AnalogOutRate*Wave_time);                   
+    Params.DPx.dacBuffAddr  	= 0;
+    Params.DPx.RewardChnl    	= find(~cellfun(@isempty, strfind(Params.DPx.AnalogOutNames,'Reward')))-1;	% Find DAC channel to send reward TTL on                                                                         % Which DAC channel to 
+    
+    %Datapixx('SetDacSchedule', Delay, c.Params.DPx.AnalogOutRate, c.Params.DPx.ndacsamples, c.Params.DPx.RewardChnl, c.Params.DPx.dacBuffAddr, c.Params.DPx.ndacsamples);
     
     Datapixx('RegWrRd');
-    Datapixx('WriteDacBuffer', c.reward_Voltages, c.dacBuffAddr, c.RewardChnl);
+    Datapixx('WriteDacBuffer', Params.DPx.reward_Voltages, Params.DPx.dacBuffAddr, Params.DPx.RewardChnl);
     nChannels = Datapixx('GetDacNumChannels');
-    Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);                           % Set all DAC channels to 0V
+    Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);                                   % Set all DAC channels to 0V
 end
 
 
