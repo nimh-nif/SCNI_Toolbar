@@ -13,6 +13,8 @@ end
 
 if isfield(c,'MonkeyFixRect') && iscell(c.MonkeyFixRect)                    % If MonkeyFixRect exists as a cell array...
     IsCalibration = 1;                                                      % This is a calibration
+else
+    IsCalibration = 0; 
 end
 
 
@@ -20,7 +22,7 @@ end
 c.Display.ExpRect   = c.Display.Rect;
 c.Display.MonkRect  = c.Display.ExpRect([3,2,3,4]).*[1,1,2,1]; 
 if ~isfield(c,'Stim_Fullscreen')
-    c.Stim_Fullscreen   = 1;
+    c.Stim_Fullscreen   = 0;
 end
 if c.Stim_Fullscreen == 0
     c.ImgSize   = round(c.Stim_Diameter*c.Display.PixPerDeg);                                 	% Convert image size from degrees to pixels

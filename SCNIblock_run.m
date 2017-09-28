@@ -47,7 +47,7 @@ if c.UseDataPixx == 1
             Dacstatus = Datapixx('GetDacStatus');
         end
         Datapixx('RegWrRd');
-        Datapixx('WriteDacBuffer', Params.DPx.reward_Voltages, Params.DPx.dacBuffAddr, Params.DPx.RewardChnl);
+        Datapixx('WriteDacBuffer', c.Params.DPx.reward_Voltages, c.Params.DPx.dacBuffAddr, c.Params.DPx.RewardChnl);
         nChannels = Datapixx('GetDacNumChannels');
         Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
     end
