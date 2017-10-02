@@ -1,5 +1,13 @@
 ## Accessing Felix and Biowulf 
 
+### Before you begin
+* Apply for NIH Biowulf HPC accounts: https://hpc.nih.gov/docs/accounts.html 
+* Sign up to GitHub https://github.com/
+* Contact the SCNI admin and requets to be added to:
+    1) the NIF group's Helix directory
+    2) the NIF GitHub user group: https://github.com/nimh-nif
+
+
 ### Using NoMachine
 
 * Install NoMachine from the web: https://www.nomachine.com/
@@ -11,8 +19,9 @@
 ::
 
     cd /data/NIF/projects
-    mkdir 
-    cd 
+    mkdir leathersml
+    chmod 755 -R /leathersml
+    cd leathersml
     git clone https://github.com/nimh-nif/SortSpikes.git
 
 * Open Matlab
@@ -36,3 +45,10 @@
 
     ssh murphyap@felix.nimh.nih.gov
     
+
+### Modifying SortSpikes Matlab code
+
+* Copy BatchNeuroScript_APM.m and rename with own initials
+* Copy set_waveclus_handles_APM.m and rename with own initials
+* Add new user to PreprocessNeuroData.m
+
