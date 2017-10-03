@@ -1,9 +1,11 @@
-## Accessing Felix and Biowulf 
+# SCNI Guide to WaveClus Spike Sorting on the NIH HPC Cluster
+
+## 1. Accessing Felix and Biowulf 
 
 ### Before you begin
 * Apply for NIH Biowulf and Helix HPC accounts: https://hpc.nih.gov/docs/accounts.html 
 * Sign up to GitHub https://github.com/
-* Contact the SCNI admin and requets to be added to:
+* Contact the SCNI admin and request to be added to:
     1) the NIF group's Helix directory
     2) the NIF GitHub user group: https://github.com/nimh-nif
 
@@ -18,11 +20,11 @@
 
 ::
 
-    cd /data/NIF/projects
-    mkdir leathersml
-    chmod 755 -R /leathersml
-    cd leathersml
-    git clone https://github.com/nimh-nif/SortSpikes.git
+    cd /data/NIF/projects                                   # change directory
+    mkdir leathersml                                        # create a new directory with your username
+    chmod 755 -R /leathersml                                # update permissions for the new directory
+    cd leathersml                                           # change directory
+    git clone https://github.com/nimh-nif/SortSpikes.git    # clone the SortSpikes git repository to your directory
 
 * Open Matlab
 
