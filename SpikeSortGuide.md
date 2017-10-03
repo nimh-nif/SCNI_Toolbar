@@ -1,7 +1,7 @@
 ## Accessing Felix and Biowulf 
 
 ### Before you begin
-* Apply for NIH Biowulf HPC accounts: https://hpc.nih.gov/docs/accounts.html 
+* Apply for NIH Biowulf and Helix HPC accounts: https://hpc.nih.gov/docs/accounts.html 
 * Sign up to GitHub https://github.com/
 * Contact the SCNI admin and requets to be added to:
     1) the NIF group's Helix directory
@@ -31,9 +31,10 @@
     module load matlab
     matlab &
 
-### Using OSX
+### Mounting Helix to the desktop
 
-* Open an OSX Finder window. From the menu at the top of the screen select Go > Connect to Server
+* Full instructions for all operating systems are providede here: https://hpc.nih.gov/docs/transfer.html
+* On OSX, open a Finder window. From the menu at the top of the screen select Go > Connect to Server
 * Enter the server address: smb://helixdrive.nih.gov/NIF and click connect
 * Enter your NIH username and password
 * The NIF group's Helix directory is now mapped to your local Mac as a volume.
@@ -43,12 +44,13 @@
 
 ::
 
-    ssh murphyap@felix.nimh.nih.gov
+    ssh yourusername@felix.nimh.nih.gov
     
 
 ### Modifying SortSpikes Matlab code
 
-* Copy BatchNeuroScript_APM.m and rename with own initials
-* Copy set_waveclus_handles_APM.m and rename with own initials
-* Add new user to PreprocessNeuroData.m
+* To allow individual users to customize parameters for sorting their data, each user should create their own copy of the following files:
+    * Copy BatchNeuroScript_APM.m, save and rename with own initials
+    * Copy set_waveclus_handles_APM.m, save and rename with own initials
+    * Edit PreprocessNeuroData.m to include new user in the switch statement
 
