@@ -51,10 +51,10 @@ end
 
 %================== Open toolbar window
 Fig.ToolbarRect     = [0,0,1920,100]*Fig.DisplayScale;
-Fig.ButtonType      = {'togglebutton','pushbutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
-Fig.IconList        = {'Play','Liquid','SpeakerOn','Exit','Penalty','GammaCorrect','Sleep','EPI','Display','Photodiode','Eye','DataPixx','TDT','OpenEphys'};
-Fig.ButtonTips      = {'Run experiment','Give reward','Play audio','Quit','Debug mode','Apply gamma','Time out','MRI training','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings'};
-Fig.ButtonFunc      = {'','SCNI_GiveReward','SCNI_PlaySound','','','','','','SCNI_DisplaySettings','','SCNI_EyelinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings'};
+Fig.ButtonType      = {'togglebutton','pushbutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
+Fig.IconList        = {'Play','Liquid','SpeakerOn','Exit','Penalty','GammaCorrect','Sleep','EPI','Stereoscopic','Display','Photodiode','Eye','DataPixx','TDT','OpenEphys'};
+Fig.ButtonTips      = {'Run experiment','Give reward','Play audio','Quit','Debug mode','Apply gamma','Time out','MRI training','Stereoscopic 3D','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings'};
+Fig.ButtonFunc      = {'','SCNI_GiveReward','SCNI_PlaySound','','','','','','','SCNI_DisplaySettings','','SCNI_EyelinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings'};
 Fig.ShortcutKeys    = {'g','r','a','q','d','p','k','g','e','t','s','o'};
 Fig.ButtonXPos      = (10*Fig.DisplayScale):(Fig.ButtonSize(3)+10*Fig.DisplayScale):((Fig.ButtonSize(3)+10*Fig.DisplayScale)*numel(Fig.IconList));
 Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure window with specified title
@@ -66,7 +66,7 @@ Fig.Handle = figure('Name','SCNI Toolbar',...                 	% Open a figure w
                     'Menu','none','Toolbar','none');            % Turn off toolbars and menu
 setappdata(0, GUItag, Fig.Handle);                              % Make GUI handle accessible from other m-files
 Fig.PannelTitles    = {'Actions', 'Modes', 'Settings'};  
-Fig.ButtonsPPannel  = [4, 4, 6];
+Fig.ButtonsPPannel  = [4, 5, 6];
 Fig.BIndx           = 1;
 
 

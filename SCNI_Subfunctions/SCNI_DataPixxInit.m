@@ -33,7 +33,7 @@ UnusedIndx                  = find(~cellfun(@isempty, strfind(Params.DPx.AnalogI
 Params.DPx.ADCchannelsUsed 	= find(Params.DPx.AnalogInAssign ~= UnusedIndx);                        % Find ADC channels assigned to inputs 
 Params.DPx.nAdcLocalBuffSpls= Params.DPx.AnalogInRate*c.MaxTrialDur;                            	% Preallocate a local buffer
 Params.DPx.adcBuffBaseAddr  = 4e6;                                                                  % Set DataPixx internal buffer address
-Params.DPx.EyeChannels      = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInNames,'Eye')));    % Find ADC channels recording eye X and Y position
+Params.DPx.EyeChannels      = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInLabels,'Eye')));    % Find ADC channels recording eye X and Y position
 
 %================== Prepare DAC schedule for reward delivery
 Params.DPx.AnalogReward      = any(Params.DPx.AnalogOutAssign==find(~cellfun(@isempty,strfind(Params.DPx.AnalogOutLabels,'Reward'))));
