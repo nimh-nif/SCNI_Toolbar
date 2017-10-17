@@ -1,4 +1,4 @@
- function [PDS, c, s] = SCNIblock_init(PDS, c, s)
+ function [PDS, c, s] = SCNI_Movie_init(PDS, c, s)
 
 %======================= Initialization function ==========================
 % This is executed only once, after the settings file is loaded by pressing 
@@ -16,33 +16,20 @@
 %==========================================================================
 
 %% ============== Load SCNI viewing geometry parameters
-addpath(genpath(fileparts(mfilename('fullpath'))))          % Add subfunctions folder to path
 temp                = SCNI_DisplaySettings([],0);           % Load display parameters
 c.Display           = temp.Display;                         
 c.Display.gamma     = 2.2;                                  % Set gamma value
 c.OverlayMode       = 'PTB';                                % Options are 'M16','L48','PTB'. Use 'PTB' is video is NOT going through the DataPixx
 c.UseDataPixx       = 1;                                    % Use DataPixx2 box for analog/ digital I/O?
-
 c.EventCodes        = SCNI_LoadEventCodes;               	% Load SCNI event codes
 
-%% ============== Initialize color lookup tables
-% CLUTs may be customized as needed. CLUTS also need to be defined before initializing DataPixx
-switch c.OverlayMode
-    case 'L48'
-        c.humanCLUT                                     = c.humanColors;
-        c.monkeyCLUT                                    = c.monkeyColors;
-%         c.humanCLUT(length(c.humanColors)+1:(256/2),:)      = repmat(linspace(0,1,(256/2)-length(c.humanColors))',[1,3]);
-%         c.monkeyCLUT(length(c.monkeyColors)+1:(256/2),:)    = repmat(linspace(0,1,(256/2)-length(c.monkeyColors))',[1,3]);
-     	c.humanCLUT((length(c.humanColors)+1):256,:)      = repmat(linspace(0,1,256-length(c.humanColors))',[1,3]);
-        c.monkeyCLUT((length(c.monkeyColors)+1):256,:)    = repmat(linspace(0,1,256-length(c.monkeyColors))',[1,3]);
-end
 
 %% ============= Initialize DataPixx
-c.SimulateEyes  = 0;            % Use mouse cursor position to simulate eye position?
-c.EyeGain       = [1,1];        % Gain for converting degrees to volts
-c.EyeOffset     = [0,0];        % Offset (in Volts) for making central fixation equal to 0V
+c.SimulateEyes  = 0;                                        % Use mouse cursor position to simulate eye position?
+c.EyeGain       = [1,1];                                    % Gain for converting degrees to volts
+c.EyeOffset     = [0,0];                                    % Offset (in Volts) for making central fixation equal to 0V
 c               = init_DataPixx(c);
-
+c.RestartDataPixx = 1;
 
 %% ======================= Settings for block design ======================
 % One 'run' consists of multiple 'blocks'. Each block contains just one
@@ -73,22 +60,17 @@ if ~exist(c.SaveDir, 'dir')                                                 % If
 end
 
 
-%% ================= Generate counterbalanced pseudo-random block and stimulus order
-c.Blocks        = SCNI_blockdesign(c.NoCond, c.BlocksPerCond, c.StimPerCond, c.StimPerBlock);    % Get pseudorandomized block & stimulus orders
-c.Blocks.TrialNumber = 0;           % Set trial number to zero to compensate for the fact that 'SCNIblock_next.m' gets called BEFORE 'SCNIblock_run.m'
-c.StimOnTime   	= [];
-c.StimOffTime 	= [];
-c.Run           = struct;  
-c.Run.TotalTime = numel(c.Blocks.Order)*size(c.Blocks.Stimorder, 2)*(c.StimDuration+c.ISI);     % Caluculate duration of entire run
-c.Run.TotalTrials = numel(c.Blocks.Order)*size(c.Blocks.Stimorder, 2);
+% %% ================= Generate counterbalanced pseudo-random block and stimulus order
+% c.Blocks        = SCNI_blockdesign(c.NoCond, c.BlocksPerCond, c.StimPerCond, c.StimPerBlock);    % Get pseudorandomized block & stimulus orders
+% c.Blocks.TrialNumber = 0;           % Set trial number to zero to compensate for the fact that 'SCNIblock_next.m' gets called BEFORE 'SCNIblock_run.m'
+% c.StimOnTime   	= [];
+% c.StimOffTime 	= [];
+% c.Run           = struct;  
+% c.Run.TotalTime = numel(c.Blocks.Order)*size(c.Blocks.Stimorder, 2)*(c.StimDuration+c.ISI);     % Caluculate duration of entire run
+% c.Run.TotalTrials = numel(c.Blocks.Order)*size(c.Blocks.Stimorder, 2);
 
 %% ================= Prepare experimenter display components
-c.CondColors    = jet(c.NoCond)*255;                                                            % Get RGB color for each block condition
-if c.FixAfterEachBlock==1 %choose the color for the fixation block if requested
-    c.CondColors(1,:)=[255 255 255];
-end
-c.BlockImg      = reshape(c.CondColors(c.Blocks.Order,:),[1,numel(c.Blocks.Order),3]);          % Generate color image of block design
-c.BlockImg      = imresize(c.BlockImg, [100,200],'nearest');                                    % Resize image with nearest neighbour interpolation
+c.BlockImg      = ones([100,200]);                                                            	% Create blank backgfround
 c.BlockImgRect  = [100, c.Display.Rect(4)-100, 600, c.Display.Rect(4)-50];                      % Specify onscreen position to draw block design
 c.BlockImgLen   = c.BlockImgRect(3)-c.BlockImgRect(1);                                          % Calculate length of block design rect
 c.BlockImgTex   = Screen('MakeTexture', c.window, c.BlockImg);                                  % Generate texture handle for block design image
@@ -97,6 +79,7 @@ ProgOverlay(:,:,4) = 127;                                                       
 c.BlockProgTex  = Screen('MakeTexture', c.window, ProgOverlay);                                 % Create a texture handle for overlay
 
 %% ================= Calculate screen coordinates
+c.Stim_Fullscreen = c.Movie.Fullscreen;
 c = SCNI_InitScreenCoords(c);
 
 
@@ -152,15 +135,20 @@ if c.PhotodiodeOn == 1
         if c.Display.UseSBS3D == 0  
              switch c.PhotodiodePos
                 case 'BottomLeft'
-                    c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]) - c.PhotdiodeSize([1,4,1,4]);	% Specify subject's portion of the screen 
+                    c.ExpDiodeRect      = c.PhotdiodeSize + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);
+                    c.MonkeyDiodeRect   = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]) - c.PhotdiodeSize([1,4,1,4]);	% Specify subject's portion of the screen 
                 case 'TopLeft'
-                    c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]);
+                    c.ExpDiodeRect      = c.PhotdiodeSize;
+                    c.MonkeyDiodeRect   = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]);
                 case 'TopRight'
-                  	c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]).*[2,1,2,1] - c.PhotdiodeSize([3,2,3,2]);
+                    c.ExpDiodeRect      = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]) - c.PhotdiodeSize([3,2,3,2]);
+                  	c.MonkeyDiodeRect   = c.PhotdiodeSize + c.Display.Rect([3,1,3,1]).*[2,1,2,1] - c.PhotdiodeSize([3,2,3,2]);
              	case 'BottomRight'
-                  	c.MonkeyDiodeRect = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]).*[2,1,2,1] - c.PhotdiodeSize([3,4,3,4]);
+                    c.ExpDiodeRect      = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]) - c.PhotdiodeSize([3,4,3,4]);
+                  	c.MonkeyDiodeRect   = c.PhotdiodeSize + c.Display.Rect([3,4,3,4]).*[2,1,2,1] - c.PhotdiodeSize([3,4,3,4]);
             end
         elseif c.Display.UseSBS3D == 1                                                                              % For presenting side-by-side stereoscopic 3D images...
+            c.ExpDiodeRect          = c.PhotdiodeSize + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);
             c.MonkeyDiodeRect(1,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1]) + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         	% Center a horizontally squashed fixation rectangle in a half screen rectangle
             c.MonkeyDiodeRect(2,:)  = (c.PhotdiodeSize./[1,1,2,1]) + c.Display.Rect([3,1,3,1])*1.5 + c.Display.Rect([1,4,1,4]) - c.PhotdiodeSize([1,4,1,4]);         
         end
@@ -176,102 +164,74 @@ c.Key_Exit    = KbName(c.Exit_Key);                                             
 c.Key_Reward  = KbName(c.Reward_Key);
 
 
-%% ===================== Pre-load stimulus images =========================
-% Static images can be pre-loaded into the GPU as PsychToolbox textures, or
-% loaded on the fly during the experiment - depending on your timing
-% requirements.
+%% ===================== Initialize movie handle =========================
+[c.mov, c.Movie.duration,  c.Movie.fps,  c.Movie.width,  c.Movie.height,  c.Movie.count,  c.Movie.AR]= Screen('OpenMovie', c.window, c.Movie.Filename); 
+c.Movie.StartTime   = 1;
+c.Movie.FrameNumber = 1;
+% Screen('PlayMovie',c.mov,1);
+% Screen('SetmovieTimeIndex',c.mov, c.Movie.StartTime,0);  
+c.Movie.SourceRect{2} = [0 0 c.Movie.width, c.Movie.height];
 
-if ~isfield(c, 'BlockIMGs')                                                 % If images have not already been loaded to PTB textures...
-    wbh         = waitbar(0, '');                                           % Open a waitbar figure
-    TotalStim   = 0;                                                        % Begin total stimulus tally
-    for Cond = 1:c.NoCond                                                   % For each experimental condition...
-        
-        switch c.OverlayMode
-            case 'M16'
-                Screen('FillRect', c.overlay, c.transparencyColor);               	% Clear background
-                DrawFormattedText(c.overlay, sprintf('Loading stimuli for condition %d/%d...', Cond, c.NoCond), c.LoadingTextPosX, 80, c.ExpOverlayIndx);
-            case 'PTB'
-                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
-                Screen('FillRect', c.window, c.Col_bckgrndRGB);                         % Clear background
-                DrawFormattedText(c.window, sprintf('Loading stimuli for condition %d/%d...', Cond, c.NoCond), c.LoadingTextPosX, 80, c.TextColor);
-        end
-        Screen('Flip', c.window, [], 0);                                   	% Draw to experimenter display
-        
-        c.StimFiles{Cond} = dir(fullfile(c.StimDir{Cond},['*', c.FileFormat]));      % Find all files of specified format in condition directory
-        if c.Stim_AddBckgrnd == 1 && ~isempty(c.BckgrndDir{Cond})                                         
-            c.BackgroundFiles{Cond} = dir([c.BckgrndDir{Cond},'/*', c.FileFormat]);    % Find all corresponding background files
-        end
-        TotalStim = TotalStim+numel(c.StimFiles{Cond});
-        for Stim = 1:numel(c.StimFiles{Cond})                               % For each file...
-
-            %============= Update experimenter display
-            message = sprintf('Loading image %d of %d (Condition %d/ %d)...\n',Stim,numel(c.StimFiles{Cond}),Cond,c.NoCond);
-            waitbar(Stim/numel(c.StimFiles{Cond}), wbh, message);           % Update waitbar
-            [keyIsDown, secs, keyCode, deltaSecs] = KbCheck();            	% Check if escape key is pressed
-            if keyIsDown && keyCode(c.Key_Exit)                               % If so...
-                break;                                                      % Break out of loop
-            end
-
-            %============= Load next file
-            img = imread(fullfile(c.StimDir{Cond}, c.StimFiles{Cond}(Stim).name));        	% Load image file
-            [a,b, imalpha] = imread(fullfile(c.StimDir{Cond}, c.StimFiles{Cond}(Stim).name));  % Read alpha channel
-            if ~isempty(imalpha)                                                            % If image file contains transparency data...
-                img(:,:,4) = imalpha;                                                       % Combine into a single RGBA image matrix
-            else
-                img(:,:,4) = ones(size(img,1),size(img,2))*255;
-            end
-        	if [size(img,2), size(img,1)] ~= c.ImgSize                                      % If X and Y dimensions of image don't match requested...
-                img = imresize(img, c.ImgSize([2,1]));                                    	% Resize image
-            end
-            if c.Stim_Color == 0                                                         	% If color was set to zero...
-                img(:,:,1:3) = repmat(rgb2gray(img(:,:,1:3)),[1,1,3]);                      % Convert RGB(A) image to grayscale
-            end
-            if strcmp(c.OverlayMode, 'L48')                                                 % Scale RGB value range
-                ColorRange = [length(c.humanColors)+1, 256];
-                img = img/max(img(:))*diff(ColorRange)+ColorRange(1);
-            end
-            if ~isempty(imalpha) && c.Stim_AddBckgrnd == 1 && ~isempty(c.BckgrndDir{Cond})    	% If image contains transparent pixels...         
-                Background = imread(fullfile(c.BckgrndDir{Cond}, c.BackgroundFiles{Cond}(Stim).name));   	% Read in phase scrambled version of stimulus
-                Background = imresize(Background, c.ImgSize);                               % Resize background image
-                if c.Stim_Color == 0
-                    Background = repmat(rgb2gray(Background),[1,1,3]);
-                end
-                Background(:,:,4) = ones(size(Background(:,:,1)))*255;
-                c.BlockBKGs{Cond}(Stim) = Screen('MakeTexture', c.window, Background);    	% Create a PTB offscreen texture for the background
-            else
-                c.BlockBKGs{Cond}(Stim) = 0;
-            end
-            c.BlockIMGs{Cond}(Stim) = Screen('MakeTexture', c.window, img);               	% Create a PTB offscreen texture for the stimulus
-        end
-
+if c.Movie.MaintainAR == 0
+	if c.Movie.Fullscreen == 1
+        c.Movie.DestRect = c.Display.Rect;
+    elseif c.Movie.Fullscreen == 0
+        c.Movie.DestRect = [0 0 MovieDims]*c.Display.PixPerDeg(1);
     end
-    delete(wbh);                                                                            % Close the waitbar figure window
-    switch c.OverlayMode
-     	case 'M16'
-            Screen('FillRect', c.overlay, c.transparencyColor);                           	% Clear background
-        case 'PTB'
-            Screen('FillRect', c.window, c.Col_bckgrndRGB);                                 % Clear background
-            DrawFormattedText(c.window, sprintf('All %d stimuli loaded!\n\nClick ''Run'' to start experiment.', TotalStim), c.LoadingTextPosX, 80, c.TextColor);
-    end 
-    Screen('Flip', c.window);
+elseif c.Movie.MaintainAR == 1
+    if c.Movie.Fullscreen == 1
+        c.Movie.WidthDeg = c.Display.Rect(3);
+    else
+        c.Movie.WidthDeg = MovieDims(1)*c.Display.PixPerDeg(1);
+    end
+    c.Movie.DestRect = (c.Movie.SourceRect{2}/c.Movie.width)*c.Movie.WidthDeg;
+end
+if ~isempty(find(c.Movie.DestRect > c.Display.Rect))
+    c.Movie.DestRect = c.Movie.DestRect*min(c.Display.Rect([3, 4])./c.Movie.Rect([3, 4]));
+    fprintf('Requested movie size > screen size! Defaulting to maximum size.\n');
+end
+c.Movie.MonkeyDestRect  = CenterRect(c.Movie.DestRect, c.Display.Rect)+c.Display.Rect([3,1,3,1]);
+c.Movie.ExpDestRect     = CenterRect(c.Movie.DestRect, c.Display.Rect);
+if c.Movie.Stereo == 1
+    if strcmpi(c.Movie.Format3D, 'LR')          % Horizontal split screen
+        c.Movie.SourceRect{1} = c.Movie.SourceRect{2}./[1 1 2 1];
+        c.Movie.SourceRect{2} = c.Movie.SourceRect{1}+[c.Movie.SourceRect{1}(3),0, c.Movie.SourceRect{1}(3),0];     
+    elseif strcmpi(c.Movie.Format3D, 'RL')          
+        c.Movie.SourceRect{2} = c.Movie.SourceRect{2}./[1 1 2 1];
+        c.Movie.SourceRect{1} = c.Movie.SourceRect{2}+[c.Movie.SourceRect{2}(3),0, c.Movie.SourceRect{2}(3),0];  
+    elseif strcmpi(c.Movie.Format3D, 'TB')      % Vertical split screen
+        c.Movie.SourceRect{1} = c.Movie.SourceRect{2}./[1 1 1 2];
+        c.Movie.SourceRect{2} = c.Movie.SourceRect{1}+[0,c.Movie.SourceRect{1}(4),0, c.Movie.SourceRect{1}(4)];
+    else
+        fprintf('\nERROR: 3D movie format must be specified in filename!\n');
+    end
+else
+    c.Movie.SourceRect{1} = c.Movie.SourceRect{2};
 end
 
-
-%% ====================== INITIALIZE AUDIO SETTINGS =======================
-Audio.On = 1;                                           % Play audio feedback tones/ movie sound?
-if Audio.On == 1
-    [Audio.Beep, Audio.Noise] = AuditoryFeedback([],1); 	% Generate tones
-%     if ~IsWin
-%         Speak('Audio initialized.');                    % Inform user that audio is ready
-%     elseif IsWin
-%         Audio.a = actxserver('SAPI.SpVoice.1');
-%         Audio.a.Speak('Audio initialized.');
-%     end
-    c.AudioBeep      = Audio.Beep(1);
-    c.AudioError     = Audio.Beep(2);
-    c.AudioPenalty   = Audio.Noise(1);
-    PsychPortAudio('Start', c.AudioBeep, 1);
+if c.Movie.Mirror == 1
+    SourceRect = c.Movie.SourceRect{1}.*[1 1 2 1];
 end
+
+Screen('FillRect', c.window, c.Col_bckgrndRGB); 
+Screen('flip', c.window);
+
+
+% %% ====================== INITIALIZE AUDIO SETTINGS =======================
+% Audio.On = 0;                                           % Play audio feedback tones/ movie sound?
+% if Audio.On == 1
+%     [Audio.Beep, Audio.Noise] = AuditoryFeedback([],1); 	% Generate tones
+% %     if ~IsWin
+% %         Speak('Audio initialized.');                    % Inform user that audio is ready
+% %     elseif IsWin
+% %         Audio.a = actxserver('SAPI.SpVoice.1');
+% %         Audio.a.Speak('Audio initialized.');
+% %     end
+%     c.AudioBeep      = Audio.Beep(1);
+%     c.AudioError     = Audio.Beep(2);
+%     c.AudioPenalty   = Audio.Noise(1);
+%     PsychPortAudio('Start', c.AudioBeep, 1);
+% end
 
 %================ SAVE PARAMS TO MAT FILE
 save(c.Matfilename, 'PDS','c','s');     % Create new matfile

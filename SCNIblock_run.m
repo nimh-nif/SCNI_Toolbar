@@ -439,29 +439,29 @@ function c = UpdateStats(c, s)
 end
 
 %================= 
-function out = checkJoy(pass,joy,th,pos)
-% checkJoy is a boolean that is true if joy is less(pos=0; press) or greater(pos=1; greater) than th
-% If PASS is on, it always returns TRUE.
-    if pass == 0
-        if pos == 0
-            out = joy > th;
-        else
-            out = joy < th;
-        end
-    else
-        out = 1;
-    end
-end
-
-%
-function joy = getjoy()
-    Datapixx RegWrRd
-    V       = Datapixx('GetAdcVoltages');       % 
-    joy     = V(7);                             % joystick is on the 7th analog channel
-    if joy<0
-        joy=0;
-    end
-end
+% function out = checkJoy(pass,joy,th,pos)
+% % checkJoy is a boolean that is true if joy is less(pos=0; press) or greater(pos=1; greater) than th
+% % If PASS is on, it always returns TRUE.
+%     if pass == 0
+%         if pos == 0
+%             out = joy > th;
+%         else
+%             out = joy < th;
+%         end
+%     else
+%         out = 1;
+%     end
+% end
+% 
+% %
+% function joy = getjoy()
+%     Datapixx RegWrRd
+%     V       = Datapixx('GetAdcVoltages');       % 
+%     joy     = V(7);                             % joystick is on the 7th analog channel
+%     if joy<0
+%         joy=0;
+%     end
+% end
 
 %================ Get current eye position in pixels from bottom left corner of screen
 function [EyeX,EyeY,V] = GetEyePix(c)

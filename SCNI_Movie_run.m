@@ -1,4 +1,4 @@
-function [PDS ,c ,s]= SCNIblock_run(PDS ,c ,s)
+function [PDS ,c ,s]= SCNI_Movie_run(PDS ,c ,s)
 
 %============================ SCNIblock_run.m ==============================
 % Execution of this m-file accomplishes one complete 'trial'. For the
@@ -11,7 +11,7 @@ function [PDS ,c ,s]= SCNIblock_run(PDS ,c ,s)
 %   2017-01-23 - Written by murphyap@mail.nih.gov based on psychmetic_run.m
 %   2017-06-08 - Fixed ADC issues with help from Krauzlis lab members
 %   2017-06-26 - Updated for use with SCNI passive 3D display
-%   
+%   2017-10-04 - Created movie experiment version
 %     ____    ___ __  _______
 %    /    |  /  //  //  ____/    Neuro Imaging Facility Core
 %   /  /| | /  //  //  /___      Building 49 Convent Drive
@@ -20,12 +20,12 @@ function [PDS ,c ,s]= SCNIblock_run(PDS ,c ,s)
 %==========================================================================
 
 if c.UseDataPixx == 1
-    PDS.datapixxtime(c.Blocks.TrialNumber)	= Datapixx('GetTime');
+    PDS.datapixxtime(c.Movie.FrameNumber)	= Datapixx('GetTime');
 end
 % HideCursor(c.Display.ScreenID);                                                 % Turn off cursor display
 
 %% ================== SETUP DATAPIXX ANALOG & DIGITAL I/O
-if c.UseDataPixx == 1
+if c.RestartDataPixx == 1
     
     %================== Start ADC for recording analog signals
     Datapixx('RegWrRd');
@@ -51,292 +51,180 @@ if c.UseDataPixx == 1
         nChannels = Datapixx('GetDacNumChannels');
         Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
     end
+    c.RestartDataPixx = 0;
 end
 
-%============ Wait for dummy TTLs from MRI scanner
-if c.Blocks.Number == 1 && c.Blocks.TrialNumber == 1                        % If this is the first trial of a run...
-    c.ScanStartedTime = GetSecs;
-    if c.WaitForScanner == 1 && c.NumDummyTTLs > 0                          % If dummy TTLs were requested
-        ScannerOn   = getMRpulse(PDS, c, s, c.NumDummyTTLs);            	% Wait for N x TTL pulses from scanner indicating next MR acquisition
-        c.ScanStartedTime = GetSecs;
-    end
-end
-
-
-
-%% =================== Run main experiment loop ===========================
-StimOn = 0;                     % Stimulus is not currently presented
-c.StimOnTime = GetSecs;
-while GetSecs < c.StimOnTime + c.StimDuration
-    
-    %============ Check current eye position
-    if c.SimulateEyes ==0
-        [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                % Get instantaneous eye position
-        s.EyeXc = s.EyeX - c.Display.Rect(3)/2;
-        s.EyeYc = s.EyeY - c.Display.Rect(4)/2;
-        
-    elseif c.SimulateEyes == 1
-        [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                       % Get mouse cursor position (relative to subject display)
-        s.EyeXc = s.EyeX-c.Display.Rect(3)/2;                               % Find pixel location relative to center of experimenter display
-        s.EyeYc = s.EyeY-c.Display.Rect(4)/2;
-        if s.EyeX > c.Display.Rect(3) && s.EyeX < 2*c.Display.Rect(3)       % If mouse cursor is entering monkey's display...
-            HideCursor;                                                     % Turn cursor off!
-        else                                                                % Otherwise, mouse in on an experimenter display
-            ShowCursor;                                                     % Show cursor
-        end
-    end
-    EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
-    [In, Dist]              = CheckFixation(s, c);                          % Check whether gaze position is within window
-    if In == 1
-        GazeColor = [0,255,0];
-    else
-        GazeColor = [255,0,0];
-    end
-    
-    
-    %============== Draw overlay
-    switch c.OverlayMode
-        case 'M16'
-            if c.BackgroundTexH ~=0                                              	% If stimulus has a background texture..
-                Screen('DrawTexture', c.window, c.BackgroundTexH, [], c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);  % Draw background
-            end
-            Screen('DrawTexture', c.window, c.ImageTexH, [], c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);   % Draw stimulus
-            if c.Fix_On == 1                                                      	% If fixation marker was requested...
-                Screen('DrawTexture', c.window, c.FixTexture, [], c.FixRect);       % Draw fixation marker
-            end
-            Screen('FillRect', c.overlay, c.transparencyColor);                     % Clear overlay
-            Screen('FrameOval', c.overlay, c.Col_grid, c.Bullseye, 1);          	% draw grid lines on experimenter's display
-            Screen('DrawLines', c.overlay, c.Meridians, 1, c.Col_grid);             % Draw vertical and horizontal meridians
-            Screen('FrameOval', c.overlay, c.ExpOverlayIndx2, c.GazeRect, c.GazeRectWidth);     	% Draw border of gaze window that subject must fixate within
-            Screen('FillOval', c.overlay, GazeColor, EyeRect);                      % Draw current gaze position
-            DrawFormattedText(c.overlay, c.TextString, c.TextRect(1), c.TextRect(2), GazeColor);%,[],[],[],[],[],c.TextRect);
-            %Screen('DrawText', c.overlay, c.TextString, [], [], c.ExpOverlayIndx);
-        case 'L48'
-            Screen('FillRect', c.window, c.backdindex);
-            Screen('FrameOval', c.window, c.L48background, c.Bullseye, 1);          	% draw grid lines
-            Screen('DrawLines', c.window, c.Meridians, 1, c.L48background);
-            Screen('FrameOval', c.window, c.L48background, c.GazeRect, c.GazeRectWidth);            % Draw border of gaze window that subject must fixate within
-            Screen('FillOval', c.window, c.L48background, EyeRect);
-            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.L48background);
-        case 'PTB'
-            %=========== Draw to monkey's screen
-            if ~IsLinux
-                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer);     % Draw to monkey's screen first
-            end
-            Screen('FillRect', c.window, c.Col_bckgrndRGB);                                 % Clear previous frame
-            if c.Blocks.Order(c.Blocks.Number) ~= 0                                         % If the current block is not a fixation block...
-                if c.BackgroundTexH ~=0                                                     % If stimulus has a background texture...
-                    Screen('DrawTexture', c.window, c.BackgroundTexH, [], c.MonkeyStimRect, c.Stim_Rotation, [], c.Stim_Contrast);    % Draw stimulus specific background
-                end
-                Screen('DrawTexture', c.window, c.ImageTexH, [], c.MonkeyStimRect, c.Stim_Rotation, [], c.Stim_Contrast);             % Draw the main stimulus
-            end
-            if c.Fix_On == 1                                                                % If fixation marker was requested...
-                for e = 1:size(c.MonkeyFixRect,1)
-                    Screen('DrawTexture', c.window, c.FixTexture, [], c.MonkeyFixRect(e,:));  	% Draw fixation marker
-                end
-            end
-            if c.PhotodiodeOn == 1
-                for e = 1:size(c.MonkeyDiodeRect,1)
-                    Screen('FillOval', c.window, c.PhotodiodeOnCol, c.MonkeyDiodeRect(e,:));  	% Draw photodiode 'on' marker
-                end
-            end
-            
-            %=========== Draw to experimenter's screen
-            if ~IsLinux
-                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
-                Screen('FillRect', c.window, c.Col_bckgrndRGB);
-            end
-            if c.Blocks.Order(c.Blocks.Number) ~= 0
-                if c.BackgroundTexH ~=0                                                     % If stimulus has a background texture..
-                    Screen('DrawTexture', c.window, c.BackgroundTexH, [], c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);  % Draw background
-                end
-                if c.Display.UseSBS3D == 0 
-                    Screen('DrawTexture', c.window, c.ImageTexH, [], c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);
-                elseif c.Display.UseSBS3D == 1
-                    Screen('DrawTexture', c.window, c.ImageTexH, c.ExpStimRect, c.StimRect, c.Stim_Rotation, [], c.Stim_Contrast);
-                end
-            end
-            if c.Fix_On == 1                                                                % If fixation marker was requested...
-                Screen('DrawTexture', c.window, c.FixTexture, [], c.FixRect);               % Draw fixation marker
-            end
-            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth);  	% Draw grid lines
-            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2); % Draw even lines thicker
-            Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);
-            Screen('FrameOval', c.window, GazeColor, c.GazeRect, c.GazeRectWidth);          % Draw border of gaze window that subject must fixate within
-            Screen('FillOval', c.window, GazeColor, EyeRect);
-            c = UpdateStats(c,s);
-            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
-    end
-%     if c.SyncStimToScanner == 1 && StimOn == 0
-%         ScannerOn   = getMRpulse(PDS, c, s, 1);                                             % Wait for TTL pulse from scanner before presenting stimulus?
+% %============ Wait for dummy TTLs from MRI scanner
+% if c.Blocks.Number == 1 && c.Blocks.TrialNumber == 1                        % If this is the first trial of a run...
+%     c.ScanStartedTime = GetSecs;
+%     if c.WaitForScanner == 1 && c.NumDummyTTLs > 0                          % If dummy TTLs were requested
+%         ScannerOn   = getMRpulse(PDS, c, s, c.NumDummyTTLs);            	% Wait for N x TTL pulses from scanner indicating next MR acquisition
+%         c.ScanStartedTime = GetSecs;
 %     end
+% end
 
-    %============= Present stimulus
-    StimOnTime = Screen('Flip', c.window);                                  % Present visual stimulus now
-    if StimOn == 0                                                          % If stimulus was not previously on the screen...
-        c.StimOnTime = StimOnTime;                                          % Record stimulus onset timestamp
-        SCNI_SendEventCode('Stim_On',c);
-        StimOn = 1;                                                         % Change stimulus on flag
-        fprintf('Stim on\n\n');
-    end
-    CheckPress(PDS, c, s);                                                  % Check experimenter's input
-    
+
+
+%% ===================== DRAW NEXT FRAME TO SCREEN ========================
+Screen('PlayMovie',c.mov,c.Movie.PlaybackRate,0,c.Movie.Volume);
+Screen('SetmovieTimeIndex',c.mov, c.Movie.StartTime,0);  
+
+if ~isfield(s,'framecount')
+    s.framecount = 1;
+    s.FrameOnTimes = zeros(1,1000);
 end
-          
+
+    
+%============ Check current eye position
+if c.SimulateEyes ==0
+    [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                % Get instantaneous eye position
+    s.EyeXc = s.EyeX - c.Display.Rect(3)/2;
+    s.EyeYc = s.EyeY - c.Display.Rect(4)/2;
+
+elseif c.SimulateEyes == 1
+    [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                       % Get mouse cursor position (relative to subject display)
+    s.EyeXc = s.EyeX-c.Display.Rect(3)/2;                               % Find pixel location relative to center of experimenter display
+    s.EyeYc = s.EyeY-c.Display.Rect(4)/2;
+    if s.EyeX > c.Display.Rect(3) && s.EyeX < 2*c.Display.Rect(3)       % If mouse cursor is entering monkey's display...
+        HideCursor;                                                     % Turn cursor off!
+    else                                                                % Otherwise, mouse in on an experimenter display
+        ShowCursor;                                                     % Show cursor
+    end
+end
+EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
+[In, Dist]              = CheckFixation(s, c);                          % Check whether gaze position is within window
+if In == 1
+    GazeColor = [0,255,0];
+else
+    GazeColor = [255,0,0];
+end
+
+
+
+
+%% =========== Draw to monkey's screen
+if ~IsLinux
+    currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer);     % Draw to monkey's screen first
+end
+Screen('FillRect', c.window, c.Col_bckgrndRGB);                                     % Clear previous frame
+% if c.Blocks.Order(c.Blocks.Number) ~= 0                                           % If the current block is not a fixation block...
+    MovieTex = Screen('GetMovieImage', c.window, c.mov);                            % Get the next frame texture
+    for Eye = 1:2                                                                   
+        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, Eye-1);        	
+        Screen('DrawTexture', c.window, MovieTex, c.Movie.SourceRect{Eye}, c.Movie.MonkeyDestRect, c.Movie.Rotation, [], c.Movie.Contrast);
+    end
+% end
+if c.Fix_On == 1                                                                    % If fixation marker was requested...
+    for e = 1:size(c.MonkeyFixRect,1)                                               % For each eye...
+        Screen('DrawTexture', c.window, c.FixTexture, [], c.MonkeyFixRect(e,:));  	% Draw fixation marker
+    end
+end
+if c.PhotodiodeOn == 1                                                              % If photodiode marker was requested...
+    for e = 1:size(c.MonkeyDiodeRect,1)                                             % For each eye...
+        Screen('FillOval', c.window, c.PhotodiodeOnCol, c.MonkeyDiodeRect(e,:));  	% Draw photodiode 'on' marker
+    end
+end
+
+%% =========== Draw to experimenter's screen
+if ~IsLinux
+    currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
+    Screen('FillRect', c.window, c.Col_bckgrndRGB);
+end
+% if c.Blocks.Order(c.Blocks.Number) ~= 0
+    if c.Display.UseSBS3D == 0 
+        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, 1);
+        Screen('DrawTexture', c.window, MovieTex, [], c.Movie.ExpDestRect, c.Movie.Rotation, [], c.Movie.Contrast);
+    elseif c.Display.UseSBS3D == 1
+        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, 1);
+        Screen('DrawTexture', c.window, MovieTex, c.Movie.SourceRect{1}, c.Movie.ExpDestRect, c.Movie.Rotation, [], c.Movie.Contrast);
+    end
+%  end
+if c.Fix_On == 1                                                                    % If fixation marker was requested...
+    Screen('DrawTexture', c.window, c.FixTexture, [], c.FixRect);                   % Draw fixation marker
+end
+if c.PhotodiodeOn == 1                                                              % If photodiode marker was requested...
+    for e = 1:size(c.ExpDiodeRect,1)                                                % For each eye...
+        Screen('FillOval', c.window, c.PhotodiodeOnCol, c.ExpDiodeRect);            % Draw photodiode 'on' marker
+    end
+end
+Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth);          % Draw grid lines
+Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2); % Draw even lines thicker
+Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);
+Screen('FrameOval', c.window, GazeColor, c.GazeRect, c.GazeRectWidth);              % Draw border of gaze window that subject must fixate within
+Screen('FillOval', c.window, GazeColor, EyeRect);
+%         c = UpdateStats(c,s);
+%         DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
+
+
+%============= Present stimulus
+s.FrameOnTimes(s.framecount) = Screen('Flip', c.window);                           	% Present visual stimulus now
+Screen('Close', MovieTex);
+c.Movie.FrameNumber = c.Movie.FrameNumber+1;    
+s.framecount = s.framecount + 1;
+% if MovieOn == 0                                                                   % If stimulus was not previously on the screen...
+%     c.Movie.StartTime =  FrameOnTime;                                             % Record stimulus onset timestamp
+%     SCNI_SendEventCode('Stim_On',c);
+%     StimOn = 1;                                                               	% Change stimulus on flag
+%     fprintf('Movie started\n\n');
+% end
+CheckPress(PDS, c, s);                                                  % Check experimenter's input
+
+
+if s.framecount > 1000
+    figure; hist(diff(FrameOnTime),100);
+    s.framecount = 1;
+end
 
 %============= DataPixx video timestamping
 if ~strcmp(c.OverlayMode, 'PTB')
     PsychDataPixx('LogOnsetTimestamps', 1);
 end
-if c.Blocks.TrialNumber == 1
-    c.Blocks.BlockStartTime(c.Blocks.Number) = c.StimOnTime-c.ScanStartedTime;
-    c.timeStamps(c.Blocks.Number,3)=c.Blocks.BlockStartTime(c.Blocks.Number);
-end
+% if c.Blocks.TrialNumber == 1
+%     c.Blocks.BlockStartTime(c.Blocks.Number) = c.StimOnTime-c.ScanStartedTime;
+%     c.timeStamps(c.Blocks.Number,3)=c.Blocks.BlockStartTime(c.Blocks.Number);
+% end
 if ~strcmp(c.OverlayMode, 'PTB')
     moleTimetag = PsychDataPixx('GetLastOnsetTimestamp');
 end
 
 
-
-c.StimOffTime = GetSecs;
-while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
-    
-    %============ Check current eye position
-    if c.SimulateEyes ==0
-        [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                % Get instantaneous eye position
-        s.EyeXc = s.EyeX - c.Display.Rect(3)/2;
-        s.EyeYc = s.EyeY - c.Display.Rect(4)/2;
-        
-    elseif c.SimulateEyes == 1
-        [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                       % Get mouse cursor position (relative to subject display)
-        s.EyeXc = s.EyeX-c.Display.Rect(3)/2;
-        s.EyeYc = s.EyeY-c.Display.Rect(4)/2;
-        if s.EyeX > c.Display.Rect(3) && s.EyeX < 2*c.Display.Rect(3)       % If mouse cursor is entering monkey's display...
-            HideCursor;                                                     % Turn cursor off!
-        else                                                                % Otherwise, mouse in on an experimenter display
-            ShowCursor;                                                     % Show cursor
-        end
-        if any(buttons)                                             
-
-        end
-        
-    end
-
-    EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
-  	[In, Dist]              = CheckFixation(s, c);                          % Check whether gaze position is within window
-    if In == 1
-        GazeColor = [0,255,0];
-    else
-        GazeColor = [255,0,0];
-    end
-    
-    %============== Check experimenter keyboard input
-    CheckPress(PDS, c, s);
-
-    
-    %============== Draw overlay
-    switch c.OverlayMode
-        case 'M16'
-            Screen('FillRect', c.overlay, c.transparencyColor);                     % Clear overlay
-            Screen('FrameOval', c.overlay, c.Col_grid, c.Bullseye, 1);          	% draw grid lines on experimenter's display
-            Screen('DrawLines', c.overlay, c.Meridians, 1, c.Col_grid);             % Draw vertical and horizontal meridians
-            Screen('FrameOval', c.overlay, c.ExpOverlayIndx2, c.GazeRect, c.GazeRectWidth);      	% Draw border of gaze window that subject must fixate within
-            Screen('FillOval', c.overlay, GazeColor, EyeRect);                      % Draw current gaze position
-            DrawFormattedText(c.overlay, c.TextString, c.TextRect(1), c.TextRect(2), GazeColor);
-            %Screen('DrawText', c.overlay, c.TextString, [], [],
-            %c.ExpOverlayIndx);%
-        case 'L48'
-            Screen('FillRect', c.window, c.backdindex); 
-            Screen('FrameOval', c.window, c.L48background, c.Bullseye, 1);          	% draw grid lines
-            Screen('DrawLines', c.window, c.Meridians, 1, c.L48background);
-            Screen('FrameOval', c.window, c.L48background, c.GazeRect, c.GazeRectWidth);            % Draw border of gaze window that subject must fixate within
-            Screen('FillOval', c.window, c.L48background, EyeRect);   
-            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.L48background);
-        case 'PTB'
-            %=========== Draw to monkey's screen
-            if ~IsLinux
-                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer); % Draw to monkey's screen first
-            end
-            Screen('FillRect', c.window, c.Col_bckgrndRGB);                             % Clear previous frame
-         	if c.Fix_On == 1                                                            % If fixation marker was requested...
-             	for e = 1:size(c.MonkeyFixRect,1)
-                    Screen('DrawTexture', c.window, c.FixTexture, [], c.MonkeyFixRect(e,:));  	% Draw fixation marker
-                end
-            end
-          	if c.PhotodiodeOn == 1
-                for e = 1:size(c.MonkeyDiodeRect,1)
-                    Screen('FillOval', c.window, c.PhotodiodeOffCol, c.MonkeyDiodeRect(e,:));  	% Draw photodiode off marker
-                end
-            end
-            
-            %=========== Draw to experimenter's screen
-            if ~IsLinux
-                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
-                Screen('FillRect', c.window, c.Col_bckgrndRGB);                       	% Clear previous frame
-            end
-          	if c.Fix_On == 1                                                            % If fixation marker was requested...
-                Screen('DrawTexture', c.window, c.FixTexture, [], c.FixRect);           % Draw fixation marker
-            end
-            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth); 	% Draw experimenter's radial grid lines
-            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2);
-            Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);               % Draw meridians
-            Screen('FrameOval', c.window, GazeColor, c.GazeRect, c.GazeRectWidth);    	% Draw border of gaze window that subject must fixate within
-            Screen('FillOval', c.window, GazeColor, EyeRect);      
-            c = UpdateStats(c,s);
-            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
-    end
-    %============= Present stimulus
-    StimOffTime = Screen('Flip', c.window);                               	% Remove visual stimulus now
-    if StimOn == 1                                                          % If stimulus was previously on the screen...
-        c.StimOffTime = StimOffTime;                                      	% Record stimulus onset timestamp
-        StimOn = 0;                                                         % Change stimulus on flag
-        fprintf('Stim off\n\n');
-    end
-    CheckPress(PDS, c, s);                                                  % Check experimenter's input
-    
-end
-                                                          
+                                       
 
 
 %================= Read continuously sampled Eye data
-if c.UseDataPixx == 1
-    Datapixx('RegWrRd');                                                            % Update registers for GetAdcStatus
-    status = Datapixx('GetAdcStatus');                                              
-    nReadSpls = status.newBufferFrames;                                             % How many samples can we read?
-    [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
-	Datapixx('StopAdcSchedule'); 
-    PDS.EyeXYP{c.Blocks.Number, c.Blocks.TrialNumber}	= NewData(1:6,:);
-    PDS.AnalogIn{c.Blocks.Number, c.Blocks.TrialNumber}	= NewData(7:8,:);           
-    PDS.Ts{c.Blocks.Number, c.Blocks.TrialNumber}       = NewDataTs;
-    save(c.Matfilename, '-append', 'PDS','c','s');
-    
-%     if ~isfield(s,'fh') || ~ishandle(s.fh)
-%         s.fh = figure('name','Eye data');
+% if c.UseDataPixx == 1
+%     Datapixx('RegWrRd');                                                            % Update registers for GetAdcStatus
+%     status = Datapixx('GetAdcStatus');                                              
+%     nReadSpls = status.newBufferFrames;                                             % How many samples can we read?
+%     [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
+% 	Datapixx('StopAdcSchedule'); 
+%     PDS.EyeXYP{c.Blocks.Number, c.Blocks.TrialNumber}	= NewData(1:6,:);
+%     PDS.AnalogIn{c.Blocks.Number, c.Blocks.TrialNumber}	= NewData(7:8,:);           
+%     PDS.Ts{c.Blocks.Number, c.Blocks.TrialNumber}       = NewDataTs;
+%     save(c.Matfilename, '-append', 'PDS','c','s');
+%     
+% end
+
+% %================ Reward animal?
+% if c.Reward_MustFix == 1                    %========== If fixation is required for reward
+% 	Valid = FindFixBreak(PDS.EyeXYP{c.Blocks.Number, c.Blocks.TrialNumber}, c);	% Check whether fixation criteria were met for this trial
+%     if Valid == 1
+%         c.RewardEarned = 1;
+%     else
+%         c.RewardEarned = 0;
 %     end
-%     PlotEyeData(NewData(1:6,:), s.fh);
-    
-end
-
-%================ Reward animal?
-if c.Reward_MustFix == 1                    %========== If fixation is required for reward
-	Valid = FindFixBreak(PDS.EyeXYP{c.Blocks.Number, c.Blocks.TrialNumber}, c);	% Check whether fixation criteria were met for this trial
-    if Valid == 1
-        c.RewardEarned = 1;
-    else
-        c.RewardEarned = 0;
-    end
-end
-
-if c.Reward_MustFix == 0 || c.RewardEarned == 1                                 % If fixation is not required OR fixation requirement has been met...
-    if GetSecs >= s.LastReward + c.NextRewardInt                                % If the time since the last automated reward exceeds the reward interval
-        SCNI_DigitalOutJuice(c.Reward_TTLDur);                                  % Deliver reward
-        disp('SCNI digital juice out')
-        s.RewardCount   = s.RewardCount + 1;
-        s.LastReward    = GetSecs;                                              % Record time of last automated reward delivery
-        c.NextRewardInt = c.Reward_MeanDur+rand(1)*c.Reward_RandDur;            % Generate random interval for next automated rward delivery
-        c.RewardEarned  = 0;
-    end
-end
+% end
+% 
+% if c.Reward_MustFix == 0 || c.RewardEarned == 1                                 % If fixation is not required OR fixation requirement has been met...
+%     if GetSecs >= s.LastReward + c.NextRewardInt                                % If the time since the last automated reward exceeds the reward interval
+%         SCNI_DigitalOutJuice(c.Reward_TTLDur);                                  % Deliver reward
+%         disp('SCNI digital juice out')
+%         s.RewardCount   = s.RewardCount + 1;
+%         s.LastReward    = GetSecs;                                              % Record time of last automated reward delivery
+%         c.NextRewardInt = c.Reward_MeanDur+rand(1)*c.Reward_RandDur;            % Generate random interval for next automated rward delivery
+%         c.RewardEarned  = 0;
+%     end
+% end
 
 
 

@@ -13,7 +13,7 @@ function varargout = pldaps_gui2_ms(varargin)
 %      existing singleton*.  Starting from the left, property value pairs are
 %      applied to the GUI before test_menu3_OpeningFcn gets called.  An
 %      unrecognized property name or invalid value makes property
-%      application?? 
+%      application??ï¿½
 %      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
 %      instance to run (singleton)".
 %
@@ -387,8 +387,13 @@ for j = 1:12
         % get contents of the field
         field = c1.(Cnames{j});
         if(length(field)==1)    % only do this if variable is single-valued
-            set(eval(sprintf('handles.par_value%d',j)),'String',num2str(field));
-            set(eval(sprintf('handles.par_value%d',j)),'Visible','on');
+            if isnumeric(field)
+                set(eval(sprintf('handles.par_value%d',j)),'String',num2str(field));
+                set(eval(sprintf('handles.par_value%d',j)),'Visible','on');
+            else
+               	set(eval(sprintf('handles.par_value%d',j)),'String',' ');
+                set(eval(sprintf('handles.par_value%d',j)),'Visible','on');
+            end
         end
     end
 end

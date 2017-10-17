@@ -100,9 +100,9 @@ OS              = computer;
 MatlabVersion   = version;
 OpenGL          = opengl('data');
 if exist('PsychtoolboxVersion', 'file')==2
-    PTBversion  = PsychtoolboxVersion;
-    WhiteSpace  = strfind(PTBversion,' ');
-    PTBversion  = PTBversion(1:WhiteSpace(1));
+    PTBversion  = deblank(PsychtoolboxVersion);
+%     WhiteSpace  = strfind(PTBversion,' ');
+%     PTBversion  = PTBversion(1:WhiteSpace(1));
     NoXscreens 	= numel(Screen('screens'));
     Resolution  = Screen('rect',max(Screen('screens')));
     RefreshRate = Screen('NominalFramerate', max(Screen('screens')));

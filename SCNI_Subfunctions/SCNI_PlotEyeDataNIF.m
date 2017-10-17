@@ -1,4 +1,4 @@
-function [s,c] = SCNI_PlotEyeData(EyePos, s, c)
+function [s,c] = SCNI_PlotEyeDataNIF(EyePos, s, c)
 
 %========================= SCNI_PlotEyeTrace.m ============================
 % Plots eye data for a single trial of calibration and allows the user to

@@ -30,7 +30,7 @@ end
 %================ Fixation settings
 c.FixArray          = {'Grid', 'Radial'};           % 
 c.CenterOnly        = 1;                            % 1 = present only central fixation; 0 = present at all locations
-c.FixEccentricity   = 15;                           % Eccentricity of non-central targets (degrees visual angle from center)
+c.FixEccentricity   = 5;                           % Eccentricity of non-central targets (degrees visual angle from center)
 c.Disparities       = [0];                          % List of binocular disparities to present targets at (degrees visual angle)
 c.FlipVertical      = 0;                            % Flip eye Y position?
 c.FlipHorizontal    = 0;                            % Flip eye X position?
@@ -49,7 +49,7 @@ end
 
 %================ Timing settings
 c.StimPerTrial      = 1;                                          	% Total number of stimulus presentations per trial
-c.TrialsPerRun      = 50;                                          	% Number fo trials per experimental run
+c.TrialsPerRun      = 1000;                                      	% Number fo trials per experimental run
 c.StimDuration      = 1.0;                                        	% Stimulus on duration (seconds)
 c.ISI               = 0.8;                                        	% Inter-stimulus interval duration (seconds)
 c.ITI               = 2;                                            % Inter-trial interval duration (seconds)
@@ -76,14 +76,14 @@ c.Eye_BlinkDuration = 0.2;                                        	% Duration (s
 c.Fix_Type           = 0;                                           % 0 = dot; 1 = crosshair; 2 = solid square; 3 = binocular vernier
 c.Fix_Color          = [0,0,0];                                 	% Color of main fixation marker component (RGB)
 c.Fix_WinRadius      = 6;                                         	% Radius of fixation window (degrees visual angle)
-c.Fix_MarkerSize     = 2;                                           % Diameter of fixation marker (degrees visual angle)
+c.Fix_MarkerSize     = 1;                                           % Diameter of fixation marker (degrees visual angle)
 c.Fix_LineWidth      = 3;                                           % Line width (pixels)
 c.MaxFixBreakDur     = 100;                                         % Maximum duration allowed to break fixation (ms)
 c.Stim_Mirror        = 0;                                            % Mirror invert images about vertical axis?
 c.Stim_Contrast      = 1;                                            % Image contrast (0-1)
 c.Stim_Rotation      = 0;                                            % Image rotation (degrees)
 c.GazeRectWidth      = 4;                                           
-c.PhotodiodeOn       = 1;                                           % 1 = add photodiode marker to corner of screen
+c.PhotodiodeOn       = 0;                                           % 1 = add photodiode marker to corner of screen
 c.PhotodiodeOnCol    = [0,0,0];                                     % Color (RGB) corresponding to 'stimulus on'
 c.PhotodiodeOffCol   = [1,1,1]*255;                                	% Color (RGB) corresponding to 'stimulus off'
 c.PhotdiodeSize      = [0, 0, 60, 60];                              % Size of photodiode marker (pixels)

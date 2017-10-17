@@ -24,24 +24,50 @@ if c.UseDataPixx == 1
 end
 % HideCursor(c.Display.ScreenID);                                                 % Turn off cursor display
 
-%================ Start DataPixx2 analog I/O
+%% ================== SETUP DATAPIXX ANALOG & DIGITAL I/O
 if c.UseDataPixx == 1
-    SCNI_StartADC(c.Params.DPx)
+    
+    %================== Start ADC for recording analog signals
+    Datapixx('RegWrRd');
+    AdcStatus = Datapixx('GetAdcStatus');
+    while AdcStatus.scheduleRunning == 1
+        Datapixx('RegWrRd');
+        AdcStatus = Datapixx('GetAdcStatus');
+        WaitSecs(0.01);
+    end
+    Datapixx('SetAdcSchedule', 0, c.Params.DPx.AnalogInRate, c.Params.DPx.nAdcLocalBuffSpls, c.Params.DPx.AnalogInCh, c.Params.DPx.adcBuffBaseAddr, c.Params.DPx.nAdcLocalBuffSpls);
+    Datapixx('StartAdcSchedule');
+    Datapixx('RegWrRd');                                                % Make sure a DAC schedule is not running before setting a new schedule
+
+    %================== Set DAC schedule for reward delivery
+    if c.Params.DPx.AnalogReward == 1
+        Dacstatus = Datapixx('GetDacStatus');                               % Check DAC status
+        while Dacstatus.scheduleRunning == 1
+            Datapixx('RegWrRd');
+            Dacstatus = Datapixx('GetDacStatus');
+        end
+        Datapixx('RegWrRd');
+        Datapixx('WriteDacBuffer', c.Params.DPx.reward_Voltages, c.Params.DPx.dacBuffAddr, c.Params.DPx.RewardChnl);
+        nChannels = Datapixx('GetDacNumChannels');
+        Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
+    end
 end
 
 c.MaxBreakSamples   = c.MaxFixBreakDur/1000*c.Params.DPx.AnalogInRate;  
 
 %% =================== Run main experiment loop ===========================
-StimOn = 0;                                                                 % Stimulus is not currently presented
+StimOn = 0;                     % Stimulus is not currently presented
 c.StimOnTime = GetSecs;
 while GetSecs < c.StimOnTime + c.StimDuration
     
     %============ Check current eye position
     if c.SimulateEyes ==0
-        [s.EyeX,s.EyeY,V]       = GetEyePix(c);                           	% Get instantaneous eye position
+        [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                % Get instantaneous eye position
 
     elseif c.SimulateEyes == 1
         [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                       % Get mouse cursor position (relative to subject display)
+%         s.EyeXc = s.EyeX-c.Display.Rect(3)/2;
+%         s.EyeYc = s.EyeY-c.Display.Rect(4)/2;
         if s.EyeX > c.Display.Rect(3) && s.EyeX < 2*c.Display.Rect(3)       % If mouse cursor is entering monkey's display...
             HideCursor;                                                     % Turn cursor off!
         else                                                                % Otherwise, mouse in on an experimenter display
@@ -49,6 +75,7 @@ while GetSecs < c.StimOnTime + c.StimDuration
         end
     end
     EyeRect = CenterRectOnPointd([-10,-10,10,10], s.EyeX, s.EyeY);
+%     EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
     [In, Dist]              = CheckFixation(s, c);                          % Check whether gaze position is within window
     if In == 1
         GazeColor = [0,255,0];
@@ -56,17 +83,19 @@ while GetSecs < c.StimOnTime + c.StimDuration
         GazeColor = [255,0,0];
     end
     
+    
+    %% ============== Draw overlay
     %=========== Draw to monkey's screen
     if ~IsLinux
-        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer);         % Draw to monkey's screen first
+        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer);     % Draw to monkey's screen first
     end
-    Screen('FillRect', c.window, c.Col_bckgrndRGB);                                         % Clear previous frame
+    Screen('FillRect', c.window, c.Col_bckgrndRGB);                                     % Clear previous frame
     for e = 1:size(c.MonkeyFixRect{1},1)
-        Screen('DrawTexture', c.window, c.FixTexture, [], c.MonkeyFixRect{s.CondNo}(e,:));	% Draw fixation marker
+        Screen('DrawTexture', c.window, c.FixTexture, [], c.MonkeyFixRect{s.CondNo}(e,:));        % Draw fixation marker
     end
     if c.PhotodiodeOn == 1 
         for e = 1:size(c.MonkeyDiodeRect,1)
-            Screen('FillOval', c.window, c.PhotodiodeOnCol, c.MonkeyDiodeRect(e,:));        % Draw photodiode 'on' marker
+            Screen('FillOval', c.window, c.PhotodiodeOnCol, c.MonkeyDiodeRect(e,:));  	% Draw photodiode 'on' marker
         end
     end
 
@@ -100,7 +129,7 @@ while GetSecs < c.StimOnTime + c.StimDuration
         fprintf('Stim on\n\n');
     end
     CheckPress(PDS, c, s);                                                  % Check experimenter's input
-    c.Cal = SCNI_ManualCalibration(c.Cal);                                 	% Check GUI for updated calibration parameters
+    
 end
           
 
@@ -108,6 +137,10 @@ end
 if ~strcmp(c.OverlayMode, 'PTB')
     PsychDataPixx('LogOnsetTimestamps', 1);
 end
+% if c.TrialNumber == 1
+%     c.Blocks.BlockStartTime(s.TrialNumber) = c.StimOnTime-c.ScanStartedTime;
+%     c.timeStamps(s.TrialNumber,3)=c.Blocks.BlockStartTime(s.TrialNumber);
+% end
 if ~strcmp(c.OverlayMode, 'PTB')
     moleTimetag = PsychDataPixx('GetLastOnsetTimestamp');
 end
@@ -119,11 +152,14 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
     
     %============ Check current eye position
     if c.SimulateEyes ==0
-        [s.EyeX,s.EyeY,V]       = GetEyePix(c);                           	% Get instantaneous eye position
+        [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                % Get instantaneous eye position
+%         s.EyeXc = s.EyeX - c.Display.Rect(3)/2;
+%         s.EyeYc = s.EyeY - c.Display.Rect(4)/2;
         
     elseif c.SimulateEyes == 1
         [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                       % Get mouse cursor position (relative to subject display)
-
+%         s.EyeXc = s.EyeX-c.Display.Rect(3)/2;
+%         s.EyeYc = s.EyeY-c.Display.Rect(4)/2;
         if s.EyeX > c.Display.Rect(3) && s.EyeX < 2*c.Display.Rect(3)       % If mouse cursor is entering monkey's display...
             HideCursor;                                                     % Turn cursor off!
         else                                                                % Otherwise, mouse in on an experimenter display
@@ -135,6 +171,7 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
         
     end
     EyeRect = CenterRectOnPointd([-10,-10,10,10], s.EyeX, s.EyeY);
+%     EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
   	[In, Dist]              = CheckFixation(s, c);                          % Check whether gaze position is within window
     if In == 1
         GazeColor = [0,255,0];
@@ -145,30 +182,50 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
     %============== Check experimenter keyboard input
     CheckPress(PDS, c, s);
 
-    %=========== Draw to monkey's screen
-    if ~IsLinux
-        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer); % Draw to monkey's screen first
+    
+    %============== Draw overlay
+    switch c.OverlayMode
+        case 'M16'
+            Screen('FillRect', c.overlay, c.transparencyColor);                     % Clear overlay
+            Screen('FrameOval', c.overlay, c.Col_grid, c.Bullseye, 1);          	% draw grid lines on experimenter's display
+            Screen('DrawLines', c.overlay, c.Meridians, 1, c.Col_grid);             % Draw vertical and horizontal meridians
+            Screen('FrameOval', c.overlay, c.ExpOverlayIndx2, c.GazeRect{s.CondNo}, c.GazeRectWidth);      	% Draw border of gaze window that subject must fixate within
+            Screen('FillOval', c.overlay, GazeColor, EyeRect);                      % Draw current gaze position
+            DrawFormattedText(c.overlay, c.TextString, c.TextRect(1), c.TextRect(2), GazeColor);
+            %Screen('DrawText', c.overlay, c.TextString, [], [],
+            %c.ExpOverlayIndx);%
+        case 'L48'
+            Screen('FillRect', c.window, c.backdindex); 
+            Screen('FrameOval', c.window, c.L48background, c.Bullseye, 1);          	% draw grid lines
+            Screen('DrawLines', c.window, c.Meridians, 1, c.L48background);
+            Screen('FrameOval', c.window, c.L48background, c.GazeRect{s.CondNo}, c.GazeRectWidth);            % Draw border of gaze window that subject must fixate within
+            Screen('FillOval', c.window, c.L48background, EyeRect);   
+            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.L48background);
+        case 'PTB'
+            %=========== Draw to monkey's screen
+            if ~IsLinux
+                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.MonkeyBuffer); % Draw to monkey's screen first
+            end
+            Screen('FillRect', c.window, c.Col_bckgrndRGB);                             % Clear previous frame
+          	if c.PhotodiodeOn == 1
+                for e = 1:size(c.MonkeyDiodeRect,1)
+                    Screen('FillOval', c.window, c.PhotodiodeOffCol, c.MonkeyDiodeRect(e,:));  	% Draw photodiode off marker
+                end
+            end
+            
+            %=========== Draw to experimenter's screen
+            if ~IsLinux
+                currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
+                Screen('FillRect', c.window, c.Col_bckgrndRGB);                       	% Clear previous frame
+            end
+            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth); 	% Draw experimenter's radial grid lines
+            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2);
+            Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);               % Draw meridians
+            Screen('FrameOval', c.window, GazeColor, c.GazeRect{s.CondNo}, c.GazeRectWidth);    	% Draw border of gaze window that subject must fixate within
+            Screen('FillOval', c.window, GazeColor, EyeRect);      
+            c = UpdateStats(c,s);
+            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
     end
-    Screen('FillRect', c.window, c.Col_bckgrndRGB);                             % Clear previous frame
-    if c.PhotodiodeOn == 1
-        for e = 1:size(c.MonkeyDiodeRect,1)
-            Screen('FillOval', c.window, c.PhotodiodeOffCol, c.MonkeyDiodeRect(e,:));  	% Draw photodiode off marker
-        end
-    end
-
-    %=========== Draw to experimenter's screen
-    if ~IsLinux
-        currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
-        Screen('FillRect', c.window, c.Col_bckgrndRGB);                       	% Clear previous frame
-    end
-    Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth); 	% Draw experimenter's radial grid lines
-    Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2);
-    Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);               % Draw meridians
-    Screen('FrameOval', c.window, GazeColor, c.GazeRect{s.CondNo}, c.GazeRectWidth);    	% Draw border of gaze window that subject must fixate within
-    Screen('FillOval', c.window, GazeColor, EyeRect);      
-    c = UpdateStats(c,s);
-    DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
-
     %============= Present stimulus
     StimOffTime = Screen('Flip', c.window);                               	% Remove visual stimulus now
     if StimOn == 1                                                          % If stimulus was previously on the screen...
@@ -186,13 +243,19 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
             PDS.EyeXYP{s.TrialNumber, s.StimNumber}     = NewData(c.Params.DPx.ADCchannelsUsed(1:3),:);
             PDS.AnalogIn{s.TrialNumber, s.StimNumber}	= NewData(c.Params.DPx.ADCchannelsUsed(4),:);           
             PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
-            %save(c.Matfilename, '-append', 'PDS','c','s');
+            save(c.Matfilename, '-append', 'PDS','c','s');
 
+ 
+%             [s, c] = SCNI_PlotEyeDataNIF(NewData(c.Params.DPx.ADCchannelsUsed(1:2),:), s, c); 
+%             c.Cal
+%             c.EyeOffset = c.Cal.EyeOffset;
+%             c.EyeGain = c.Cal.EyeGain;
         end
         
         %================ Reward animal?
         if c.Reward_MustFix == 1                    %========== If fixation is required for reward
             Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}(1:2,:), c, s);       % Check whether fixation criteria were met for this trial
+            Valid
             if Valid == 1
                 c.RewardEarned = 1;
             else
@@ -204,11 +267,55 @@ while GetSecs < c.StimOffTime + c.ISI     %=============== Stimulus off period
         end
         
     end
-    CheckPress(PDS, c, s);                                                              % Check experimenter's input
-    c.Cal = SCNI_ManualCalibration(c.Cal);                                              % Check GUI for updated calibration parameters
+    CheckPress(PDS, c, s);                                                      % Check experimenter's input
+    c = SCNI_ManualCalibration(c);                                              % Check GUI for updated calibration parameters
     
 end
                                                           
+
+% 
+% %================= Read continuously sampled Eye data
+% if c.UseDataPixx == 1
+%     Datapixx('RegWrRd');                                                                        % Update registers for GetAdcStatus
+%     status      = Datapixx('GetAdcStatus');                                              
+%     nReadSpls   = status.newBufferFrames;                                                       % How many samples can we read?
+%     [NewData, NewDataTs]= Datapixx('ReadAdcBuffer', nReadSpls, c.Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
+% 	Datapixx('StopAdcSchedule'); 
+%     PDS.EyeXYP{s.TrialNumber, s.StimNumber}     = NewData(1:6,:);
+%     PDS.AnalogIn{s.TrialNumber, s.StimNumber}	= NewData(7:8,:);           
+%     PDS.Ts{s.TrialNumber, s.StimNumber}         = NewDataTs;
+%     
+%     Fig = s.Fig;
+%     s   = rmfield(s, 'Fig');
+%     save(c.Matfilename, '-append', 'PDS','c','s');
+%     s.Fig = Fig;
+%     
+%     [s, c] = SCNI_PlotEyeDataNIF(NewData(4:5,:), s, c);
+%     %[s, c] = PlotEyeData(NewData(1:6,:), s, c);
+% end
+% 
+% %================ Reward animal?
+% if c.Reward_MustFix == 1                    %========== If fixation is required for reward
+% 	Valid = FindFixBreak(PDS.EyeXYP{s.TrialNumber, s.StimNumber}, c);       % Check whether fixation criteria were met for this trial
+%     if Valid == 1
+%         c.RewardEarned = 1;
+%     else
+%         c.RewardEarned = 0;
+%     end
+% end
+% 
+% if c.Reward_MustFix == 0 || c.RewardEarned == 1                                 % If fixation is not required OR fixation requirement has been met...
+% %     if GetSecs >= s.LastReward + c.NextRewardInt                                % If the time since the last automated reward exceeds the reward interval
+% %         SCNI_DigitalOutJuice(c.Reward_TTLDur);                                  % Deliver reward
+% %         disp('SCNI digital juice out')
+% %         s.RewardCount   = s.RewardCount + 1;
+% %         s.LastReward    = GetSecs;                                              % Record time of last automated reward delivery
+% %         c.NextRewardInt = c.Reward_MeanDur+rand(1)*c.Reward_RandDur;            % Generate random interval for next automated rward delivery
+% %         c.RewardEarned  = 0;
+% %     end
+% end
+
+
 
 
 
@@ -321,10 +428,11 @@ function c = UpdateStats(c, s)
     c.Run.CurrentSecs   = rem(c.Run.CurrentTime, 60);
     c.Run.CurrentTrial  = s.TrialNumber*c.TrialsPerRun + s.StimNumber;
     c.Run.CurrentPercent= c.Run.CurrentTrial/c.TrialsPerRun*c.StimPerTrial*100;
-    c.TextFormat        = ['Trial     %d /%d\n\n',...
+    c.TextFormat        = ['Stim      %d /%d\n\n',...
+                           'Trial     %d /%d\n\n',...
                            'Run time  %02d:%02.0f\n\n',...
                            'Condition %d\n\n'];
-    c.TextContent   = [ s.TrialNumber, c.TrialsPerRun, c.Run.CurrentMins, c.Run.CurrentSecs, s.CondNo];
+    c.TextContent   = [s.StimNumber, c.StimPerTrial, s.TrialNumber, c.TrialsPerRun, c.Run.CurrentMins, c.Run.CurrentSecs, s.CondNo];
     c.TextString    = sprintf(c.TextFormat, c.TextContent);
 
     %========= Update stats
@@ -337,6 +445,31 @@ function c = UpdateStats(c, s)
 %     Screen('FrameRect', c.window, [0,0,0], c.BlockProgRect, 3);
 end
 
+%================= 
+function out = checkJoy(pass,joy,th,pos)
+% checkJoy is a boolean that is true if joy is less(pos=0; press) or greater(pos=1; greater) than th
+% If PASS is on, it always returns TRUE.
+    if pass == 0
+        if pos == 0
+            out = joy > th;
+        else
+            out = joy < th;
+        end
+    else
+        out = 1;
+    end
+end
+
+%
+function joy = getjoy()
+    Datapixx RegWrRd
+    V       = Datapixx('GetAdcVoltages');       % 
+    joy     = V(7);                             % joystick is on the 7th analog channel
+    if joy<0
+        joy=0;
+    end
+end
+
 %================ Get current eye position in pixels from bottom left corner of screen
 function [EyeX,EyeY,V] = GetEyePix(c)
 	if c.SimulateEyes == 0
@@ -346,7 +479,7 @@ function [EyeX,EyeY,V] = GetEyePix(c)
         Datapixx('RegWrRd');                                                % Update registers for GetAdcStatus
       	V       = Datapixx('GetAdcVoltages');                               % Read ADC voltages for all channels                
         Datapixx('RegWrRd'); 
-        DVA     = (V(EyeChannels)+ c.Cal.EyeOffset).*c.Cal.EyeGain;      	% Convert volts into degrees of visual angle
+        DVA     = (V(EyeChannels)+ c.EyeOffset).*c.EyeGain;                	% Convert volts into degrees of visual angle
      	EyeX    = c.Display.Rect(3)/2 + DVA(1)*c.Display.PixPerDeg(1);      % Convert degrees to pixels (sign change in X to account for camera invertion?)
         EyeY    = c.Display.Rect(4)/2 + DVA(2)*c.Display.PixPerDeg(2);      
   

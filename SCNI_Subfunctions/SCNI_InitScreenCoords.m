@@ -41,7 +41,9 @@ if IsLinux == 1                                                                 
         c.MonkeyGazeRect = c.GazeRect + c.Display.Rect([3,1,3,1]);                              
     end
     if c.Display.UseSBS3D == 0 
-        c.MonkeyFixRect(1,:)  = CenterRect(c.FixRect, c.MonkeyStimRect);  
+     	if ~IsCalibration
+            c.MonkeyFixRect(1,:)  = CenterRect(c.FixRect, c.MonkeyStimRect); 
+        end
     elseif c.Display.UseSBS3D == 1                                                                                              % For presenting side-by-side stereoscopic 3D images...
         c.MonkeyHalfRect      = c.MonkeyStimRect([1,2,1,4])+[0,0,diff(c.MonkeyStimRect([1,3]))/2,0];                            % Calculate screen coordinates of left half of subject's display
         if ~IsCalibration                                                                                                       % If this is not a calibration...
@@ -57,4 +59,3 @@ elseif IsLinux == 0
     end
 end
 c.ExpStimRect = c.StimRect./[1,1,2,1];
-

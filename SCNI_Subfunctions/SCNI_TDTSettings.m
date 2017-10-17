@@ -31,7 +31,7 @@ end
 if Success < 1                              % If the parameters could not be loaded...
     Params.TDT.UseSynapse           = 0;
     Params.TDT.UseOpenEX            = 1;
-    Params.TDT.Host_IP              = '156.40.249.112';
+    Params.TDT.Host_IP              = '156.40.249.201';
     Params.TDT.RS4_IP               = '156.40.249.101';
     Params.TDT.Modes                = {'Idle','Standby','Preview','Record'};
   	Params.TDT.SubjectID            = 'Spice';
@@ -39,12 +39,7 @@ if Success < 1                              % If the parameters could not be loa
     Params.TDT.SpeciesList          = {'mouse', 'rat', 'monkey', 'marmoset', 'human', 'bat', 'owl', 'bird', 'ferret', 'gerbil','guinea-pig', 'rabbit', 'pig', 'cat', 'dog', 'fish', 'dolphin','snake', 'shark', 'duck', 'cow', 'goat', 'horse'};
     Params.TDT.TankPath             = 'C:\TDT\NEXTTANK';
     Params.TDT.StimRange            = [1, 7999];
-    Params.TDT.Event.FixOn          = 8000;
-   	Params.TDT.Event.FixOff         = 8001;
- 	Params.TDT.Event.Abort          = 8002;
-  	Params.TDT.Event.TrialEnd       = 8003;
-    Params.TDT.Event.AutoReward     = 8004;
-    Params.TDT.Event.ManualReward   = 8004;
+    Params.TDT.Events               = SCNI_LoadEventCodes;
 elseif Success > 1
     return;
 end
@@ -335,7 +330,7 @@ ParamsOut = Params;
         
         
         %============= Get info
-        Params.TDT.currUser         = syn.getCurrentUser();
+        Params.TDT.currUser        = syn.getCurrentUser();
         Params.TDT.currExperiment  = syn.getCurrentExperiment();
         Params.TDT.currSubject     = syn.getCurrentSubject();
         Params.TDT.currTank        = syn.getCurrentTank();

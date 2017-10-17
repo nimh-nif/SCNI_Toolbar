@@ -41,10 +41,8 @@ else
 end
 load(c.CalibrationFile)
 c.Cal           = Cal;
+c.Cal           = SCNI_ManualCalibration(c.Cal);    % Open manual calibration GUI window
 
-c.EyeGain       = [1,1];        % Gain for converting degrees to volts
-c.EyeOffset     = [0,0];        % Offset (in Volts) for making central fixation equal to 0V
-c.EyeInvert     = [0,0];        % Flip X and/or Y values (i.e. invert sign of gains)?
 
 %% ============= Initialize DataPixx
 c               = init_DataPixx(c);
@@ -71,6 +69,7 @@ c = SCNI_GenerateCalTargets(c);
 
 %% ================= Calculate screen coordinates
 c.Stim_Diameter = c.Fix_MarkerSize;
+
 c = SCNI_InitScreenCoords(c);
 
 %% ================= Draw fixation marker to texture
@@ -94,7 +93,7 @@ switch c.Fix_Type
 end
 
 %========== Prepare grid for experimenter display
-CircleSpacing   = 10*c.Display.PixPerDeg;                               % Increase in diameter with each concentric circle
+CircleSpacing   = c.Display.Exp.GridSpacing*c.Display.PixPerDeg;      	% Increase in diameter with each concentric circle
 NoCircles       = floor(c.Display.Rect(3)/CircleSpacing(1));          	% Caclulate number of circles to fill screen width
 c.BullsEyeWidth = 1;                                                    % Pen width for bulls eye lines (pixels)
 for circleno = 1:NoCircles

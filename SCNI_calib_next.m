@@ -31,6 +31,9 @@ elseif s.StimNumber >= c.StimPerTrial                                       % If
 end
 
 if ~isfield(c, 'CompletedRun') || c.CompletedRun ~= 1                      	% If this is not the very first trial...
+    
+    c = SCNI_GenerateCalTargets(c);
+    
     if c.CenterOnly == 0
         s.CondNo      = c.LocationOrder((s.TrialNumber*c.StimPerTrial)+s.StimNumber);  % Get the condition number for the current block
     elseif c.CenterOnly == 1
