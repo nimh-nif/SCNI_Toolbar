@@ -470,7 +470,7 @@ function [EyeX,EyeY,V] = GetEyePix(c)
         if TestWithFunctionGen == 1
             EyeChannels = [8,7];
         else
-            EyeChannels = [1,2];
+            EyeChannels = c.Params.DPx.ADCchannelsUsed([1,2]);
         end
         Datapixx('RegWrRd');                                                % Update registers for GetAdcStatus
         status = Datapixx('GetAdcStatus');          

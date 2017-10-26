@@ -22,7 +22,7 @@ c.Display.gamma     = 2.2;                                  % Set gamma value
 c.OverlayMode       = 'PTB';                                % Options are 'M16','L48','PTB'. Use 'PTB' is video is NOT going through the DataPixx
 c.UseDataPixx       = 1;                                    % Use DataPixx2 box for analog/ digital I/O?
 c.EventCodes        = SCNI_LoadEventCodes;               	% Load SCNI event codes
-
+c.TDT.Enabled       = 1;
 
 %% ============= Initialize DataPixx
 c.SimulateEyes  = 0;                                        % Use mouse cursor position to simulate eye position?
@@ -59,16 +59,6 @@ if ~exist(c.SaveDir, 'dir')                                                 % If
     mkdir(c.SaveDir);
 end
 
-
-% %% ================= Generate counterbalanced pseudo-random block and stimulus order
-% c.Blocks        = SCNI_blockdesign(c.NoCond, c.BlocksPerCond, c.StimPerCond, c.StimPerBlock);    % Get pseudorandomized block & stimulus orders
-% c.Blocks.TrialNumber = 0;           % Set trial number to zero to compensate for the fact that 'SCNIblock_next.m' gets called BEFORE 'SCNIblock_run.m'
-% c.StimOnTime   	= [];
-% c.StimOffTime 	= [];
-% c.Run           = struct;  
-% c.Run.TotalTime = numel(c.Blocks.Order)*size(c.Blocks.Stimorder, 2)*(c.StimDuration+c.ISI);     % Caluculate duration of entire run
-% c.Run.TotalTrials = numel(c.Blocks.Order)*size(c.Blocks.Stimorder, 2);
-
 %% ================= Prepare experimenter display components
 c.BlockImg      = ones([100,200]);                                                            	% Create blank backgfround
 c.BlockImgRect  = [100, c.Display.Rect(4)-100, 600, c.Display.Rect(4)-50];                      % Specify onscreen position to draw block design
@@ -79,9 +69,9 @@ ProgOverlay(:,:,4) = 127;                                                       
 c.BlockProgTex  = Screen('MakeTexture', c.window, ProgOverlay);                                 % Create a texture handle for overlay
 
 %% ================= Calculate screen coordinates
-c.Stim_Fullscreen = c.Movie.Fullscreen;
-c = SCNI_InitScreenCoords(c);
-
+c.Stim_Fullscreen   = c.Movie.Fullscreen;
+c.Stim_Diameter     = c.Movie.Rect(1);
+c                   = SCNI_InitScreenCoords(c);
 
 %% ================= Draw fixation marker to texture
 FixSize         = round(c.Fix_MarkerSize*c.Display.PixPerDeg);
@@ -182,7 +172,7 @@ elseif c.Movie.MaintainAR == 1
     if c.Movie.Fullscreen == 1
         c.Movie.WidthDeg = c.Display.Rect(3);
     else
-        c.Movie.WidthDeg = MovieDims(1)*c.Display.PixPerDeg(1);
+        c.Movie.WidthDeg = c.Movie.Rect(1)*c.Display.PixPerDeg(1);
     end
     c.Movie.DestRect = (c.Movie.SourceRect{2}/c.Movie.width)*c.Movie.WidthDeg;
 end
@@ -212,6 +202,7 @@ end
 if c.Movie.Mirror == 1
     SourceRect = c.Movie.SourceRect{1}.*[1 1 2 1];
 end
+c.GazeRect = c.Movie.ExpDestRect + [repmat(-c.Fix_WinBorder,[1,2]).*c.Display.PixPerDeg, repmat(c.Fix_WinBorder,[1,2]).*c.Display.PixPerDeg];
 
 Screen('FillRect', c.window, c.Col_bckgrndRGB); 
 Screen('flip', c.window);

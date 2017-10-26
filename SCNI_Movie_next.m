@@ -17,6 +17,9 @@ function [PDS, c, s]= SCNI_Movie_next(PDS, c, s)
 
 
 %============ Advance to next trial/ block
+if ~isfield(c, 'RunStartTime')
+    c.RunStartTime = GetSecs;
+end
 % if c.Blocks.TrialNumber < size(c.Blocks.Stimorder, 2)                       % If 'within block trial number' is less than # trials per block...
 %     c.Blocks.TrialNumber    = c.Blocks.TrialNumber+1;                       % Advance trial number
 % elseif c.Blocks.TrialNumber >= size(c.Blocks.Stimorder, 2)                  % If 'within block trial number' is equal to # trials per block...

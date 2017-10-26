@@ -16,6 +16,11 @@ if isfield(c,'MonkeyFixRect') && iscell(c.MonkeyFixRect)                    % If
 else
     IsCalibration = 0; 
 end
+if isfield(c,'Fix_WinBorder')
+    IsMovie = 1;
+else
+    IsMovie = 0;
+end
 
 
 %% ================= Calculate screen coordinates
@@ -31,9 +36,12 @@ elseif c.Stim_Fullscreen == 1                                                   
 end
 c.FixRect   = CenterRect([0,0,c.Fix_MarkerSize*c.Display.PixPerDeg], c.Display.Rect);         	% Specify PTB rect to draw fixation marker to    
 c.StimRect  = CenterRect([0,0,c.ImgSize], c.Display.Rect);                                     	% Specify PTB rect to draw stimuli to
-if ~IsCalibration
+if ~IsCalibration && ~IsMovie
     c.GazeRect  = CenterRect([0,0,c.Fix_WinRadius*2*c.Display.PixPerDeg], c.Display.Rect);  	% Specify PTB rect that fixation must remain inside
+elseif IsMovie
+    c.GazeRect  = CenterRect([0,0,c.Fix_WinBorder*2*c.Display.PixPerDeg], c.Display.Rect);
 end
+
 
 if IsLinux == 1                                                                                 % If using dual displays on Linux...
     c.MonkeyStimRect = c.StimRect + c.Display.Rect([3,1,3,1]);                                	% Specify subject's portion of the screen

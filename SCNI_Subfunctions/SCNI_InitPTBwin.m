@@ -18,7 +18,7 @@ elseif IsLinux == 1
 end
 [c.window, c.screenRect] = PsychImaging('OpenWindow', c.Display.ScreenID, c.Col_bckgrndRGB(1), [], [], [], c.Display.Stereomode); 	% Open a PTB window
 Screen('BlendFunction', c.window, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                        % Enable alpha channel
-%PsychColorCorrection('SetEncodingGamma', c.window, 1/c.Display.gamma);     
+% PsychColorCorrection('SetEncodingGamma', c.window, 1/c.Display.gamma);     
 c.ExperimenterBuffer        = 0;
 c.MonkeyBuffer              = 1;
 Screen('TextSize', c.window, 30);

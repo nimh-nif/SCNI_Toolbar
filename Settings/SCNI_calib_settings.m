@@ -74,9 +74,9 @@ c.Eye_BlinkDuration = 0.2;                                        	% Duration (s
 
 %================ Appearance settings
 c.Fix_Type           = 0;                                           % 0 = dot; 1 = crosshair; 2 = solid square; 3 = binocular vernier
-c.Fix_Color          = [0,0,0];                                 	% Color of main fixation marker component (RGB)
+c.Fix_Color          = [255,0,0];                                 	% Color of main fixation marker component (RGB)
 c.Fix_WinRadius      = 6;                                         	% Radius of fixation window (degrees visual angle)
-c.Fix_MarkerSize     = 1;                                           % Diameter of fixation marker (degrees visual angle)
+c.Fix_MarkerSize     = 0.5;                                           % Diameter of fixation marker (degrees visual angle)
 c.Fix_LineWidth      = 3;                                           % Line width (pixels)
 c.MaxFixBreakDur     = 100;                                         % Maximum duration allowed to break fixation (ms)
 c.Stim_Mirror        = 0;                                            % Mirror invert images about vertical axis?

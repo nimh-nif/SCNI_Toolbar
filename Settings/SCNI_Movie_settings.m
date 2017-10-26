@@ -30,8 +30,10 @@ addpath(genpath(fullfile(fileparts(mfilename('fullpath')),'..')))          % Add
 ExpType = 1;
 
 if ExpType == 1     %====================== Monkey Thieves (1080p)
-    c.Movie.Dir         = fullfile(Prefix, '/murphya/Stimuli/Movies/MonkeyThieves1080p/Season 1');
-    c.Movie.Format      = '.mp4';
+%     c.Movie.Dir         = fullfile(Prefix, '/murphya/Stimuli/Movies/MonkeyThieves1080p/Season 1');
+%     c.Movie.Format      = '.mp4';
+    c.Movie.Dir         = fullfile(Prefix, '/murphya/Stimuli/Movies/RussMoviesWMV/');
+    c.Movie.Format      = '.wmv';
     c.Movie.Stereo      = 0;
 	c.Movie.Dome        = 0;
     
@@ -52,9 +54,10 @@ elseif ExpType == 3 %====================== Dome Movies
     
 end
 c.Movie.AllFiles        = wildcardsearch(c.Movie.Dir, sprintf('*%s', c.Movie.Format));  % List all movie files in specified directory
-c.Movie.Filename        = c.Movie.AllFiles{randi(numel(c.Movie.AllFiles))};           	% Randomly select one of the movies
+c.MovieNumber           = 1;
+c.Movie.Filename        = c.Movie.AllFiles{c.MovieNumber};                              % Select one of the movies
 
-c.Movie.Fullscreen    	= 1;                                     	% Scale movie to fit entire display?
+c.Movie.Fullscreen    	= 0;                                     	% Scale movie to fit entire display?
 c.Movie.Rect            = [10,6];                                	% Rectangle to present movie in if not fullscreen (degrees visual angle, centered)
 c.Movie.MaintainAR      = 1;                                        % Maintain original aspect ratio (if not presenting full screen)
 c.Movie.BackgroundColor	= [1,1,1]*127;                           	% Background color (if move is not fullscreen)
@@ -65,11 +68,11 @@ c.Movie.Contrast        = 1;                                        % Set the im
 c.Movie.Rotation        = 0;                                        % Rotate the movie image (degrees)
 
 %================ Timing settings
-c.InitialFixDur     = 4;                                            % Duration of initial and final fixation periods (seconds)
+c.InitialFixDur     = 2;                                            % Duration of initial and final fixation periods (seconds)
 c.RunDuration       = 300;                                          % Duration of one run (seconds)
 c.MaxTrialDur       = 300;                                          % Estimate maximum trial duration (seconds) for preallocating I/O buffer
 c.WaitForScanner    = 0;                                            % Wait to receive TTL pulses from scanner before starting
-c.NumDummyTTLs      = 4;                                            % The number of TTL pulses to ignore before starting the run
+c.NumDummyTTLs      = 30;                                           % The number of TTL pulses to ignore before starting the run
 
 %================ Reward settings
 c.Exit_Key          = 'Escape';
@@ -88,15 +91,16 @@ c.Reward_Increase   = 0;                                            % Duration t
 c.Eye_BlinkDuration = 0.2;                                        	% Duration (seconds) that eye 'position' can exit fixation window without triggering a broken fixation event
 
 %================ Appearance settings
-c.Fix_On             = 1;                                           % Draw fixation marker?
+c.InitialFixDur      = 2;                                           % Duration of initial fixation (seconds)
+c.Fix_On             = 0;                                           % Draw fixation marker?
 c.Fix_Type           = 1;                                           % 0 = dot; 1 = crosshair; 2 = solid square; 3 = binocular vernier
 c.Fix_Color          = [0,255,0];                                 	% Color of main fixation marker component (RGB)
-c.Fix_WinRadius      = 2;                                         	% Radius of fixation window (degrees visual angle)
+c.Fix_WinBorder      = 2;                                         	% Fixation window extent relative to frame (degrees visual angle)
 c.Fix_MarkerSize     = 1;                                           % Diameter of fixation marker (degrees visual angle)
 c.Fix_LineWidth      = 3;                                           % Line width (pixels)
 c.Stim_Color         = 1;                                            % 0 = show grayscale images; 1 = show RGB images; 
 c.GazeRectWidth      = 4;                                           
-c.PhotodiodeOn       = 1;                                           % 1 = add photodiode marker to corner of screen
+c.PhotodiodeOn       = 0;                                           % 1 = add photodiode marker to corner of screen
 c.PhotodiodeOnCol    = [0,0,0];                                     % Color (RGB) corresponding to 'stimulus on'
 c.PhotodiodeOffCol   = [1,1,1]*255;                                	% Color (RGB) corresponding to 'stimulus off'
 c.PhotdiodeSize      = [0, 0, 60, 60];                              % Size of photodiode marker (pixels)

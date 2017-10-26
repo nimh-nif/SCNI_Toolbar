@@ -26,53 +26,66 @@ end
 
 %% ================== SETUP DATAPIXX ANALOG & DIGITAL I/O
 if c.RestartDataPixx == 1
-    
-    %================== Start ADC for recording analog signals
-    Datapixx('RegWrRd');
-    AdcStatus = Datapixx('GetAdcStatus');
-    while AdcStatus.scheduleRunning == 1
-        Datapixx('RegWrRd');
-        AdcStatus = Datapixx('GetAdcStatus');
-        WaitSecs(0.01);
-    end
-    Datapixx('SetAdcSchedule', 0, c.Params.DPx.AnalogInRate, c.Params.DPx.nAdcLocalBuffSpls, c.Params.DPx.AnalogInCh, c.Params.DPx.adcBuffBaseAddr, c.Params.DPx.nAdcLocalBuffSpls);
-    Datapixx('StartAdcSchedule');
-    Datapixx('RegWrRd');                                                % Make sure a DAC schedule is not running before setting a new schedule
-
-    %================== Set DAC schedule for reward delivery
-    if c.Params.DPx.AnalogReward == 1
-        Dacstatus = Datapixx('GetDacStatus');                               % Check DAC status
-        while Dacstatus.scheduleRunning == 1
-            Datapixx('RegWrRd');
-            Dacstatus = Datapixx('GetDacStatus');
-        end
-        Datapixx('RegWrRd');
-        Datapixx('WriteDacBuffer', c.Params.DPx.reward_Voltages, c.Params.DPx.dacBuffAddr, c.Params.DPx.RewardChnl);
-        nChannels = Datapixx('GetDacNumChannels');
-        Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
-    end
+    SCNI_StartADC(c.Params.DPx)
     c.RestartDataPixx = 0;
 end
 
-% %============ Wait for dummy TTLs from MRI scanner
-% if c.Blocks.Number == 1 && c.Blocks.TrialNumber == 1                        % If this is the first trial of a run...
-%     c.ScanStartedTime = GetSecs;
-%     if c.WaitForScanner == 1 && c.NumDummyTTLs > 0                          % If dummy TTLs were requested
-%         ScannerOn   = getMRpulse(PDS, c, s, c.NumDummyTTLs);            	% Wait for N x TTL pulses from scanner indicating next MR acquisition
-%         c.ScanStartedTime = GetSecs;
-%     end
-% end
-
-
 
 %% ===================== DRAW NEXT FRAME TO SCREEN ========================
-Screen('PlayMovie',c.mov,c.Movie.PlaybackRate,0,c.Movie.Volume);
-Screen('SetmovieTimeIndex',c.mov, c.Movie.StartTime,0);  
 
 if ~isfield(s,'framecount')
-    s.framecount = 1;
-    s.FrameOnTimes = zeros(1,1000);
+ 
+    c.ValidFixations = nan(1,100000);
+    
+    %============ Wait for dummy TTLs from MRI scanner
+    c.ScanStartedTime = GetSecs;
+    SCNI_SendEventCode('Trial_Start', c);
+    if c.WaitForScanner == 1 && c.NumDummyTTLs > 0                          % If dummy TTLs were requested
+        ScannerOn   = getMRpulse(PDS, c, s, c.NumDummyTTLs);            	% Wait for N x TTL pulses from scanner indicating next MR acquisition
+        c.ScanStartedTime = GetSecs;
+    end
+    
+    %============ Present initial fixation
+    if c.InitialFixDur > 0
+        SCNI_SendEventCode('Fix_on', c);
+        FixStart = GetSecs;
+        while GetSecs < FixStart + c.InitialFixDur
+            
+            %====================== Get instantaneous eye position
+            [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                
+            s.EyeXc = s.EyeX - c.Display.Rect(3)/2;
+            s.EyeYc = s.EyeY - c.Display.Rect(4)/2;
+            EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
+            [In, Dist]              = CheckFixationRect(s, c);                          % Check whether gaze position is within window
+            ValidFixNans            = find(isnan(c.ValidFixations));
+            c.ValidFixations(ValidFixNans(1)) = In;
+            if In == 1
+                GazeColor = [0,255,0];
+            else
+                GazeColor = [255,0,0];
+            end
+            
+            %====================== Draw sceen elements
+            for e = 1:size(c.MonkeyFixRect,1)                                               % For each eye...
+                Screen('DrawTexture', c.window, c.FixTexture, [], c.MonkeyFixRect(e,:));  	% Draw fixation marker
+            end
+            Screen('DrawTexture', c.window, c.FixTexture, [], c.FixRect);                   % Draw fixation marker
+            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth);     	% Draw grid lines
+            Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2); % Draw even lines thicker
+            Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);
+            Screen('FrameRect', c.window, GazeColor, c.GazeRect, c.GazeRectWidth);         	% Draw border of gaze window that subject must fixate within
+            Screen('FillOval', c.window, GazeColor, EyeRect);
+            c = UpdateStats(c,s);
+            DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
+            Screen('Flip', c.window);                                                       % Present fixation now
+        end
+    end
+    s.framecount    = 1;
+    s.FrameOnTimes  = zeros(1,1000);
+    Screen('PlayMovie',c.mov,c.Movie.PlaybackRate,0,c.Movie.Volume);
+    Screen('SetmovieTimeIndex',c.mov, c.Movie.StartTime,0);  
 end
+
 
     
 %============ Check current eye position
@@ -80,10 +93,10 @@ if c.SimulateEyes ==0
     [s.EyeX,s.EyeY,V]       = GetEyePix(c);                                % Get instantaneous eye position
     s.EyeXc = s.EyeX - c.Display.Rect(3)/2;
     s.EyeYc = s.EyeY - c.Display.Rect(4)/2;
-
+    
 elseif c.SimulateEyes == 1
-    [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                       % Get mouse cursor position (relative to subject display)
-    s.EyeXc = s.EyeX-c.Display.Rect(3)/2;                               % Find pixel location relative to center of experimenter display
+    [s.EyeX,s.EyeY,buttons]	= GetMouse(c.window);                           % Get mouse cursor position (relative to subject display)
+    s.EyeXc = s.EyeX-c.Display.Rect(3)/2;                                   % Find pixel location relative to center of experimenter display
     s.EyeYc = s.EyeY-c.Display.Rect(4)/2;
     if s.EyeX > c.Display.Rect(3) && s.EyeX < 2*c.Display.Rect(3)       % If mouse cursor is entering monkey's display...
         HideCursor;                                                     % Turn cursor off!
@@ -92,14 +105,14 @@ elseif c.SimulateEyes == 1
     end
 end
 EyeRect = repmat([round(s.EyeX), round(s.EyeY)],[1,2])+[-10,-10,10,10];
-[In, Dist]              = CheckFixation(s, c);                          % Check whether gaze position is within window
+[In, Dist]              = CheckFixationRect(s, c);                          % Check whether gaze position is within window
+ValidFixNans            = find(isnan(c.ValidFixations));
+c.ValidFixations(ValidFixNans(1)) = In;
 if In == 1
     GazeColor = [0,255,0];
 else
     GazeColor = [255,0,0];
 end
-
-
 
 
 %% =========== Draw to monkey's screen
@@ -150,30 +163,28 @@ end
 Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye, c.BullsEyeWidth);          % Draw grid lines
 Screen('FrameOval', c.window, c.Col_gridRGB, c.Bullseye(:,2:2:end), c.BullsEyeWidth+2); % Draw even lines thicker
 Screen('DrawLines', c.window, c.Meridians, 1, c.Col_gridRGB);
-Screen('FrameOval', c.window, GazeColor, c.GazeRect, c.GazeRectWidth);              % Draw border of gaze window that subject must fixate within
+Screen('FrameRect', c.window, GazeColor, c.GazeRect, c.GazeRectWidth);              % Draw border of gaze window that subject must fixate within
 Screen('FillOval', c.window, GazeColor, EyeRect);
-%         c = UpdateStats(c,s);
-%         DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
+c = UpdateStats(c,s);
+DrawFormattedText(c.window, c.TextString, c.TextRect(1), c.TextRect(2), c.TextColor);
 
 
 %============= Present stimulus
 s.FrameOnTimes(s.framecount) = Screen('Flip', c.window);                           	% Present visual stimulus now
+if s.framecount == 1
+    SCNI_SendEventCode('Stim_on', c);
+end
 Screen('Close', MovieTex);
 c.Movie.FrameNumber = c.Movie.FrameNumber+1;    
 s.framecount = s.framecount + 1;
-% if MovieOn == 0                                                                   % If stimulus was not previously on the screen...
-%     c.Movie.StartTime =  FrameOnTime;                                             % Record stimulus onset timestamp
-%     SCNI_SendEventCode('Stim_On',c);
-%     StimOn = 1;                                                               	% Change stimulus on flag
-%     fprintf('Movie started\n\n');
-% end
+
 CheckPress(PDS, c, s);                                                  % Check experimenter's input
 
 
-if s.framecount > 1000
-    figure; hist(diff(FrameOnTime),100);
-    s.framecount = 1;
-end
+% if s.framecount > 1000
+%     figure; hist(diff(s.FrameOnTimes),100);
+%     s.framecount = 1;
+% end
 
 %============= DataPixx video timestamping
 if ~strcmp(c.OverlayMode, 'PTB')
@@ -235,13 +246,6 @@ end
 
 %% ==================== SCNIBLOCK SUBFUNCTIONS =============================
 
-function PlotEyeData(EyeData, fh)
-    
-    plot(NewData(1,:),NewData(2,:));
-    
-
-
-end
 
 %================= Check experimenter's keyboard input
 function CheckPress(PDS, c, s)
@@ -267,7 +271,7 @@ function ManualAbort
 end
 
 
-%================= Check subject's gaze is within specified window
+%================= Check subject's gaze is within specified radius
 function [In, Dist] = CheckFixation(s, c)
     Dist = sqrt(s.EyeXc^2 + s.EyeYc^2);                   % Gaze distance from center of screen (pixels)
     if Dist <= c.Fix_WinRadius*c.Display.PixPerDeg          % Is gaze within specified radius?
@@ -276,6 +280,13 @@ function [In, Dist] = CheckFixation(s, c)
         In = 0;
     end
 end
+
+%================= Check subject's gaze is within specified rectangle
+function [In, Dist] = CheckFixationRect(s, c)
+    In = IsInRect(s.EyeX, s.EyeY, c.GazeRect);
+    Dist = [];
+end
+
 
 %================= Check gaze period 
 function [ValidTrial] = FindFixBreak(EyeData, c)
@@ -297,30 +308,25 @@ end
 %================= Update statistics for experimenter display =============
 function c = UpdateStats(c, s)
 
+    ValidFixPercent = nanmean(c.ValidFixations)*100;
+
     %========= Update clock
-    c.Run.CurrentTime   = GetSecs-c.Run.StartTime;                                % Calulate time
+    c.Run.CurrentTime   = GetSecs-c.RunStartTime;                                % Calulate time
     c.Run.CurrentMins   = floor(c.Run.CurrentTime/60);
     c.Run.CurrentSecs   = rem(c.Run.CurrentTime, 60);
-    c.Run.CurrentTrial  = (c.Blocks.Number-1)*size(c.Blocks.Stimorder, 2)+c.Blocks.TrialNumber;
-    c.Run.CurrentPercent= c.Run.CurrentTrial/c.Run.TotalTrials*100;
-    c.TextFormat        = ['Block     %d /%d\n\n',...
-                           'Trial     %d /%d\n\n',...
+    c.Run.CurrentPercent = (c.Run.CurrentTime/c.RunDuration)*100;
+    c.TextFormat        = ['Movie ID  %d\n\n',...
                            'Run time  %02d:%02.0f\n\n',...
-                           'Condition %d\n\n',...
-                           'Stimulus  %d\n\n',...
-                           'Rewards   %d'];
-    if c.FixAfterEachBlock == 1;
-        c.TextContent   = [c.Blocks.Number, c.Blocks.Total, c.Blocks.TrialNumber, size(c.Blocks.Stimorder, 2), c.Run.CurrentMins, c.Run.CurrentSecs, c.CondNo, c.ImageNo, s.RewardCount];
-    else
-        c.TextContent   = [c.Blocks.Number, c.Blocks.Total, c.Blocks.TrialNumber, size(c.Blocks.Stimorder, 2), c.Run.CurrentMins, c.Run.CurrentSecs, c.CondNo, c.ImageNo, s.RewardCount];
-    end
+                           'Rewards   %d\n\n',...
+                           'Fixation %%   %.0f'];
+	c.TextContent   = [c.MovieNumber, c.Run.CurrentMins, c.Run.CurrentSecs, s.RewardCount, ValidFixPercent];
     c.TextString    = sprintf(c.TextFormat, c.TextContent);
 
     %========= Update stats
     currentbuffer = Screen('SelectStereoDrawBuffer', c.window, c.ExperimenterBuffer);
     Screen('DrawTexture', c.window, c.BlockImgTex, [], c.BlockImgRect);
     Screen('FrameRect', c.window, [0,0,0], c.BlockImgRect, 3);
-    c.BlockProgLen = c.BlockImgLen*(c.Run.CurrentPercent/100);
+    c.BlockProgLen  = c.BlockImgLen*(c.Run.CurrentPercent/100);
     c.BlockProgRect = [c.BlockImgRect([1,2]), c.BlockProgLen+c.BlockImgRect(1), c.BlockImgRect(4)];
     Screen('DrawTexture', c.window, c.BlockProgTex, [], c.BlockProgRect);
     Screen('FrameRect', c.window, [0,0,0], c.BlockProgRect, 3);
@@ -354,12 +360,7 @@ end
 %================ Get current eye position in pixels from bottom left corner of screen
 function [EyeX,EyeY,V] = GetEyePix(c)
 	if c.SimulateEyes == 0
-        TestWithFunctionGen = 1;
-        if TestWithFunctionGen == 1
-            EyeChannels = [8,7];
-        else
-            EyeChannels = [1,2];
-        end
+     	EyeChannels = c.Params.DPx.ADCchannelsUsed([1,2]);
         Datapixx('RegWrRd');                                                % Update registers for GetAdcStatus
         status = Datapixx('GetAdcStatus');          
         Datapixx('RegWrRd');                                                % Update registers for GetAdcStatus

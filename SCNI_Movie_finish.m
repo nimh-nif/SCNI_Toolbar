@@ -11,7 +11,7 @@ function [PDS, c, s]= NIFblock_finish(PDS, c, s)
 %==========================================================================
 
 
-disp('Finish!')
+% disp('Finish!')
 
 %%
 % s.blockno = c.blockno;
