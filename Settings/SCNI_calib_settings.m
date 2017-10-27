@@ -66,7 +66,7 @@ c.Reward_MustFix    = 1;                                            % Require fi
 c.RewardEarned      = 0;                                            % Flag for whether fixation requirement was met in the current inter-reward period
 c.TrialsPerReward   = 1;                                            % Average duration between reward deliveries (seconds)
 c.Reward_RandDur    = 0;                                            % Range of randomized variation in reward delivery time (seconds)
-c.Reward_TTLDur     = 0.05;                                         % Duration of initial reward TTL pulse (seconds)
+c.Reward_TTLDur     = 0.025;                                         % Duration of initial reward TTL pulse (seconds)
 c.Reward_Increase   = 0;                                            % Duration to increase reward TTL pulse by per trial (seconds)
 
 %=============== Eye tracking settings

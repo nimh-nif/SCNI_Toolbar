@@ -92,6 +92,15 @@ end
             case 2  %============= Save calibration
                 [file, path] = uiputfile('*.mat','Save calibration');
                 if file ~= 0
+                    for n = 1:size(Fig.Edit, 1)
+                        for xy = 1:size(Fig.Edit, 2)
+                            Fig.Values{n}(xy) = str2num(get(Fig.Edit(n, xy), 'string'));
+                        end
+                    end
+                    Cal.EyeOffset       = Fig.Values{1};
+                    Cal.EyeGain         = Fig.Values{2};
+                    Cal.VoltageRange    = Fig.Values{3};
+                    Cal = rmfield(Cal, 'Window');
                     CalibFilename   = fullfile(path, file);
                     save(CalibFilename, 'Cal');
                 end
