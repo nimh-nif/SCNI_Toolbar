@@ -114,15 +114,17 @@ Params.Run.StartTime    = FrameOnset;
 while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Duration
     
     %=============== Get next frame and draw to displays
-    MovieTex = Screen('GetMovieImage', Params.Display.win, mov);                                                    % Get texture handle for next frame
+    if Params.Movie.Paused == 0
+        MovieTex = Screen('GetMovieImage', Params.Display.win, mov);                                                    % Get texture handle for next frame
+    end
     Screen('FillRect', Params.Display.win, Params.Movie.Background*255);                                             	% Clear previous frame
     for Eye = 1:NoEyes                                                                                              % For each individual eye view...
         currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                                % Select the correct stereo buffer
         Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp);      % Draw to the experimenter's display
         %Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{Eye}, Params.Movie.RectMonk);   % Draw to the subject's display
         if Params.Display.PD.Position > 1
-            Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Paused+1}*255, Params.Display.PD.SubRect(Eye,:));
-            Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Paused+1}*255, Params.Display.PD.ExpRect);
+            Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Params.Movie.Paused+1}*255, Params.Display.PD.SubRect(Eye,:));
+            Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Params.Movie.Paused+1}*255, Params.Display.PD.ExpRect);
         end
         if Params.Movie.FixOn == 1
             Screen('DrawTexture', Params.Display.win, Params.Display.FixTexture, [], Params.Display.MonkeyFixRect(Eye,:));  	% Draw fixation marker
@@ -151,13 +153,10 @@ while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Duration
     Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);                            % Draw current gaze position
 	Params         = SCNI_UpdateStats(Params); 
     
+    [VBL FrameOnset(end+1)] = Screen('Flip', Params.Display.win);               % Flip next frame
 
-    if Paused == 0
-        [VBL FrameOnset(end+1)] = Screen('Flip', Params.Display.win); 	% Flip next frame
-    end
     
     %=============== Check for experimenter input
-    Screen('Close', MovieTex);                                                      % Close the last texture
     [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
     if keyIsDown && secs > LastPress+0.1                                            % If key is pressed and it's more than 100ms since last key press...
       	LastPress   = secs;                                                         % Log time of current key press
@@ -169,6 +168,7 @@ while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Duration
             elseif Params.Movie.Paused == 0                                         % If unpaused...
                 Screen('SetMovieTimeIndex', mov, Params.Movie.PauseTime);        	% Set the movie time point to when paused
                 Screen('PlayMovie',mov, Params.Movie.Rate, Params.Movie.Loop, Params.Movie.AudioOn*Params.Movie.AudioVol);
+                Params.Run.StartTime = GetSecs-Params.Movie.PauseTime;              % Refresh start time
             end
         elseif keyCode(Params.Movie.Keys.VolUp) == 1
             Params.Movie.AudioVol = min([1, Params.Movie.AudioVol+Params.Movie.VolInc]);
@@ -179,6 +179,10 @@ while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Duration
         elseif keyCode(Params.Movie.Keys.Stop) == 1                     
             EndMovie = 1;
         end
+    end
+    
+	if Params.Movie.Paused == 0
+        Screen('Close', MovieTex);                                                	% Close the last texture
     end
 end
 
