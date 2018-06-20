@@ -1,6 +1,6 @@
 <img src="https://github.com/MonkeyGone2Heaven/SCNI_Toolbar/blob/master/SCNI_Subfunctions/Icons/Systems/Logo_SCNI_Toolbar.png"  alt="SCNI_Toolbar" width="200" height="100"/> 
 
-The SCNI Toolbar is a library of Matlab / GNU Octave functions and graphical user interfaces (GUIs) that provide behavioural neurocientists with a simple and intuitive method of loading, editing, and saving parameters for a variety of systems involved in visual neurophysiology and neuroimaging experiments. More specifically, the toolbar is intended to be used in conjunction with experiments programmed using PsychToolbox extensions in Matlab/ GNU Octave, under the PLDAPS framework. Currently supported systems include:
+The SCNI Toolbar is a library of Matlab / GNU Octave functions and graphical user interfaces (GUIs) that provide behavioural neurocientists with a simple and intuitive method of loading, editing, and saving parameters for a variety of systems involved in visual neurophysiology and neuroimaging experiments. More specifically, the toolbar is intended to be used in conjunction with experiments programmed using PsychToolbox extensions in Matlab/ GNU Octave (optionally under the PLDAPS framework). Currently supported systems include:
 
 Visual stimulus presentation:
 
