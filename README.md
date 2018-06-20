@@ -19,5 +19,5 @@ Behavioural control:
 * [SR Research, EyeLink](http://www.sr-research.com/)
 * [Arrington Research, ViewPoint](http://www.arringtonresearch.com/)
 
-![SCNI Toolbar](https://user-images.githubusercontent.com/7523776/28806598-f6078df4-763e-11e7-8d4a-e6a2b8e97e10.png)
+![SCNI Toolbar](https://user-images.githubusercontent.com/7523776/41602802-9d710d1e-73a9-11e8-9120-f2f8c3ab6e16.png)
 
