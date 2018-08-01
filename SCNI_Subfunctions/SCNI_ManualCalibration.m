@@ -1,5 +1,7 @@
 function Cal = SCNI_ManualCalibration(Cal)
 
+
+
 global Fig
 
 if ~isfield(Cal, 'Window') || Cal.Window == 0

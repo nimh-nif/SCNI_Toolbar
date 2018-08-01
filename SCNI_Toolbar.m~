@@ -9,7 +9,7 @@
 
 function [p] = SCNI_Toolbar(p)
 
-persistent Fig Icon                                                         % Declare global variables
+persistent Fig Icon Params                                                         % Declare global variables
 
 %============ Initialize GUI
 GUItag      = 'SCNI_Toolbar';                                               % String to use as GUI window tag
@@ -149,7 +149,7 @@ for p = 1:numel(Fig.PannelTitles)
     end
     
 end      
-Params = AppendToolbarHandles(Params);
+
 
 %================== Add logo button for link to Wiki
 [im, cm, alph] = imread('Logo_SCNI_Toolbar.png');

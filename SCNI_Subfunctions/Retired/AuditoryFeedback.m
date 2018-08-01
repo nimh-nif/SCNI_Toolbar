@@ -18,6 +18,7 @@ function [Beep, Noise] = AuditoryFeedback(Tone, PlaybackMode)
 %
 % 01/03/2012 - Witten by Aidan Murphy (apm909@bham.ac.uk)
 % 14/03/2013 - Lowpass filtered white noise output added.
+% 16/07/2018 - Rhesus macaque vocalization added.
 %     ___  ______  __   __
 %    /   ||  __  \|  \ |  \    APM SUBFUNCTIONS
 %   / /| || |__/ /|   \|   \   Aidan P. Murphy - apm909@bham.ac.uk
@@ -46,14 +47,14 @@ end
 if PlaybackMode == 1
     InitializePsychSound;                                                       % Initialize PsychPortAudio at standard latency
     p.nrchannels = 1;                                                           % Set number of channels (1 channel = mono)
-    p.sampRate = Snd('DefaultRate');                                        	% Set sample rate
+    p.sampRate = round(Snd('DefaultRate'));                                       	% Set sample rate
     if IsWin
         sugLat = 0.015;                                                      	% Add 15 msecs latency on Windows, to protect against shoddy drivers
     else
         sugLat = [];                                                            
     end
     try
-        pamaster = PsychPortAudio('Open', [], 1+8, 0, p.sampRate, p.nrchannels, [], sugLat);    
+        pamaster = PsychPortAudio('Open', [], 1, 0, p.sampRate, p.nrchannels, [], sugLat);    
         PsychPortAudio('Start', pamaster, 0, 0, 1);                                 % Start the master immediately  
     catch
     end

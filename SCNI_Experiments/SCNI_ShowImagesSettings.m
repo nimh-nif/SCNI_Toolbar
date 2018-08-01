@@ -1,4 +1,4 @@
-%======================== SCNI_ImageExpSettings.m =========================
+%======================== SCNI_ShowImagesSettings.m =======================
 % This function provides a graphical user interface for setting parameters 
 % related to simple static image presentation experiments. Parameters can 
 % be saved and loaded, and the updated parameters are returned in the 
@@ -15,12 +15,12 @@
 %
 %==========================================================================
 
-function ParamsOut = SCNI_ImageExpSettings(ParamsFile, OpenGUI)
+function ParamsOut = SCNI_ShowImagesSettings(ParamsFile, OpenGUI)
 
 persistent Params Fig;
 
 %============ Initialize GUI
-GUItag      = 'SCNI_ImageExpSettings';                  % String to use as GUI window tag
+GUItag      = 'SCNI_ShowImagesSettings';             	% String to use as GUI window tag
 Fieldname   = 'ImageExp';                               % Params structure fieldname for DataPixx info
 if ~exist('OpenGUI','var')
     OpenGUI = 1;
@@ -71,7 +71,7 @@ setappdata(0,GUItag,Fig.Handle);                                        % Assign
 Fig.PanelYdim       = 130*Fig.DisplayScale;
 Fig.Rect            = [0 200 500 900]*Fig.DisplayScale;              	% Specify figure window rectangle
 set(Fig.Handle,     'Name','SCNI: Image Experiment settings',...    	% Open a figure window with specified title
-                    'Tag','SCNI_ImageExpSettings',...                 	% Set figure tag
+                    'Tag','SCNI_ShowImagesSettings',...                 % Set figure tag
                     'Renderer','OpenGL',...                             % Use OpenGL renderer
                     'OuterPosition', Fig.Rect,...                       % position figure window
                     'NumberTitle','off',...                             % Remove figure number from title

@@ -12,7 +12,7 @@ function EventCodes = SCNI_LoadEventCodes()
 %                   values are reserved for stimulus number, so event codes 
 %                   begin from 8001. Use the EventCodes.TDTnumber field to 
 %                   send.
-%   - TDT Synapes:  Synapse can receive event codes via digital input (as
+%   - TDT Synape:   Synapse can receive event codes via digital input (as
 %                   with OpenEX) and via ethernet (as with Open Ephys). You
 %                   can chose which to use.
 %   - Open Ephys:   since communication with Open Ephys occurs via TCP

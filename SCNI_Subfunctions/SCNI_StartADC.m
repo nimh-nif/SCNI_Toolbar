@@ -1,4 +1,4 @@
-function SCNI_StartADC(DPx)
+function AdcStatus = SCNI_StartADC(Params)
 
 %========================== SCNI_StartADC.m ===============================
 % Start DataPixx2's ADC buffer (and optionally DAC) running.
@@ -9,21 +9,21 @@ AdcStatus = Datapixx('GetAdcStatus');
 while AdcStatus.scheduleRunning == 1
     Datapixx('RegWrRd');
     AdcStatus = Datapixx('GetAdcStatus');
-    WaitSecs(0.01);
+	WaitSecs(0.01);
 end
-Datapixx('SetAdcSchedule', 0, DPx.AnalogInRate, DPx.nAdcLocalBuffSpls, DPx.AnalogInCh, DPx.adcBuffBaseAddr, DPx.nAdcLocalBuffSpls);
+Datapixx('SetAdcSchedule', 0, Params.DPx.AnalogInRate, Params.DPx.nAdcLocalBuffSpls, Params.DPx.AnalogInCh, Params.DPx.adcBuffBaseAddr, Params.DPx.nAdcLocalBuffSpls);
 Datapixx('StartAdcSchedule');
 Datapixx('RegWrRd');                                                    % Make sure a DAC schedule is not running before setting a new schedule
 
 %================== Set DAC schedule for reward delivery
-if DPx.AnalogReward == 1
+if Params.DPx.AnalogReward == 1
     Dacstatus = Datapixx('GetDacStatus');                               % Check DAC status
     while Dacstatus.scheduleRunning == 1
         Datapixx('RegWrRd');
         Dacstatus = Datapixx('GetDacStatus');
     end
     Datapixx('RegWrRd');
-    Datapixx('WriteDacBuffer', DPx.reward_Voltages, DPx.dacBuffAddr, DPx.RewardChnl);
+    Datapixx('WriteDacBuffer', Params.DPx.reward_Voltages, Params.DPx.dacBuffAddr, Params.DPx.RewardChnl);
     nChannels = Datapixx('GetDacNumChannels');
     Datapixx('SetDacVoltages', [0:nChannels-1; zeros(1, nChannels)]);    	% Set all DAC channels to 0V
 end

@@ -220,21 +220,21 @@ c.Key_Reward  = KbName(c.Reward_Key);
 c.Movie.FrameNumber = 1;
 
 
-% %% ====================== INITIALIZE AUDIO SETTINGS =======================
-% Audio.On = 0;                                           % Play audio feedback tones/ movie sound?
-% if Audio.On == 1
-%     [Audio.Beep, Audio.Noise] = AuditoryFeedback([],1); 	% Generate tones
-% %     if ~IsWin
-% %         Speak('Audio initialized.');                    % Inform user that audio is ready
-% %     elseif IsWin
-% %         Audio.a = actxserver('SAPI.SpVoice.1');
-% %         Audio.a.Speak('Audio initialized.');
-% %     end
-%     c.AudioBeep      = Audio.Beep(1);
-%     c.AudioError     = Audio.Beep(2);
-%     c.AudioPenalty   = Audio.Noise(1);
-%     PsychPortAudio('Start', c.AudioBeep, 1);
-% end
+%% ====================== INITIALIZE AUDIO SETTINGS =======================
+Audio.On = 0;                                           % Play audio feedback tones/ movie sound?
+if Audio.On == 1
+    [Audio.Beep, Audio.Noise] = AuditoryFeedback([],1); 	% Generate tones
+%     if ~IsWin
+%         Speak('Audio initialized.');                    % Inform user that audio is ready
+%     elseif IsWin
+%         Audio.a = actxserver('SAPI.SpVoice.1');
+%         Audio.a.Speak('Audio initialized.');
+%     end
+    c.AudioBeep      = Audio.Beep(1);
+    c.AudioError     = Audio.Beep(2);
+    c.AudioPenalty   = Audio.Noise(1);
+    PsychPortAudio('Start', c.AudioBeep, 1);
+end
 
 Screen('TextFont', c.window, 'Courier'); 
 Screen('TextStyle', c.window, 1); 
