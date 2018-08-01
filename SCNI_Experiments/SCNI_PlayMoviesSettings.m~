@@ -56,8 +56,6 @@ if Success < 1                                          	% If the parameters cou
     Params.Movie.SubdirOpt      = 3;
     Params.Movie.FixTypes       = {'None','Dot','Square','Cross','Binocular'};
     Params.Movie.FixType        = 1;
-    Params.Movie.Rotation       = 0;
-    Params.Movie.Contrast       = 1;
     
     %============== Behavioural parameters
     Params.Movie.GazeRectBorder = 2;                        % Distance of gaze window border from edge of movie frame (degrees)
@@ -120,7 +118,7 @@ Fig.UItransform.Labels      = {'Present fullscreen','Retinal subtense (deg)','Im
 Fig.UItransform.Style       = {'checkbox','Edit','Edit','Edit'};
 Fig.UItransform.Defaults    = {[], Params.Movie.SizeDeg(1), Params.Movie.Rotation, Params.Movie.Contrast};
 Fig.UItransform.Values     	= {Params.Movie.Fullscreen, [], [], []};
-Fig.UItransform.Enabled     = [1, ~Params.Movie.Fullscreen, 1, 1, 1,1,1,1];
+Fig.UItransform.Enabled     = [1, 1, ~Params.Movie.Fullscreen, 1, 1, 1,1,1,1];
 Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 

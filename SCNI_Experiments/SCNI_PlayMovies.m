@@ -33,6 +33,8 @@ if nargin < 2
     Params.Movie.StartTime      = 1;                        % Movie playback starts at time (seconds)
     Params.Movie.Scale          = 1.5;                        % Proportion of original size to present movie at
     Params.Movie.Paused         = 0;
+ 	Params.Movie.Rotation       = 0;
+    Params.Movie.Contrast       = 1;
     
     %============== Keyboard shortcuts
     KbName('UnifyKeyNames');
@@ -202,8 +204,8 @@ while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
         Screen('FillRect', Params.Display.win, Params.Movie.Background*255);                                             	% Clear previous frame
         for Eye = 1:NoEyes                                                                                              % For each individual eye view...
             currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                                % Select the correct stereo buffer
-            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp);      % Draw to the experimenter's display
-            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{Eye}, Params.Movie.RectMonk);   % Draw to the subject's display
+            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp, Params.Movie.Rotation, [], Params.Movie.Contrast);      % Draw to the experimenter's display
+            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{Eye}, Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
             if Params.Display.PD.Position > 1
                 Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Params.Movie.Paused+1}*255, Params.Display.PD.SubRect(Eye,:));
                 Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Params.Movie.Paused+1}*255, Params.Display.PD.ExpRect);

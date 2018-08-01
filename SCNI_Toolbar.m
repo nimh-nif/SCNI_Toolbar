@@ -63,7 +63,7 @@ end
 Fig.ToolbarRect     = [0,0,1920,100]*Fig.DisplayScale;
 Fig.ButtonType      = {'togglebutton','pushbutton','pushbutton','togglebutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
 Fig.IconList        = {'Play','Liquid','SpeakerOn','Movie','Eye','Exit','Penalty','GammaCorrect','Sleep','EPI','Stereoscopic','Display','Photodiode','Eye','DataPixx','TDT','OpenEphys','Transfer','Github'};
-Fig.ButtonTips      = {'Run experiment','Give reward','Play audio','Play movie','Eye calibration','Quit','Debug mode','Apply gamma','Time out','MRI training','Stereoscopic 3D','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings','Transfer data','Manage GitHub repos'};
+Fig.ButtonTips      = {'Run current experiment','Give reward','Play audio','Play a movie','Run eye calibration','Quit current experiment','Debug mode','Apply gamma','Time out','MRI training','Stereoscopic 3D','Display settings','Photodiode settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings','Transfer data','Manage GitHub repos'};
 Fig.ButtonFunc      = {'RunCurrentExp','SCNI_GiveReward','SCNI_PlaySound','SCNI_PlayMovies','SCNI_Calibration','Stop',...
                         'SCNI_DebugMode','SCNI_ApplyGamma','SCNI_RestMode','SCNI_ScannerMode','SCNI_3Dmode',...
                         'SCNI_DisplaySettings','','SCNI_EyelinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings','SCNI_TransferSettings','SCNI_CodeSettings'};

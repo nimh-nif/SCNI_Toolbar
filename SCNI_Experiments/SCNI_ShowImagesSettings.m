@@ -36,6 +36,9 @@ if Success < 1
     Params.ImageExp.LoadRecurs  = 1;                                        % Load images recursively from all sub-directories?
     Params.ImageExp.FileFormats = {'.png','.jpg','.bmp'};                 	% What file format are the images?
     Params.ImageExp.FileFormat  = 1;
+    Params.ImageExp.SubdirOpts  = {'Ignore','Load','Conditions'};           % How to treat subdirectories found in Params.ImageExp.ImageDir?    
+    Params.ImageExp.SubdirOpt   = 1;                                        % Default is to ignore images in subdirectories
+    Params.ImageExp.ImageConds  = {''};             
     Params.ImageExp.Preload     = 1;                                        % Pre-load images to GPU before experiment?
     Params.ImageExp.UseAlpha    = 1;                                        % Use alpha transparency data (requires .png file type)
     Params.ImageExp.Greyscale   = 0;                                        % Convert images to greyscale?
@@ -51,7 +54,16 @@ if Success < 1
     Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg;
     Params.ImageExp.KeepAspect  = 1;                                        % Maintain aspect ratio of original images?
     Params.ImageExp.PositionDeg = [0, 0];
+    Params.ImageExp.FixOn       = 1;
+    Params.ImageExp.FixTypes    = {'None','Dot','Square','Cross','Binocular'};
+    Params.ImageExp.FixType     = 2;
+    Params.ImageExp.StimPerTrial = 5;                                       % Number of stimulus presentations per trial
+    Params.ImageExp.ITIms       = 2000;                                     % Inter-trial interval (ms)
     Params.ImageExp.DurationMs  = 300;
+    Params.ImageExp.ISIMs       = 300;
+    Params.ImageExp.ISIjitter   = 200;                                      % Maximum temporal jitter (+/- ms) to change each ISI by
+    Params.ImageExp.PosJitter   = 2;                                        % Maximum spatial jitter (+/- deg) to move stimulus from center each trial
+    Params.ImageExp.ScaleJitter = 0;                                        % Maximum scaling jitter (+/- % original) to scale stimulus by on each trial
     Params.ImageExp.AddBckgrnd  = 0;                                        % Add an image or noise background?
     Params.ImageExp.BckgrndDir  = {};
     
@@ -63,6 +75,7 @@ if OpenGUI == 0
     ParamsOut = Params;
     return;
 end
+Params = RefreshImageList(Params);
 
 
 %========================= OPEN GUI WINDOW ================================
@@ -86,18 +99,18 @@ Fig.TitleFontSize = 18;
 
 %============= Prepare GUI panels
 Fig.PanelNames      = {'Image selection','Image transforms','Image presentation'};
-Fig.PannelHeights   = [150, 220, 200];
+Fig.PannelHeights   = [200, 220, 200];
 BoxPos{1}           = [Fig.Margin, Fig.Rect(4)-Fig.PannelHeights(1)*Fig.DisplayScale-Fig.Margin*2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(1)*Fig.DisplayScale];   
 for i = 2:numel(Fig.PanelNames)
     BoxPos{i}           = [Fig.Margin, BoxPos{i-1}(2)-Fig.PannelHeights(i)*Fig.DisplayScale-Fig.Margin/2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(i)*Fig.DisplayScale];
 end
 
-Fig.UIimages.Labels         = {'Image directory', 'Background directory', 'Image format', 'SBS 3D?','Load sub-directories?','Pre-load images?'};
-Fig.UIimages.Style          = {'Edit','Edit','Popup','checkbox','checkbox','checkbox'};
-Fig.UIimages.Defaults       = {Params.ImageExp.ImageDir, Params.ImageExp.BckgrndDir, Params.ImageExp.FileFormats,[], [], []};
-Fig.UIimages.Values         = {isempty(Params.ImageExp.ImageDir), isempty(Params.ImageExp.BckgrndDir), Params.ImageExp.FileFormat, Params.ImageExp.SBS3D, Params.ImageExp.LoadRecurs, Params.ImageExp.Preload};
-Fig.UIimages.Enabled        = [0, 0, 1, 1, 1, 1];
-Fig.UIimages.Ypos           = [(Fig.PannelHeights(1)-Fig.Margin):-20:10]*Fig.DisplayScale;
+Fig.UIimages.Labels         = {'Image directory', 'Background directory', 'Image format', 'Subdirectories', 'Conditions', 'Total images', 'SBS 3D?','Pre-load images?'};
+Fig.UIimages.Style          = {'Edit','Edit','Popup','Popup','Popup','Edit','checkbox','checkbox'};
+Fig.UIimages.Defaults       = {Params.ImageExp.ImageDir, Params.ImageExp.BckgrndDir, Params.ImageExp.FileFormats, Params.ImageExp.SubdirOpts, Params.ImageExp.ImageConds, num2str(Params.ImageExp.TotalImages), [], []};
+Fig.UIimages.Values         = {isempty(Params.ImageExp.ImageDir), isempty(Params.ImageExp.BckgrndDir), Params.ImageExp.FileFormat, Params.ImageExp.SubdirOpt, 1, [], Params.ImageExp.SBS3D, Params.ImageExp.Preload};
+Fig.UIimages.Enabled        = [0, 0, 1, 1, 1, 1, 1, 1];
+Fig.UIimages.Ypos           = [(Fig.PannelHeights(1)-50):-20:10]*Fig.DisplayScale;
 Fig.UIimages.Xwidth         = [180, 200]*Fig.DisplayScale;
 
 Fig.UItransform.Labels      = {'Scale image','Present fullscreen','Retinal subtense (deg)','Use alpha channel?','Mask type','Present in greyscale','Image rotation (deg)','Image contrast (%)'};
@@ -105,12 +118,19 @@ Fig.UItransform.Style       = {'checkbox','checkbox','Edit','checkbox','Popup','
 Fig.UItransform.Defaults    = {[], [], Params.ImageExp.SizeDeg(1), [], Params.ImageExp.MaskTypes, [], Params.ImageExp.Rotation, Params.ImageExp.Contrast};
 Fig.UItransform.Values     	= {~Params.ImageExp.Fullscreen, Params.ImageExp.Fullscreen, [], Params.ImageExp.UseAlpha, Params.ImageExp.MaskType, Params.ImageExp.Greyscale, [], []};
 Fig.UItransform.Enabled     = [1, 1, ~Params.ImageExp.Fullscreen, 1, 1, 1,1,1,1];
-Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-Fig.Margin):-20:10]*Fig.DisplayScale;
+Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 
+Fig.UIpresent.Labels        = {'Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)'};
+Fig.UIpresent.Style        	= {'Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit'};
+Fig.UIpresent.Defaults     	= {Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIMs, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter};
+Fig.UIpresent.Values        = {[],[],[],[],[],Params.ImageExp.FixType,[],[]};
+Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1];
+Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
+Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
 OfforOn         = {'Off','On'};
-PanelStructs    = {Fig.UIimages, Fig.UItransform};
+PanelStructs    = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};
 
 for p = 1:numel(Fig.PanelNames)
     Fig.PannelHandl(p) = uipanel( 'Title',Fig.PanelNames{p},...
@@ -136,7 +156,13 @@ for p = 1:numel(Fig.PanelNames)
                     'HorizontalAlignment', 'left',...
                     'FontSize', Fig.FontSize,...
                     'Callback', {@UpdateParams, p, n});
-        
+        if p == 1 && n < 3
+            uicontrol(  'Style', 'pushbutton',...
+                        'string','...',...
+                        'Parent', Fig.PannelHandl(p),...
+                        'Position', [Fig.Margin + 20+ sum(PanelStructs{p}.Xwidth([1,2])), PanelStructs{p}.Ypos(n), 20*Fig.DisplayScale, 20*Fig.DisplayScale],...
+                        'Callback', {@UpdateParams, p, n});
+        end
 
 
     end
@@ -145,7 +171,7 @@ end
 
 
 
-%% ==================== SUBFUNCTIONS
+%% =========================== SUBFUNCTIONS ===============================
 
     function LoadImages(win)
         LoadTextPos = Params.Display.Rect(3)/2;
@@ -210,4 +236,121 @@ end
         
     end
 
+
+    %=============== Update parameters
+    function UpdateParams(hObj, Evnt, Indx1, Indx2)
+
+        switch Indx1    %============= Panel 1 controls
+            case 1
+                switch Indx2
+                    case 1      %===== Change image directory
+                        Params.ImageExp.ImageDir	= uigetdir('/projects/','Select stimulus directory');
+                        set(Fig.UIhandle(1,1),'string',Params.ImageExp.ImageDir);
+                        Params = RefreshImageList(Params);
+                        
+                    case 2      %===== Change background image directory
+                        Params.ImageExp.BckgrndDir	= uigetdir('/projects/','Select background image directory');
+                        set(Fig.UIhandle(1,2),'string',Params.ImageExp.BckgrndDir);
+                        
+                    case 3      %===== Change image file format
+                        Params.ImageExp.FileFormat  = get(hObj, 'value');
+                        Params = RefreshImageList(Params);
+                        
+                    case 4      %===== Change subdirectory use
+                        Params.ImageExp.SubdirOpt = get(hObj, 'value');
+                        Params = RefreshImageList(Params);
+                        
+                    case 5
+                        
+                    case 6
+                        
+                    case 7      %===== Change 3D format
+                        Params.ImageExp.SBS3D = get(hObj, 'value');
+                        
+                    case 8      %===== Pre-load images?
+                        
+                end
+                
+            case 2      %============= Panel 2 controls
+                switch Indx2
+                    case 1      %===== Toggle image scaling
+
+                        
+                    case 2      %===== Toggle fullscreen
+                        Params.ImageExp.Fullscreen = get(hObj, 'value');
+                        
+                    case 3
+                        
+                    case 4
+                        
+                    case 5
+                        
+                    case 6
+                        
+                    case 7
+                        
+                    case 8
+                        
+                end
+                
+            case 3      %============= Panel 3 controls
+            	switch Indx2
+                    case 1      %===== Toggle image scaling
+
+                        
+                    case 2      %===== Toggle fullscreen  
+                        
+                    case 3
+                        
+                    case 4
+                        
+                    case 5
+                        
+                    case 6
+                        
+                    case 7
+                        
+                    case 8
+                end
+        end
+
+    end
+
+    %====================== Refresh the list(s) of images =================
+    function Params = RefreshImageList(Params)
+        
+        switch Params.ImageExp.SubdirOpts{Params.ImageExp.SubdirOpt}
+            case 'Load'
+                Params.ImageExp.AllImFiles 	= wildcardsearch(Params.ImageExp.ImageDir, ['*',Params.ImageExp.FileFormats{Params.ImageExp.FileFormat}]);
+                Params.ImageExp.ImageConds  = {''};
+                
+            case 'Ignore'
+                Params.ImageExp.AllImFiles 	= regexpdir(Params.ImageExp.ImageDir, Params.ImageExp.FileFormats{Params.ImageExp.FileFormat},0);
+                Params.ImageExp.ImageConds  = {''};
+                
+            case 'Conditions'
+                SubDirs                     = dir(Params.ImageExp.ImageDir);
+                Params.ImageExp.ImageConds  = {SubDirs([SubDirs.isdir]).name};
+                Params.ImageExp.ImageConds(~cellfun(@isempty, strfind(Params.ImageExp.ImageConds, '.'))) = [];
+                Params.ImageExp.AllImFiles 	= [];
+                for cond = 1:numel(Params.ImageExp.ImageConds)
+                    Params.ImageExp.ImByCond{cond} 	= regexpdir(fullfile(Params.ImageExp.ImageDir, Params.ImageExp.ImageConds{cond}), Params.ImageExp.FileFormats{Params.ImageExp.FileFormat},0);
+                    Params.ImageExp.ImByCond{cond}(cellfun(@isempty, Params.ImageExp.ImByCond{cond})) = [];
+                    Params.ImageExp.AllImFiles      = [Params.ImageExp.AllImFiles; Params.ImageExp.ImByCond{cond}];
+                end
+        end
+        Params.ImageExp.TotalImages     = numel(Params.ImageExp.AllImFiles);
+        
+        %========== Update GUI
+        if isfield(Fig, 'UIimages')
+            ButtonIndx = find(~cellfun(@isempty, strfind(Fig.UIimages.Labels, 'Conditions')));
+            if ~isempty(Params.ImageExp.ImageConds)
+                set(Fig.UIhandle(1,ButtonIndx), 'string', Params.ImageExp.ImageConds, 'enable', 'on');
+            else
+                set(Fig.UIhandle(1,ButtonIndx), 'string', {''}, 'enable', 'off');
+            end
+            StrIndx = find(~cellfun(@isempty, strfind(Fig.UIimages.Labels, 'Total images')));
+            set(Fig.UIhandle(1,StrIndx), 'string', num2str(Params.ImageExp.TotalImages));
+        end
+    end
 end
