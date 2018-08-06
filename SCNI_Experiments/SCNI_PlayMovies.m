@@ -13,28 +13,10 @@ function Movie = SCNI_PlayMovies(Params, movieFile)
 %==========================================================================
 
 %================= SET DEFAULT PARAMETERS
-if nargin < 2
-    Params.Movie.Dir            = '/projects/murphya/Stimuli/Movies/MonkeyThieves1080p/Season 1/';
-    Params.Movie.AllFiles       = wildcardsearch(Params.Movie.Dir, '*.mp4');
-    Params.Movie.CurrentFile    = Params.Movie.AllFiles{randi(numel(Params.Movie.AllFiles))};
-    [~,Params.Movie.Filename]   = fileparts(Params.Movie.CurrentFile);
-    Params.Movie.RunDuration    = 300;                      % Total duration of one run (seconds)
-    Params.Movie.Duration       = 10;                       % Duration of each movie file to play (seconds). Whole movie plays if empty.
-    Params.Movie.PlayMultiple   = 1;                        % Play multiple different movie files consecutively?
-    Params.Movie.ISI            = 1;                        % Delay between consecutive movies (seconds)
-    Params.Movie.SBS            = 0;                        % Are movies in side-by-side stereoscopic 3D format?
-    Params.Movie.Fullscreen     = 0;                        % Scale the movie to fill the display screen?
-    Params.Movie.AudioOn        = 1;                        % Play accompanying audio with movie?
-    Params.Movie.AudioVol       = 1;                        % Set proportion of volume to use
-    Params.Movie.VolInc         = 0.1;                      % Volume change increments (proportion) when set by experimenter
-    Params.Movie.Loop           = 0;                        % Loop playback of same movie if it reaches the end before the set playback duration?
-    Params.Movie.Background     = [0,0,0];                  % Color (RGB) of background for non-fullscreen movies
-    Params.Movie.Rate           = 1;                        % Rate of movie playback as proportion of original fps (range -1:1)
-    Params.Movie.StartTime      = 1;                        % Movie playback starts at time (seconds)
-    Params.Movie.Scale          = 1.5;                        % Proportion of original size to present movie at
-    Params.Movie.Paused         = 0;
- 	Params.Movie.Rotation       = 0;
-    Params.Movie.Contrast       = 1;
+if nargin < 2 || ~isfield(Params, 'Movie')
+    
+    Params  = SCNI_PlayMoviesSettings(Params, 0);
+    Params  = SCNI_GenerateDesign(Params, 0);           
     
     %============== Keyboard shortcuts
     KbName('UnifyKeyNames');
@@ -46,14 +28,7 @@ if nargin < 2
         eval(sprintf('Params.Movie.KeysList(Params.Movie.Keys.%s) = 1;', KeyFunctions{k}));
         fprintf('Press ''%s'' for %s\n', KeyNames{k}, KeyFunctions{k});
     end
-    
-    %============== Behavioural parameters
-    Params.Movie.GazeRectBorder = 2;                        % Distance of gaze window border from edge of movie frame (degrees)
-    Params.Movie.FixOn          = 0;                        % Present a fixtion marker during movie playback?
-    Params.Movie.PreCalib       = 0;                        % Run a quick 9-point calibration routine prior to movie onset?
-    Params.Movie.Reward         = 1;                        % Give reward during movie?
-    Params.Movie.FixRequired    = 1;                        % Require fixation criterion to be met for reward?
-    
+
 end
 
 %================= PRE-ALLOCATE RUN AND REWARD FIELDS
@@ -67,6 +42,9 @@ Params.Run.Duration             = Params.Movie.RunDuration;
 Params.Run.MaxTrialDur          = Params.Movie.Duration;
 Params.Run.MovieCount           = 1;                            % Start movie count at 1
 Params.Run.ExpQuit              = 0;
+Params.Run.EndMovie             = 0;
+% Params.Run.CurrentFile          = Params.Movie.ImByCond{Params.Design.Cond(1,1)}{Params.Design.Stim(1,1)};
+Params.Run.CurrentFile          = Params.Movie.ImByCond{1}{1};
 
 Params.Reward.Proportion        = 0.7;                          % Set proportion of reward interval that fixation must be maintained for (0-1)
 Params.Reward.MeanIRI           = 4;                            % Set mean interval between reward delivery (seconds)
@@ -96,8 +74,7 @@ if Params.DPx.UseDPx == 1
 end
 
 %================= LOAD FIRST MOVIE FILE
-EndMovie        = 0;
-[mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Movie.CurrentFile); 
+[mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Run.CurrentFile); 
 Params.Run.mov = mov;
 if isempty(Params.Movie.Duration)
     Params.Movie.Duration = Movie.duration;
@@ -126,14 +103,14 @@ Params.Display.GazeRect = Params.Movie.GazeRect;
 
 %================= BEGIN RUN
 FrameOnset = GetSecs;
-while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
+while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
 
     if Params.Run.MovieCount > 1
         Params.Run.MoiveIndx(Params.Run.MovieCount) = randi(numel(Params.Movie.AllFiles));                   % <<<< RANDOMIZE movie order
         SCNI_SendEventCode(Params.Run.MoiveIndx(Params.Run.MovieCount), Params);                             % Send event code to connected neurophys systems
-        Params.Movie.CurrentFile    = Params.Movie.AllFiles{Params.Run.MoiveIndx(Params.Run.MovieCount)};   
-        [~,Params.Movie.Filename]   = fileparts(Params.Movie.CurrentFile);  
-        [mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Movie.CurrentFile); 
+        Params.Run.CurrentFile      = Params.Movie.AllFiles{Params.Run.MoiveIndx(Params.Run.MovieCount)};   
+        [~,Params.Movie.Filename]   = fileparts(Params.Run.CurrentFile);  
+        [mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Run.CurrentFile); 
         Params.Run.mov = mov;
     end
 
@@ -186,16 +163,16 @@ while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
         if Params.Run.MovieCount == 1
             Params.Run.StartTime  = ISIoffset;
         end
-        EndMovie = CheckKeys(Params);                                                   % Check for keyboard input
+        Params.Run.EndMovie = CheckKeys(Params);                                                   % Check for keyboard input
         if get(Params.Toolbar.StopButton,'value')==1                                    % Check for toolbar input
-            EndMovie = 1;
+            Params.Run.EndMovie = 1;
         end
     end
 
     
     %================= BEGIN CURRENT MOVIE PLAYBACK
     MovieStarted = 0;
-    while EndMovie == 0 && (FrameOnset(end)-Params.Run.MovieStartTime) < Params.Movie.Duration
+    while Params.Run.EndMovie == 0 && (FrameOnset(end)-Params.Run.MovieStartTime) < Params.Movie.Duration
         
         %=============== Get next frame and draw to displays
         if Params.Movie.Paused == 0
@@ -241,9 +218,9 @@ while EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
             MovieStarted = 1;                                                           % Change flag to show movie has started
         end
         [VBL FrameOnset(end+1)] = Screen('Flip', Params.Display.win);                   % Flip next frame
-        EndMovie = CheckKeys(Params);                                                   % Check for keyboard input
+        Params.Run.EndMovie = CheckKeys(Params);                                                   % Check for keyboard input
         if get(Params.Toolbar.StopButton,'value') == 1
-            EndMovie = 1;
+            Params.Run.EndMovie = 1;
         end
         if Params.Movie.Paused == 0 
             Screen('Close', MovieTex);                                                	% Close the last movie frame texture
@@ -275,7 +252,7 @@ end
 
 %=============== CHECK FOR EXPERIMENTER INPUT
 function EndMovie = CheckKeys(Params)
-    EndMovie = 0;
+    EndMovie = Params.Run.EndMovie;
     [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
     if keyIsDown && secs > Params.Run.LastPress+0.1                              	% If key is pressed and it's more than 100ms since last key press...
         Params.Run.LastPress   = secs;                                            	% Log time of current key press

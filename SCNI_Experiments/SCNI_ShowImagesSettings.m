@@ -27,6 +27,13 @@ if ~exist('OpenGUI','var')
 end
 if ~exist('ParamsFile','var')
     ParamsFile = [];
+elseif exist('ParamsFile','var')
+    if ischar(ParamsFile) && exist(ParamsFile, 'file')
+        Params      = load(ParamsFile);
+    elseif isstruct(ParamsFile)
+        Params      = ParamsFile;
+        ParamsFile  = Params.File;
+    end
 end
 [Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
 
@@ -40,6 +47,7 @@ if Success < 1
     Params.ImageExp.SubdirOpt   = 1;                                        % Default is to ignore images in subdirectories
     Params.ImageExp.ImageConds  = {''};             
     Params.ImageExp.Preload     = 1;                                        % Pre-load images to GPU before experiment?
+    Params.ImageExp.ImagesLoaded = 0;                                       % Images have not yet been loaded
     Params.ImageExp.UseAlpha    = 1;                                        % Use alpha transparency data (requires .png file type)
     Params.ImageExp.Greyscale   = 0;                                        % Convert images to greyscale?
     Params.ImageExp.Rotation    = 0;                                        % Rotate images?
@@ -49,9 +57,9 @@ if Success < 1
     Params.ImageExp.ColorTypes  = {'Original','Greyscale','Hue inverted'};  
     Params.ImageExp.ColorType   = 1;
     Params.ImageExp.Fullscreen  = 0;                                        % Show images at fullscreen size
+    Params.ImageExp.ScaleImage  = 1;
     Params.ImageExp.SBS3D       = 0;      
     Params.ImageExp.SizeDeg     = [10, 10];                                 
-    Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg;
     Params.ImageExp.KeepAspect  = 1;                                        % Maintain aspect ratio of original images?
     Params.ImageExp.PositionDeg = [0, 0];
     Params.ImageExp.FixOn       = 1;
@@ -110,6 +118,9 @@ Fig.UIimages.Style          = {'Edit','Edit','Popup','Popup','Popup','Edit','che
 Fig.UIimages.Defaults       = {Params.ImageExp.ImageDir, Params.ImageExp.BckgrndDir, Params.ImageExp.FileFormats, Params.ImageExp.SubdirOpts, Params.ImageExp.ImageConds, num2str(Params.ImageExp.TotalImages), [], []};
 Fig.UIimages.Values         = {isempty(Params.ImageExp.ImageDir), isempty(Params.ImageExp.BckgrndDir), Params.ImageExp.FileFormat, Params.ImageExp.SubdirOpt, 1, [], Params.ImageExp.SBS3D, Params.ImageExp.Preload};
 Fig.UIimages.Enabled        = [0, 0, 1, 1, 1, 1, 1, 1];
+Fig.UIimages.Tips           = {'Select directory to load images from','Select directory to load background images from','Select format of images to load',...
+                                sprintf('Select how to treat subdirectories found within the image directory:\n1) IGNORE: load only images of selected format in image directory;\n2) LOAD: load images recursively from all subdirectories;\n3) CONDITIONS: treat each subdirectory as a condition name, and remember which directory each image came from.'),...
+                                'Displays conditions (subdirectory names) found within the image directory (read-only)', 'Displays the total number of image files located of the selected type within the specified directories (read-only)', 'Select whether images are in side-by-side stereoscopic 3D format', 'Pre-load images into GPU before starting experiment?'};
 Fig.UIimages.Ypos           = [(Fig.PannelHeights(1)-50):-20:10]*Fig.DisplayScale;
 Fig.UIimages.Xwidth         = [180, 200]*Fig.DisplayScale;
 
@@ -128,6 +139,10 @@ Fig.UIpresent.Values        = {[],[],[],[],[],Params.ImageExp.FixType,[],[]};
 Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
 Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
+
+Fig.PanelVars(1).Fieldnames = {'', '', 'FileFormat', 'SubdirOpt', '', '', 'SBS3D','Preload'};
+Fig.PanelVars(2).Fieldnames = {'','Fullscreen','SizeDeg','UseAlpha','MaskType','Greyscale','Rotation','Contrast'};
+Fig.PanelVars(3).Fieldnames = {'StimPerTrial','DurationMs','ISIMs','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter'};
 
 OfforOn         = {'Off','On'};
 PanelStructs    = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};
@@ -156,83 +171,169 @@ for p = 1:numel(Fig.PanelNames)
                     'HorizontalAlignment', 'left',...
                     'FontSize', Fig.FontSize,...
                     'Callback', {@UpdateParams, p, n});
-        if p == 1 && n < 3
-            uicontrol(  'Style', 'pushbutton',...
-                        'string','...',...
-                        'Parent', Fig.PannelHandl(p),...
-                        'Position', [Fig.Margin + 20+ sum(PanelStructs{p}.Xwidth([1,2])), PanelStructs{p}.Ypos(n), 20*Fig.DisplayScale, 20*Fig.DisplayScale],...
-                        'Callback', {@UpdateParams, p, n});
+        if p == 1 
+            set(Fig.UIhandle(p,n), 'TooltipString', PanelStructs{p}.Tips{n});
+            if n < 3
+                uicontrol(  'Style', 'pushbutton',...
+                            'string','...',...
+                            'Parent', Fig.PannelHandl(p),...
+                            'Position', [Fig.Margin + 20+ sum(PanelStructs{p}.Xwidth([1,2])), PanelStructs{p}.Ypos(n), 20*Fig.DisplayScale, 20*Fig.DisplayScale],...
+                            'Callback', {@UpdateParams, p, n});
+            end
         end
-
 
     end
 end
 
-
+%================= OPTIONS PANEL
+uicontrol(  'Style', 'pushbutton',...
+            'String','Load Images',...
+            'parent', Fig.Handle,...
+            'tag','Load Images',...
+            'units','pixels',...
+            'Position', [Fig.Margin,20*Fig.DisplayScale,100*Fig.DisplayScale,30*Fig.DisplayScale],...
+            'TooltipString', 'Load selected images to GPU',...
+            'FontSize', Fig.FontSize, ...
+            'HorizontalAlignment', 'left',...
+            'Callback', {@OptionSelect, 1});   
+uicontrol(  'Style', 'pushbutton',...
+            'String','Save Params',...
+            'parent', Fig.Handle,...
+            'tag','Save Params',...
+            'units','pixels',...
+            'Position', [140,20,100,30]*Fig.DisplayScale,...
+            'TooltipString', 'Save current parameters to file',...
+            'FontSize', Fig.FontSize, ...
+            'HorizontalAlignment', 'left',...
+            'Callback', {@OptionSelect, 2});    
+uicontrol(  'Style', 'pushbutton',...
+            'String','Continue',...
+            'parent', Fig.Handle,...
+            'tag','Continue',...
+            'units','pixels',...
+            'Position', [260,20,100,30]*Fig.DisplayScale,...
+            'TooltipString', 'Continue to run SCNI_ShowImages.m',...
+            'FontSize', Fig.FontSize, ...
+            'HorizontalAlignment', 'left',...
+            'Callback', {@OptionSelect, 3});         
 
 
 %% =========================== SUBFUNCTIONS ===============================
 
-    function LoadImages(win)
-        LoadTextPos = Params.Display.Rect(3)/2;
-        TextColor   = [1,1,1];
-        wbh         = waitbar(0, '');                                                                                                       % Open a waitbar figure
-        TotalStim   = 0;                                                                                                                    % Begin total stimulus tally
-        for Cond = 1:Params.ImageExp.NoCond                                                                                                 % For each experimental condition...
+    %==================== User selected option
+    function OptionSelect(hObj, Event, Indx)
+        switch Indx
+            case 1  %============ Load images to GPU
+                Params = LoadImages([], Params);
+                Params.ImageExp.ImagesLoaded = 1;
+                
+            case 2  %============ Save parameters to file
+                ImageExp = Params.ImageExp;
+                save(Params.File, 'ImageExp', '-append');
+                
+            case 3  %============ Run experiment
+                if Params.ImageExp.Preload == 1 && Params.ImageExp.ImagesLoaded == 0
+                    Params = LoadImages([], Params);
+                    Params.ImageExp.ImagesLoaded = 1;
+                end
+                Params = SCNI_ShowImages(Params);
+        end
+    end
 
-            Params.ImageExp.StimFiles{Cond} = dir(fullfile(c.StimDir{Cond},['*', Params.ImageExp.FileFormats{Params.ImageExp.FileFormat}]));                  	% Find all files of specified format in condition directory
-            if Params.ImageExp.AddBckgrnd == 1 && ~isempty(Params.ImageExp.BckgrndDir{Cond})                                         
-                Params.ImageExp.BackgroundFiles{Cond} = dir([Params.ImageExp.BckgrndDir{Cond},'/*', Params.ImageExp.FileFormats{Params.ImageExp.FileFormat}]); 	% Find all corresponding background files
-            end
-            TotalStim = TotalStim+numel(Params.ImageExp.StimFiles{Cond});
-            for Stim = 1:numel(Params.ImageExp.StimFiles{Cond})                                                                             % For each file...
+    %==================== Pre-load selected images into GPU ===============
+    function Params = LoadImages(win, Params)
+        
+        if nargin == 0 || isempty(win)
+            Screen('Preference', 'VisualDebugLevel', 0);   
+            Params.Display.ScreenID = max(Screen('Screens'));
+            [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.Rect,[],[], [], []);
+            Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                                              % Enable alpha channel
+        end
+        LoadTextPos = (Params.Display.Rect([3,4])./[4,2]);
+        TextColor   = [1,1,1]*255;
+        Screen(Params.Display.win,'TextSize',60); 
+        wbh         = waitbar(0, '');                                                                                                       % Open a waitbar figure
+        StimCount   = 1;
+        for Cond = 1:numel(Params.ImageExp.ImageConds)                                                                                  	% For each experimental condition...
+
+            for Stim = 1:numel(Params.ImageExp.ImByCond{Cond})                                                                             % For each file...
                 
                 %============= Update experimenter display
-                message = sprintf('Loading image %d of %d (Condition %d/ %d)...\n',Stim,numel(Params.ImageExp.StimFiles{Cond}),Cond,Params.ImageExp.NoCond);
-%                 Screen('SelectStereoDrawBuffer', win, c.ExperimenterBuffer);
-                Screen('FillRect', win, Params.Display.Exp.BackgroundColor);                                                                % Clear background
-                DrawFormattedText(win, message,  LoadTextPos, 80, TextColor);
-                Screen('Flip', win, [], 0);                                                                                                 % Draw to experimenter display
+                message = sprintf('Loading image %d of %d (Condition %d/ %d: %s)...\n',Stim, numel(Params.ImageExp.ImByCond{Cond}), Cond, numel(Params.ImageExp.ImageConds), Params.ImageExp.ImageConds{Cond});
+                Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor);                                             	% Clear background
+                DrawFormattedText(Params.Display.win, message, LoadTextPos(1), LoadTextPos(2), TextColor);
+                Screen('Flip', Params.Display.win, [], 0);                                                                                	% Draw to experimenter display
             
-                waitbar(Stim/numel(Params.ImageExp.StimFiles{Cond}), wbh, message);                                                         % Update waitbar
+                waitbar(StimCount/Params.ImageExp.TotalImages, wbh, message);                                                               % Update waitbar
                 [keyIsDown, secs, keyCode, deltaSecs] = KbCheck();                                                                          % Check if escape key is pressed
-                if keyIsDown && keyCode(KbName(c.Exit_Key))                                                                                 % If so...
+                if keyIsDown && keyCode(KbName('Escape'))                                                                                   % If so...
                     break;                                                                                                                  % Break out of loop
                 end
 
                 %============= Load next file
-                img = imread(fullfile(Params.ImageExp.StimDir{Cond}, Params.ImageExp.StimFiles{Cond}(Stim).name));                          % Load image file
-                [~,~, imalpha] = imread(fullfile(Params.ImageExp.StimDir{Cond}, Params.ImageExp.StimFiles{Cond}(Stim).name));               % Read alpha channel
-                if ~isempty(imalpha)                                                                                                        % If image file contains transparency data...
-                    img(:,:,4) = imalpha;                                                                                                   % Combine into a single RGBA image matrix
-                else
-                    img(:,:,4) = ones(size(img,1),size(img,2))*255;
+                img = imread(Params.ImageExp.ImByCond{Cond}{Stim});                                                                         % Load image file
+                if Params.ImageExp.UseAlpha == 1
+                    [~,~, imalpha] = imread(Params.ImageExp.ImByCond{Cond}{Stim});                                                          % Read alpha channel
+                    if ~isempty(imalpha)                                                                                                 	% If image file contains transparency data...
+                        img(:,:,4) = imalpha;                                                                                           	% Combine into a single RGBA image matrix
+                    else
+                        img(:,:,4) = ones(size(img,1),size(img,2))*255;
+                    end
                 end
-                if [size(img,2), size(img,1)] ~= Params.ImageExp.SizePix                                                                    % If X and Y dimensions of image don't match requested...
-                    img = imresize(img, Params.ImageExp.SizePix([2,1]));                                                                    % Resize image
+                
+                %============= Scale image
+                if Params.ImageExp.ScaleImage == 1
+                	Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg;                                        % Convert requested image size from degrees to pixels
+                    if [size(img,2), size(img,1)] ~= Params.ImageExp.SizePix                                                             	% If X and Y dimensions of image don't match requested...
+                        img = imresize(img, Params.ImageExp.SizePix([2,1]));                                                                % Resize image
+                    end
                 end
+                
+                %============= Convert to greyscale
                 if Params.ImageExp.Greyscale == 1                                                                                           % If greyscale was selected...
                     img(:,:,1:3) = repmat(rgb2gray(img(:,:,1:3)),[1,1,3]);                                                                  % Convert RGB(A) image to grayscale
                 end
-                if ~isempty(imalpha) && Params.ImageExp.AddBckgrnd == 1 && ~isempty(Params.ImageExp.BckgrndDir{Cond})                       % If image contains transparent pixels...         
-                    Background = imread(fullfile(Params.ImageExp.BckgrndDir{Cond}, Params.ImageExp.BackgroundFiles{Cond}(Stim).name));      % Read in phase scrambled version of stimulus
+                
+                %============= Add background image
+                if ~isempty(imalpha) && ~isempty(Params.ImageExp.BckgrndDir)                                                                % If image contains transparent pixels...         
+                    Background = imread(Params.ImageExp.BackgroundFiles{Cond}{Stim});                                                       % Read in background images (e.g. phase scrambled version of stimuli)
                     Background = imresize(Background, Params.ImageExp.SizePix);                                                             % Resize background image
                     if Params.ImageExp.Greyscale == 1 
                         Background = repmat(rgb2gray(Background),[1,1,3]);
                     end
                     Background(:,:,4) = ones(size(Background(:,:,1)))*255;
-                    Params.ImageExp.BlockBKGs{Cond}(Stim) = Screen('MakeTexture', win, Background);                                         % Create a PTB offscreen texture for the background
+                    Params.ImageExp.BckgrndTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, Background);                                    	% Create a PTB offscreen texture for the background
                 else
-                    Params.ImageExp.BlockBKGs{Cond}(Stim) = 0;
+                    Params.ImageExp.BckgrndTex{Cond}(Stim) = 0;
                 end
-                Params.ImageExp.ImgTex{Cond}(Stim) = Screen('MakeTexture', win, img);                                                       % Create a PTB offscreen texture for the stimulus
+                
+                %============= Add mask
+                if Params.ImageExp.MaskType > 1
+                    Mask.Dim        = Params.Display.PixPerDeg;                 % Dimensions [w, h] (pixels)
+                    Mask.ApRadius   = Params.Display.PixPerDeg;                 % radius of central aperture (pixels)
+                    Mask.Color      = Params.Display.Exp.BackgroundColor;       % RGB 0-255
+                    Mask.s          = 1;                                        % Standard deviation of Gaussian edge (if selcted) in degrees
+                    Mask.Taper      = 0.2;                                      % Spread of cosine edge as a proportion of aperture radius
+                    ReturnMaskTex   = 0;                                        % 0 = return mask as an image; 1 = return mask as a PTB texture handle
+                    switch Params.ImageExp.MaskTypes{Params.ImageExp.MaskType}
+                        case 'Circular'
+                            Mask.Edge = 0;          % 0 = hard edge;  
+                        case 'Gaussian'
+                            Mask.Edge = 1;          % 1 = gaussian edge;  
+                        case 'Cosine'
+                            Mask.Edge = 2;          % 2 = cosine edge;  
+                    end
+                    Params.ImageExp.MaskTex = SCNI_GenerateAlphaMask(Mask, Params.Display, ReturnMaskTex);
+                end
+                Params.ImageExp.ImgTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, img);                                                       % Create a PTB offscreen texture for the stimulus
+                StimCount = StimCount+1;
             end
 
         end
         delete(wbh);                                                                                                                      	% Close the waitbar figure window
-        Screen('FillRect', win, Params.Display.Exp.BackgroundColor);                                                                        % Clear background
-        DrawFormattedText(win, sprintf('All %d stimuli loaded!\n\nClick ''Run'' to start experiment.', TotalStim),  LoadTextPos, 80, TextColor);
-        Screen('Flip', win);
+        Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor);                                                                        % Clear background
+        DrawFormattedText(Params.Display.win, sprintf('All %d stimuli loaded!\n\nClick the ''Run'' button in the SCNI Toolbar to start the experiment.', Params.ImageExp.TotalImages),  LoadTextPos(1), LoadTextPos(2), TextColor);
+        Screen('Flip', Params.Display.win);
         
     end
 
@@ -240,79 +341,32 @@ end
     %=============== Update parameters
     function UpdateParams(hObj, Evnt, Indx1, Indx2)
 
-        switch Indx1    %============= Panel 1 controls
-            case 1
-                switch Indx2
-                    case 1      %===== Change image directory
-                        Params.ImageExp.ImageDir	= uigetdir('/projects/','Select stimulus directory');
-                        set(Fig.UIhandle(1,1),'string',Params.ImageExp.ImageDir);
-                        Params = RefreshImageList(Params);
-                        
-                    case 2      %===== Change background image directory
-                        Params.ImageExp.BckgrndDir	= uigetdir('/projects/','Select background image directory');
-                        set(Fig.UIhandle(1,2),'string',Params.ImageExp.BckgrndDir);
-                        
-                    case 3      %===== Change image file format
-                        Params.ImageExp.FileFormat  = get(hObj, 'value');
-                        Params = RefreshImageList(Params);
-                        
-                    case 4      %===== Change subdirectory use
-                        Params.ImageExp.SubdirOpt = get(hObj, 'value');
-                        Params = RefreshImageList(Params);
-                        
-                    case 5
-                        
-                    case 6
-                        
-                    case 7      %===== Change 3D format
-                        Params.ImageExp.SBS3D = get(hObj, 'value');
-                        
-                    case 8      %===== Pre-load images?
-                        
-                end
-                
-            case 2      %============= Panel 2 controls
-                switch Indx2
-                    case 1      %===== Toggle image scaling
+        %============= Panel 1 controls for directory selection
+        if Indx1 == 1 && Indx2 == 1         %===== Change image directory
+                    Params.ImageExp.ImageDir	= uigetdir('/projects/','Select stimulus directory');
+                    set(Fig.UIhandle(1,1),'string',Params.ImageExp.ImageDir);
 
-                        
-                    case 2      %===== Toggle fullscreen
-                        Params.ImageExp.Fullscreen = get(hObj, 'value');
-                        
-                    case 3
-                        
-                    case 4
-                        
-                    case 5
-                        
-                    case 6
-                        
-                    case 7
-                        
-                    case 8
-                        
+        elseif Indx1 == 1 && Indx2 == 2      %===== Change background image directory
+                    Params.ImageExp.BckgrndDir	= uigetdir('/projects/','Select background image directory');
+                    set(Fig.UIhandle(1,2),'string',Params.ImageExp.BckgrndDir);
+                    
+        else                                %============= All other controls
+            if ~isempty(Fig.PanelVars(Indx1).Fieldnames{Indx2})
+                switch get(hObj,'style')
+                    case 'edit'
+                        NewValue = str2num(get(hObj, 'string'));
+                    case 'checkbox'
+                        NewValue = get(hObj, 'value');
+                    case 'popupmenu'
+                        NewValue = get(hObj, 'value');
                 end
-                
-            case 3      %============= Panel 3 controls
-            	switch Indx2
-                    case 1      %===== Toggle image scaling
-
-                        
-                    case 2      %===== Toggle fullscreen  
-                        
-                    case 3
-                        
-                    case 4
-                        
-                    case 5
-                        
-                    case 6
-                        
-                    case 7
-                        
-                    case 8
-                end
+                eval(sprintf('Params.ImageExp.%s = %d;', Fig.PanelVars(Indx1).Fieldnames{Indx2}, NewValue));
+            end
         end
+        if Indx1 == 1 && Indx2 <= 4                     % If first 4 controls were updated...
+            Params = RefreshImageList(Params);          % Refresh list of images
+        end
+
 
     end
 
@@ -323,10 +377,12 @@ end
             case 'Load'
                 Params.ImageExp.AllImFiles 	= wildcardsearch(Params.ImageExp.ImageDir, ['*',Params.ImageExp.FileFormats{Params.ImageExp.FileFormat}]);
                 Params.ImageExp.ImageConds  = {''};
+                Params.ImageExp.ImByCond{1} = Params.ImageExp.AllImFiles;
                 
             case 'Ignore'
                 Params.ImageExp.AllImFiles 	= regexpdir(Params.ImageExp.ImageDir, Params.ImageExp.FileFormats{Params.ImageExp.FileFormat},0);
                 Params.ImageExp.ImageConds  = {''};
+                Params.ImageExp.ImByCond{1} = Params.ImageExp.AllImFiles;
                 
             case 'Conditions'
                 SubDirs                     = dir(Params.ImageExp.ImageDir);
@@ -340,6 +396,21 @@ end
                 end
         end
         Params.ImageExp.TotalImages     = numel(Params.ImageExp.AllImFiles);
+        
+        %========== Find background images
+        if ~isempty(Params.ImageExp.BckgrndDir)   
+            switch Params.ImageExp.SubdirOpts{Params.ImageExp.SubdirOpt}
+                case 'Load'
+                    Params.ImageExp.BckgrndFiles 	= wildcardsearch(Params.ImageExp.BckgrndDir, ['*',Params.ImageExp.FileFormats{Params.ImageExp.FileFormat}]);
+                case 'Ignore'
+                    Params.ImageExp.BckgrndFiles 	= regexpdir(Params.ImageExp.BckgrndDir, Params.ImageExp.FileFormats{Params.ImageExp.FileFormat},0);
+                case 'Conditions'
+                    for cond = 1:numel(Params.ImageExp.ImageConds)
+                        Params.ImageExp.BckgrndFilesByCond{Cond} = regexpdir(fullfile(Params.ImageExp.BckgrndDir, Params.ImageExp.ImageConds{cond}), Params.ImageExp.FileFormats{Params.ImageExp.FileFormat},0);
+                        
+                    end
+            end
+        end
         
         %========== Update GUI
         if isfield(Fig, 'UIimages')

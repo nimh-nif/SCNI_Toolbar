@@ -1,6 +1,6 @@
-function Blocks = NIF_blockdesign(NoCond, BlocksPerCond, StimPerCond, StimPerBlock)
+function Blocks = SCNI_BlockDesign(NoCond, BlocksPerCond, StimPerCond, StimPerBlock)
 
-%========================== NIF_blockdesign.m =============================
+%========================== SCNI_BlockDesign.m ============================
 % Initializes a pseudorandom sequence of blocks using a Latin square.
 % Stimulus order is conterbalanced across blocks within a run.
 %
@@ -11,12 +11,6 @@ function Blocks = NIF_blockdesign(NoCond, BlocksPerCond, StimPerCond, StimPerBlo
 %
 % HISTORY:
 %   2017-01-23 - Adapted from APMSubfunctions by murphyap@mail.nih.gov
-%   
-%     ____    ___ __  ______
-%    /    |  /  //  //  ___/    Neuro Imaging Facility Core
-%   /  /| | /  //  //  /__      Building 49 Convent Drive
-%  /  / | |/  //  //  ___/      NATIONAL INSTITUTES OF HEALTH
-% /__/  |____//__//__/          
 %==========================================================================
 
 while 1                                     % Until acceptable sequence is generated...

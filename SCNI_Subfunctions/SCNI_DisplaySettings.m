@@ -61,6 +61,8 @@ if Success < 1
     Params.Display.Exp.GridSpacing      = 5;
     Params.Display.Exp.EyeSamples       = 1;
     Params.Display.Exp.GazeWinAlpha     = 1;
+    Params.Display.Exp.TextColor        = [1,1,1];
+    Params.Display.Exp.TextSize         = 24;
     Params.Display.PD.Position          = 2;
     Params.Display.PD.Diameter          = 60;
     Params.Display.PD.Color             = {[0,0,0], [1,1,1]}; 
@@ -290,50 +292,7 @@ for n = 1:numel(ColorLabels)
                 'Callback', {@SetExpVal, n},...
                 'FontSize', Fig.FontSize);
 end
-
-
-% %================= DISPLAY PREVIEW PANEL
-% % Fig.PreviewHandle = uipanel( 'Title','Display Preview',...
-% %                 'FontSize',Fig.FontSize+2,...
-% %                 'BackgroundColor',Fig.Background,...
-% %                 'Units','pixels',...
-% %                 'Position',BoxPos{4},...
-% %                 'Parent',Fig.Handle);  
-% % Ypos = BoxPos{4}(4)-Fig.Margin*2-10;           
-% 
-% %Fig.Axh(1) = axes('Parent',Fig.PreviewHandle, 'position', [0.05, 0.1, 0.4, 0.7]);
-% Fig.Axh(1) = axes('Parent',Fig.Handle, 'units','pixels','position',[50 50 300 150]);
-% set(Fig.Axh(1), 'color', Params.Display.Color.Background, 'units','pixels');
-% axis equal tight off
-% xlabel('Experimenter display','fontsize', Fig.FontSize+2);
-% Fig.Im      = image(1:Resolution(2), 1:Resolution(1), ones(Resolution(2),Resolution(1),3)*0.5, 'Parent', Fig.Axh(1));
-% % alpha(Fig.Im, 0);
-% 
-% %============= Calculate experimenter grid positions
-% if Params.Display.Exp.GridOn == 1 
-%     
-%     CircleSpacing   = Params.Display.Exp.GridSpacing*Params.Display.Display.PixPerDeg;         	% Increase in diameter with each concentric circle
-%     NoCircles       = floor(Params.Display.Display.Rect(3)/CircleSpacing(1));         	% Calculate number of circles to fill screen width
-%     Params.Display.Exp.GridLineWidth = 1;                                             	% Pen width for grid lines (pixels)
-%     for circleno = 1:NoCircles
-%         CircleDiameter(circleno,:)              = CircleSpacing*circleno;               
-%         Params.Display.Exp.GridCircleRects(:,circleno) 	= CenterRect([0,0,CircleDiameter(circleno,:)], Params.Display.Display.Rect)'; 
-%     end
-%     Params.Display.Exp.Meridians     = [Params.Display.Display.ExpRect([3,3])/2, 0, Params.Display.Display.ExpRect(3); 0, Params.Display.Display.ExpRect(4), Params.Display.Display.ExpRect([4,4])/2];
-%     
-%     %=========== Draw grid to figure
-%     axes(Fig.Axh(1));
-%    	
-%     ph(1) = plot([0 0], ylim, '-k', 'color', Params.Display.Exp.GridColor);
-%     ph(2) = plot(xlim, [0 0], '-k', 'color', Params.Display.Exp.GridColor);
-%     
-%     
-% end
-% 
-% 
-% %Fig.Axh(2) = axes('Parent',Fig.PreviewHandle, 'position', [0.55, 0.1, 0.4, 0.7]);
-% % xlabel('Subject display','fontsize', Fig.FontSize);
-        
+    
     
 
 %================= OPTIONS PANEL

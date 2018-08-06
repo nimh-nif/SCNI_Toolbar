@@ -35,7 +35,7 @@ AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
 Params.Toolbar.AllExpFiles      = AllFiles;
 Params.Toolbar.Session.Subject  = [];
 Params.Toolbar.Session.DateNum  = datetime('now');
-Params.Toolbar.Session.DateStr  = datestr(Params.Toolbar.Session.DateNum, 'yyyy-mm-dd');
+Params.Toolbar.Session.DateStr  = datestr(Params.Toolbar.Session.DateNum, 'YYYYMMDD');
 Params.Toolbar.Session.File   	= [];
 
 
@@ -186,12 +186,11 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                         DefaultSettingsFile = fullfile(Home, 'SCNI_Parameters');
                         [file, path] = uigetfile(DefaultSettingsFile, 'Select paramaters file');
                         if file ~= 0
-                            NewParams 	= load(fullfile(path, file));                           % Load params file
-                            NewParams.Toolbar.Session   = Params.Toolbar.Session;            	% Transfer 'Toolbar' fields to new Params
-                            NewParams.Toolbar.Button    = Params.Toolbar.Button; 
-                            Params  = NewParams;                                                % Replace previously loaded params
-                            Params.File = file;                                                 % Add params filename
-                            set(Fig.OptH(indx1, 1), 'string', Params.File);                     % Update params file string in SCNI_Toolbar GUI
+                            NewParams           = load(fullfile(path, file));           % Load params file
+                            NewParams.Toolbar.Session   = Params.Toolbar;                       % Transfer 'Toolbar' field to new Params
+                            Params  = NewParams;                            % Replace previously loaded params
+                            Params.File = file;                             % Add params filename
+                            set(Fig.OptH(indx1, 1), 'string', Params.File);        % Update params file string in SCNI_Toolbar GUI
 
                             if isfield(Params.Toolbar, 'ExpDir') && exist(Params.Toolbar.ExpDir, 'dir')
                                 set(Fig.OptH(indx1, 2), 'string', Params.Toolbar.ExpDir);
