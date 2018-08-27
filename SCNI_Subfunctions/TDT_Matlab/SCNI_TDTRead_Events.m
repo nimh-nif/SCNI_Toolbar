@@ -8,7 +8,7 @@ function SCNI_TDTReadEvents(tankName, blockName, savePath, TT)
 % 
 %==========================================================================
 
-[TT, CloseTT] = SCNI_TDTRead_Init;
+[TT, CloseTT] = SCNI_TDTRead_Init([], tankName, blockName);
 
 %================== READ EVENT CODES
 Events.evts         = TT.ReadEventsV(100000,'Evnt',0,0,0.0,0.0,'All');

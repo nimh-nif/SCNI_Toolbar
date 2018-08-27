@@ -12,16 +12,7 @@ function SCNI_TDTRead_Spikes(tankName, blockName, savePath, SnipChNum)
 %   28/07/2018 - Updated to provide cleaner output format (APM)
 %==========================================================================
 
-if ~exist('TT','var')                   % If TTank handle was not supplied...
-    TT = actxcontrol('TTank.X');        % Open TTank
-    TT.ConnectServer('Local','Me');
-    CloseTT = 1;
-end
-a = TT.OpenTank(tankName, 'R');
-b = TT.SelectBlock(blockName);
-if a ~= 1 || b ~= 1
-    fprintf('Error communicating with TTank: %s\n %s\n', a, b);
-end
+[TT, CloseTT] = SCNI_TDTRead_Init([], tankName, blockName);
 
 %========== Get absolute start and stop times (sec)
 tStart      = TT.CurBlockStartTime;

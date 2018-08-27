@@ -32,10 +32,12 @@ for f = 1:numel(AllFullFiles)
     [~,AllFiles{f},AllExt{f}] = fileparts(AllFullFiles{f});
 end
 AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
+AllFiles(~cellfun(@isempty, strfind(AllExt, 'Settings'))) = [];
 Params.Toolbar.AllExpFiles      = AllFiles;
+Params.Toolbar.CurrentExp       = Params.Toolbar.AllExpFiles{1};
 Params.Toolbar.Session.Subject  = [];
 Params.Toolbar.Session.DateNum  = datetime('now');
-Params.Toolbar.Session.DateStr  = datestr(Params.Toolbar.Session.DateNum, 'yyyy-mm-dd');
+Params.Toolbar.Session.DateStr  = datestr(Params.Toolbar.Session.DateNum, 'yyyymmdd');
 Params.Toolbar.Session.File   	= [];
 
 
@@ -64,25 +66,25 @@ Fig.Panel.Xpos       = [10*Fig.DisplayScale, 20*Fig.DisplayScale+Fig.Panel.Width
 Fig.Panel.Ypos       = [95, 95, 10, 10, 10]*Fig.DisplayScale;
 
 %============== User panel
-Fig.OptStrings{1}   = {'Settings file','Experiment directory','Current Experiment','Data directory'};
-Fig.OptType{1}      = {'edit','edit','popup','edit'};
-Fig.OptDefaults{1}  = {ParamFilename, Params.Toolbar.ExpDir, Params.Toolbar.AllExpFiles, Params.Toolbar.SaveDir}; 
+Fig.OptStrings{1}   = {'Settings file','Experiment directory','Data directory'};
+Fig.OptType{1}      = {'edit','edit','edit'};
+Fig.OptDefaults{1}  = {ParamFilename, Params.Toolbar.ExpDir, Params.Toolbar.SaveDir}; 
 Fig.OptXsize        = round([140, 200, 16]*Fig.DisplayScale);
 Fig.OptXPos         = round([20, 40, 60]*Fig.DisplayScale)+[0, cumsum(Fig.OptXsize(1:end-1))];
 Fig.OptYpos         = round([(Fig.Panel.Heights(4)-100):(-20*Fig.DisplayScale):(10*Fig.DisplayScale)]);
-Fig.OptTips{1}      = {'Select settings file', 'Select directory containing experiment code', 'Select current experiment', 'Select user directory to save data to'};
-Fig.OptsEnabled{1}  = [1, 1, 1, 1];
-Fig.OptsHighlight{1} = [0, exist(Params.Toolbar.ExpDir,'dir'), 0, isempty(Params.Toolbar.SaveDir)];
-Fig.OptsButton{1}   = [1,1,0,1];
+Fig.OptTips{1}      = {'Select settings file', 'Select directory containing experiment code','Select user directory to save data to'};
+Fig.OptsEnabled{1}  = [1, 1, 1];
+Fig.OptsHighlight{1} = [0, exist(Params.Toolbar.ExpDir,'dir'), isempty(Params.Toolbar.SaveDir)];
+Fig.OptsButton{1}   = [1,1,1];
 
 %============== Session panel
-Fig.OptStrings{2}   = {'Subject ID','Session date','Experiment file','Calibration'};
-Fig.OptType{2}      = {'edit','edit','edit','edit'};
-Fig.OptDefaults{2}  = {Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr, Params.Toolbar.Session.File, []}; 
-Fig.OptTips{2}      = {'','','',''};
-Fig.OptsEnabled{2}  = [1, 0, 1, 0];
-Fig.OptsHighlight{2} = [isempty(Fig.OptDefaults{2}{1}), 0, isempty(Fig.OptDefaults{2}{1}), 0];
-Fig.OptsButton{2}   = [0,0,1,1];
+Fig.OptStrings{2}   = {'Subject ID','Session date','Current experiment','Current run #','Experiment file','Calibration'};
+Fig.OptType{2}      = {'edit','edit','popup','edit','edit','edit'};
+Fig.OptDefaults{2}  = {Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr, Params.Toolbar.AllExpFiles, 1, Params.Toolbar.Session.File, []}; 
+Fig.OptTips{2}      = {'Enter a subject ID','Today''s date','Select current experiment', 'Current run number for this experiment','Data filename',''};
+Fig.OptsEnabled{2}  = [1, 0, 1, 1, 1, 0];
+Fig.OptsHighlight{2} = [isempty(Fig.OptDefaults{2}{1}), 0, 0, 0, isempty(Fig.OptDefaults{2}{1}), 0];
+Fig.OptsButton{2}   = [0,0,0,0,1,1];
 
 Fig.OffOn            = {'Off','On'};        
 Fig.BIndx            = 1;                   
@@ -133,6 +135,7 @@ for p = 1:numel(Fig.Panel.Titles)
                                 'HorizontalAlignment', 'left',...
                                 'TooltipString', Fig.OptTips{p-3}{n},...
                                 'fontsize', 18, ...
+                                'enable', Fig.OffOn{Fig.OptsEnabled{p-3}(n)+1},...
                                 'callback', {@OptionsSet, p-3, n},...
                                 'Parent',Fig.Panel.Handle(p));
             if Fig.OptsButton{p-3}(n) == 1
@@ -187,28 +190,30 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                         [file, path] = uigetfile(DefaultSettingsFile, 'Select paramaters file');
                         if file ~= 0
                             NewParams 	= load(fullfile(path, file));                           % Load params file
-                            NewParams.Toolbar.Session   = Params.Toolbar.Session;            	% Transfer 'Toolbar' fields to new Params
-                            NewParams.Toolbar.Button    = Params.Toolbar.Button; 
+                            NewParams.Toolbar.Session       = Params.Toolbar.Session;         	% Transfer 'Toolbar' fields to new Params
+                            NewParams.Toolbar.Button        = Params.Toolbar.Button; 
+                            NewParams.Toolbar.AllExpFiles   = Params.Toolbar.AllExpFiles;
+                            NewParams.Toolbar.CurrentExp    = Params.Toolbar.CurrentExp;
                             Params  = NewParams;                                                % Replace previously loaded params
                             Params.File = file;                                                 % Add params filename
                             set(Fig.OptH(indx1, 1), 'string', Params.File);                     % Update params file string in SCNI_Toolbar GUI
 
                             if isfield(Params.Toolbar, 'ExpDir') && exist(Params.Toolbar.ExpDir, 'dir')
-                                set(Fig.OptH(indx1, 2), 'string', Params.Toolbar.ExpDir);
+                                set(Fig.OptH(1, 2), 'string', Params.Toolbar.ExpDir);
                                 AllFullFiles = wildcardsearch(Params.Toolbar.ExpDir, '*.m');
                                 for f = 1:numel(AllFullFiles)
                                     [~,AllFiles{f},AllExt{f}] = fileparts(AllFullFiles{f});
                                 end
                                 AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
-                                set(Fig.OptH(indx1, 3), 'string', AllFiles);
+                                AllFiles(~cellfun(@isempty, strfind(AllExt, 'Settings'))) = [];
+                                set(Fig.OptH(2, 3), 'string', AllFiles);
                                 Params.Toolbar.AllExpFiles = AllFiles;
                             end
-                        
-                            
+
                             if isfield(Params.Toolbar,'SaveDir') && exist(Params.Toolbar.SaveDir, 'dir')
-                                set(Fig.OptH(indx1, 4), 'string', Params.Toolbar.SaveDir, 'backgroundcolor', Fig.ValidColor);
+                                set(Fig.OptH(indx1, 3), 'string', Params.Toolbar.SaveDir, 'backgroundcolor', Fig.ValidColor);
                             else
-                                set(Fig.OptH(indx1, 4), 'string', Params.Toolbar.SaveDir, 'backgroundcolor', Fig.MissingColor);
+                                set(Fig.OptH(indx1, 3), 'string', Params.Toolbar.SaveDir, 'backgroundcolor', Fig.MissingColor);
                             end
                         end
                         Params = AppendToolbarHandles(Params);
@@ -224,15 +229,24 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                                 [~,AllFiles{f},AllExt{f}] = fileparts(AllFullFiles{f});
                             end
                             AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
-                            set(Fig.OptH(indx1, 3), 'string', AllFiles);
+                            set(Fig.OptH(2, 3), 'string', AllFiles);
                             Params.Toolbar.AllExpFiles = AllFiles;
                         end
 
-                    case 3   %================= Select 
+                    case 3   %================= Select current experiment
                         CurrentExpIndx  = get(hObj, 'value');
-                        Params.Toolbar.CurrentExp =  Params.Toolbar.AllExpFiles{CurrentExpIndx};
+                        Params.Toolbar.CurrentExp 	=  Params.Toolbar.AllExpFiles{CurrentExpIndx};
+                        CheckReady;
+                        CheckData;
+
                         
-                    case 4  %================= Select data save directory
+                    case 4   %================= Set current run number
+                        CurrentRunNo  = str2num(get(hObj, 'string'));
+                        
+                        Params.Toolbar.CurrentRun = CurrentRunNo;
+                        
+                        
+                    case 5  %================= Select data save directory
                         path = uigetdir('/rawdata/', 'Select directory to save data to');
                         if path ~= 0
                             Params.Toolbar.SaveDir = path;
@@ -243,9 +257,9 @@ Fig.HelpH = uicontrol('style','pushbutton',...
 
             case 2 %=============== SESSION SETTINGS
                 switch indx2
-                    case 1
+                    case 1  %================= Set subject ID
                         Params.Toolbar.Session.Subject  = get(hObj, 'String');
-                        Params.Toolbar.Session.File     = sprintf('%s_%s.mat', Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr);
+                        Params.Toolbar.Session.File     = sprintf('%s_%s_%s.mat', Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr, Params.Toolbar.CurrentExp);
                         Params.Toolbar.Session.DataDir  = fullfile(Params.Toolbar.SaveDir, Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr);
                         Params.Toolbar.Session.Fullfile = fullfile(Params.Toolbar.Session.DataDir, Params.Toolbar.Session.File);
                         if ~exist(Params.Toolbar.Session.DataDir, 'dir')
@@ -254,17 +268,72 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                                 mkdir(Params.Toolbar.Session.DataDir);
                             end
                         end
-                        set(Fig.OptH(indx1, 1), 'backgroundcolor', Fig.ValidColor);
-                        set(Fig.OptH(indx1, 3), 'string', Params.Toolbar.Session.File, 'backgroundcolor', Fig.ValidColor);
+                        set(Fig.OptH(2, 1), 'backgroundcolor', Fig.ValidColor);
+                        set(Fig.OptH(2, 5), 'string', Params.Toolbar.Session.File, 'backgroundcolor', Fig.ValidColor);
+                        CheckReady;
+                        CheckData;
                         
-                    case 3
+                    case 3   %================= Select current experiment
+                        CurrentExpIndx  = get(hObj, 'value');
+                        Params.Toolbar.CurrentExp 	=  Params.Toolbar.AllExpFiles{CurrentExpIndx};
+                        CheckReady;
+                        CheckData;    
                         
+                    case 4  %================= Set current run number
+                        CurrentRunNo  = str2num(get(hObj, 'string'));
+                        Params.Toolbar.CurrentRun = CurrentRunNo;
                         
+                    case 5  %================= Select experiment data file
+                        if isfield(Params.Toolbar.Session, 'DataDir')
+                            DefaultDataFile = Params.Toolbar.Session.DataDir;
+                        else
+                            DefaultDataFile = Params.Toolbar.SaveDir;
+                        end
+                        [file, path] = uigetfile(DefaultDataFile, 'Select .mat file to save session data to');
+                        if file ~= 0
+                            Params.Toolbar.Session.Fullfile  	= fullfile(path, file);
+                            Params.Toolbar.Session.File         = file;
+                          	set(Fig.OptH(2, 5), 'string', Params.Toolbar.Session.File, 'backgroundcolor', Fig.ValidColor);
+                            CheckReady;
+                        end
                         
-                    case 4
+                    case 6  %================= Calibration data
                         
                         
                 end
+        end
+    end
+
+    %============== Check whether mat file has been created & read
+    function Run = CheckData
+        Run = 0;
+        if isempty(Params.Toolbar.Session.Subject)
+            return;
+        end
+        if ~isfield(Params.Toolbar,'CurrentExp') || isempty(Params.Toolbar.CurrentExp)
+            return;
+        end
+        Params.Toolbar.Session.File     = sprintf('%s_%s_%s.mat', Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr, Params.Toolbar.CurrentExp);
+        Params.Toolbar.Session.DataDir  = fullfile(Params.Toolbar.SaveDir, Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr);
+        Params.Toolbar.Session.Fullfile = fullfile(Params.Toolbar.Session.DataDir, Params.Toolbar.Session.File);
+        set(Fig.OptH(2, 5), 'string', Params.Toolbar.Session.File, 'backgroundcolor', Fig.ValidColor);
+        
+    end
+    
+    %============== Check whether ready to run experiment
+    function CheckReady
+        if ~isempty(Params.Toolbar.Session.File) && ~isempty(Params.Toolbar.CurrentExp)
+            set(Fig.bh(1), 'enable', 'on');
+        end
+        if ~isempty(Params.Toolbar.CurrentExp)
+            Params.Toolbar.CurrentExpSettingsFile	= [Params.Toolbar.CurrentExp, 'Settings'];
+            SettingsIndx    = find(strcmp({Fig.Button.IconName}, 'Settings'));
+            SettingsIndx    = SettingsIndx(Fig.Button(SettingsIndx).Panel == 1);
+            if exist(Params.Toolbar.CurrentExpSettingsFile,'file')
+                set(Fig.bh(SettingsIndx), 'enable', 'on');
+            else
+                set(Fig.bh(SettingsIndx), 'enable', 'off');
+            end
         end
     end
 
@@ -274,9 +343,9 @@ Fig.HelpH = uicontrol('style','pushbutton',...
         %======= Toggle button icon
         if strcmpi(get(Fig.bh(indx), 'style'), 'togglebutton')
             if get(hObj, 'value')==0
-                set(Fig.bh(indx), 'cdata', eval(sprintf('Icon.%s{1}',Fig.IconList{indx})));
+                set(Fig.bh(indx), 'cdata', eval(sprintf('Icon.%s{1}',Fig.Button(indx).IconName)));
             elseif get(hObj, 'value')==1
-                set(Fig.bh(indx), 'cdata', eval(sprintf('Icon.%s{2}',Fig.IconList{indx})));
+                set(Fig.bh(indx), 'cdata', eval(sprintf('Icon.%s{2}',Fig.Button(indx).IconName)));
             end
         end
 
@@ -298,6 +367,9 @@ Fig.HelpH = uicontrol('style','pushbutton',...
     %=========== Run currently selected experiment
     function Params = RunCurrentExp(Params)
         if isfield(Params.Toolbar, 'CurrentExp')
+            if ~exist(Params.Toolbar.Session.Fullfile, 'file')
+                save(Params.Toolbar.Session.Fullfile, 'Params')
+            end
             eval(sprintf('Params = %s(Params);', Params.Toolbar.CurrentExp));
         end
     end
@@ -376,14 +448,14 @@ Fig.HelpH = uicontrol('style','pushbutton',...
         
         FieldNames  = {'Type','IconName','Tip','Func','Shortcut','Panel','Enabled','XPos'};
         Type        = {'togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
-        IconName	= {'Play','Liquid','SpeakerOn','Eye','Exit','Settings','Penalty','GammaCorrect','Sleep','EPI','Stereoscopic','Display','Liquid','Eye','DataPixx','TDT','OpenEphys','Motive','Transfer','Github','SaveDisk'};
+        IconName	= {'Play','Liquid','SpeakerOn','Eye','Exit','Settings','Penalty','GammaCorrect','Sleep','EPI','Stereoscopic','Display','Liquid','Eye','DataPixx','TDT','OpenEphys','Motive','Transfer','Github','Save'};
         Tip         = {'Run current experiment','Give reward','Play audio','Run eye calibration','Quit current experiment','Edit experiment settings','Debug mode','Apply gamma','Time out','MRI training','Stereoscopic 3D','Display settings','Reward settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings','OptiTrack settings','Transfer data','Manage GitHub repos','Save parameters'};
         Func        = {'RunCurrentExp','SCNI_GiveReward','SCNI_PlaySound','SCNI_Calibration','Stop','RunCurrentExpSettings',...
                     	'SCNI_DebugMode','SCNI_ApplyGamma','SCNI_RestMode','SCNI_ScannerMode','SCNI_3Dmode',...
                         'SCNI_DisplaySettings','SCNI_RewardSettings','SCNI_EyelinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings','SCNI_OptiTrackSettings','SCNI_TransferSettings','SCNI_CodeSettings','SaveParams'};
         Shortcut    = {'g','r','a','c','q','s',[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]};
         Panel       = [1,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3];
-        Enabled     = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1];
+        Enabled     = [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1];
         AllXPos   	= (10*Fig.DisplayScale):(Fig.ButtonSize(3)+10*Fig.DisplayScale):((Fig.ButtonSize(3)+10*Fig.DisplayScale)*numel(IconName)); 
         XPos        = [];
         for p = unique(Panel)

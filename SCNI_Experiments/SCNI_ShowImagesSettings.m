@@ -57,7 +57,6 @@ if Success < 1
     Params.ImageExp.ColorTypes  = {'Original','Greyscale','Hue inverted'};  
     Params.ImageExp.ColorType   = 1;
     Params.ImageExp.Fullscreen  = 0;                                        % Show images at fullscreen size
-    Params.ImageExp.ScaleImage  = 1;
     Params.ImageExp.SBS3D       = 0;      
     Params.ImageExp.SizeDeg     = [10, 10];                                 
     Params.ImageExp.KeepAspect  = 1;                                        % Maintain aspect ratio of original images?
@@ -65,7 +64,10 @@ if Success < 1
     Params.ImageExp.FixOn       = 1;
     Params.ImageExp.FixTypes    = {'None','Dot','Square','Cross','Binocular'};
     Params.ImageExp.FixType     = 2;
+    Params.ImageExp.DesignTypes = {'Neurophysiology (random)','fMRI (block design)','fMRI (event related)'};
+    Params.ImageExp.DesignType  = 1;
     Params.ImageExp.StimPerTrial = 5;                                       % Number of stimulus presentations per trial
+    Params.ImageExp.TrialsPerRun = 100;                                     % Number of trials per run
     Params.ImageExp.ITIms       = 2000;                                     % Inter-trial interval (ms)
     Params.ImageExp.DurationMs  = 300;
     Params.ImageExp.ISIMs       = 300;
@@ -74,6 +76,8 @@ if Success < 1
     Params.ImageExp.ScaleJitter = 0;                                        % Maximum scaling jitter (+/- % original) to scale stimulus by on each trial
     Params.ImageExp.AddBckgrnd  = 0;                                        % Add an image or noise background?
     Params.ImageExp.BckgrndDir  = {};
+    Params.ImageExp.FixWinDeg   = 2;                                        % Diameter of circular fixation window (degrees)
+    Params.ImageExp.InitialFixDur = 500;                                    % Duration (ms) of fixation period before each trial
     
 elseif Success > 1
     ParamsOut = Params;
@@ -84,7 +88,6 @@ if OpenGUI == 0
     return;
 end
 Params = RefreshImageList(Params);
-
 
 %========================= OPEN GUI WINDOW ================================
 Fig.Handle          = figure;                                       	% Open new figure window         
@@ -107,45 +110,45 @@ Fig.TitleFontSize = 18;
 
 %============= Prepare GUI panels
 Fig.PanelNames      = {'Image selection','Image transforms','Image presentation'};
-Fig.PannelHeights   = [200, 220, 200];
+Fig.PannelHeights   = [220, 200, 250];
 BoxPos{1}           = [Fig.Margin, Fig.Rect(4)-Fig.PannelHeights(1)*Fig.DisplayScale-Fig.Margin*2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(1)*Fig.DisplayScale];   
 for i = 2:numel(Fig.PanelNames)
     BoxPos{i}           = [Fig.Margin, BoxPos{i-1}(2)-Fig.PannelHeights(i)*Fig.DisplayScale-Fig.Margin/2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(i)*Fig.DisplayScale];
 end
 
-Fig.UIimages.Labels         = {'Image directory', 'Background directory', 'Image format', 'Subdirectories', 'Conditions', 'Total images', 'SBS 3D?','Pre-load images?'};
-Fig.UIimages.Style          = {'Edit','Edit','Popup','Popup','Popup','Edit','checkbox','checkbox'};
-Fig.UIimages.Defaults       = {Params.ImageExp.ImageDir, Params.ImageExp.BckgrndDir, Params.ImageExp.FileFormats, Params.ImageExp.SubdirOpts, Params.ImageExp.ImageConds, num2str(Params.ImageExp.TotalImages), [], []};
-Fig.UIimages.Values         = {isempty(Params.ImageExp.ImageDir), isempty(Params.ImageExp.BckgrndDir), Params.ImageExp.FileFormat, Params.ImageExp.SubdirOpt, 1, [], Params.ImageExp.SBS3D, Params.ImageExp.Preload};
-Fig.UIimages.Enabled        = [0, 0, 1, 1, 1, 1, 1, 1];
+Fig.UIimages.Labels         = {'Image directory', 'Background directory', 'Image format', 'Subdirectories', 'Conditions', 'Total images', 'Total memory (MB)', 'SBS 3D?','Pre-load images?'};
+Fig.UIimages.Style          = {'Edit','Edit','Popup','Popup','Popup','Edit','Edit','checkbox','checkbox'};
+Fig.UIimages.Defaults       = {Params.ImageExp.ImageDir, Params.ImageExp.BckgrndDir, Params.ImageExp.FileFormats, Params.ImageExp.SubdirOpts, Params.ImageExp.ImageConds, num2str(Params.ImageExp.TotalImages), num2str(Params.ImageExp.TotalMemory), [], []};
+Fig.UIimages.Values         = {isempty(Params.ImageExp.ImageDir), isempty(Params.ImageExp.BckgrndDir), Params.ImageExp.FileFormat, Params.ImageExp.SubdirOpt, 1, [], [], Params.ImageExp.SBS3D, Params.ImageExp.Preload};
+Fig.UIimages.Enabled        = [0, 0, 1, 1, 1, 0, 0, 1, 1];
 Fig.UIimages.Tips           = {'Select directory to load images from','Select directory to load background images from','Select format of images to load',...
                                 sprintf('Select how to treat subdirectories found within the image directory:\n1) IGNORE: load only images of selected format in image directory;\n2) LOAD: load images recursively from all subdirectories;\n3) CONDITIONS: treat each subdirectory as a condition name, and remember which directory each image came from.'),...
-                                'Displays conditions (subdirectory names) found within the image directory (read-only)', 'Displays the total number of image files located of the selected type within the specified directories (read-only)', 'Select whether images are in side-by-side stereoscopic 3D format', 'Pre-load images into GPU before starting experiment?'};
+                                'Displays conditions (subdirectory names) found within the image directory (read-only)', 'Displays the total number of image files located of the selected type within the specified directories (read-only)', 'Dipslays the total memory required (MB) to load selected image files','Select whether images are in side-by-side stereoscopic 3D format', 'Pre-load images into GPU before starting experiment?'};
 Fig.UIimages.Ypos           = [(Fig.PannelHeights(1)-50):-20:10]*Fig.DisplayScale;
 Fig.UIimages.Xwidth         = [180, 200]*Fig.DisplayScale;
 
-Fig.UItransform.Labels      = {'Scale image','Present fullscreen','Retinal subtense (deg)','Use alpha channel?','Mask type','Present in greyscale','Image rotation (deg)','Image contrast (%)'};
-Fig.UItransform.Style       = {'checkbox','checkbox','Edit','checkbox','Popup','checkbox','Edit','Edit'};
-Fig.UItransform.Defaults    = {[], [], Params.ImageExp.SizeDeg(1), [], Params.ImageExp.MaskTypes, [], Params.ImageExp.Rotation, Params.ImageExp.Contrast};
-Fig.UItransform.Values     	= {~Params.ImageExp.Fullscreen, Params.ImageExp.Fullscreen, [], Params.ImageExp.UseAlpha, Params.ImageExp.MaskType, Params.ImageExp.Greyscale, [], []};
-Fig.UItransform.Enabled     = [1, 1, ~Params.ImageExp.Fullscreen, 1, 1, 1,1,1,1];
+Fig.UItransform.Labels      = {'Present fullscreen','Retinal subtense (deg)','Use alpha channel?','Mask type','Present in greyscale','Image rotation (deg)','Image contrast (%)'};
+Fig.UItransform.Style       = {'checkbox','Edit','checkbox','Popup','checkbox','Edit','Edit'};
+Fig.UItransform.Defaults    = {[], Params.ImageExp.SizeDeg(1), [], Params.ImageExp.MaskTypes, [], Params.ImageExp.Rotation, Params.ImageExp.Contrast};
+Fig.UItransform.Values     	= {Params.ImageExp.Fullscreen, [], Params.ImageExp.UseAlpha, Params.ImageExp.MaskType, Params.ImageExp.Greyscale, [], []};
+Fig.UItransform.Enabled     = [1, ~Params.ImageExp.Fullscreen, 1, 1, 1,1,1,1];
 Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 
-Fig.UIpresent.Labels        = {'Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)'};
-Fig.UIpresent.Style        	= {'Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit'};
-Fig.UIpresent.Defaults     	= {Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIMs, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter};
-Fig.UIpresent.Values        = {[],[],[],[],[],Params.ImageExp.FixType,[],[]};
-Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1];
+Fig.UIpresent.Labels        = {'Experimental design','Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)','Fixation window (deg)'};
+Fig.UIpresent.Style        	= {'Popup', 'Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit','Edit'};
+Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIMs, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg};
+Fig.UIpresent.Values        = {Params.ImageExp.DesignType,[],[],[],[],[],Params.ImageExp.FixType,[],[],[]};
+Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
 Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
-Fig.PanelVars(1).Fieldnames = {'', '', 'FileFormat', 'SubdirOpt', '', '', 'SBS3D','Preload'};
-Fig.PanelVars(2).Fieldnames = {'','Fullscreen','SizeDeg','UseAlpha','MaskType','Greyscale','Rotation','Contrast'};
-Fig.PanelVars(3).Fieldnames = {'StimPerTrial','DurationMs','ISIMs','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter'};
+Fig.PanelVars(1).Fieldnames = {'', '', 'FileFormat', 'SubdirOpt', '', '', '','SBS3D','Preload'};
+Fig.PanelVars(2).Fieldnames = {'Fullscreen','SizeDeg','UseAlpha','MaskType','Greyscale','Rotation','Contrast'};
+Fig.PanelVars(3).Fieldnames = {'DesignType','StimPerTrial','DurationMs','ISIMs','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg'};
 
-OfforOn         = {'Off','On'};
-PanelStructs    = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};
+Fig.OffOn           = {'Off','On'};
+PanelStructs        = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};
 
 for p = 1:numel(Fig.PanelNames)
     Fig.PannelHandl(p) = uipanel( 'Title',Fig.PanelNames{p},...
@@ -165,7 +168,7 @@ for p = 1:numel(Fig.PanelNames)
         Fig.UIhandle(p,n) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
                     'String', PanelStructs{p}.Defaults{n},...
                     'Value', PanelStructs{p}.Values{n},...
-                    'Enable', OfforOn{PanelStructs{p}.Enabled(n)+1},...
+                    'Enable', Fig.OffOn{PanelStructs{p}.Enabled(n)+1},...
                     'Position', [Fig.Margin + PanelStructs{p}.Xwidth(1), PanelStructs{p}.Ypos(n), PanelStructs{p}.Xwidth(2), 20*Fig.DisplayScale],...
                     'Parent', Fig.PannelHandl(p),...
                     'HorizontalAlignment', 'left',...
@@ -217,7 +220,11 @@ uicontrol(  'Style', 'pushbutton',...
             'HorizontalAlignment', 'left',...
             'Callback', {@OptionSelect, 3});         
 
-
+        
+uiwait(Fig.Handle);     % Wait until GUI window is closed beofre returning Params
+ParamsOut = Params;     % Output 'Params' struct
+        
+        
 %% =========================== SUBFUNCTIONS ===============================
 
     %==================== User selected option
@@ -236,7 +243,10 @@ uicontrol(  'Style', 'pushbutton',...
                     Params = LoadImages([], Params);
                     Params.ImageExp.ImagesLoaded = 1;
                 end
-                Params = SCNI_ShowImages(Params);
+                ParamsOut = Params;
+                close(Fig.Handle);
+                return;
+
         end
     end
 
@@ -254,6 +264,27 @@ uicontrol(  'Style', 'pushbutton',...
         Screen(Params.Display.win,'TextSize',60); 
         wbh         = waitbar(0, '');                                                                                                       % Open a waitbar figure
         StimCount   = 1;
+        
+     	%============= Generate alpha mask
+        if Params.ImageExp.MaskType > 1
+            Mask.Dim        = repmat(Params.ImageExp.SizeDeg,[1,2])*Params.Display.PixPerDeg(1);% Dimensions [w, h] (pixels)
+            Mask.ApRadius   = (Params.ImageExp.SizeDeg-0.1)/2*Params.Display.PixPerDeg(1);      % radius of central aperture (pixels)
+            Mask.Color      = Params.Display.Exp.BackgroundColor*255;                          	% RGB 0-255
+            Mask.s          = 1;                                                                % Standard deviation of Gaussian edge (if selcted) in degrees
+            Mask.Taper      = 0.2;                                                              % Spread of cosine edge as a proportion of aperture radius
+            ReturnMaskTex   = 1;                                                                % 0 = return mask as an image; 1 = return mask as a PTB texture handle
+            switch Params.ImageExp.MaskTypes{Params.ImageExp.MaskType}
+                case 'Circular'
+                    Mask.Edge = 0;          % 0 = hard edge;  
+                case 'Gaussian'
+                    Mask.Edge = 1;          % 1 = gaussian edge;  
+                case 'Cosine'
+                    Mask.Edge = 2;          % 2 = cosine edge;  
+            end
+            Params.ImageExp.MaskTex = SCNI_GenerateAlphaMask(Mask, Params.Display, ReturnMaskTex);
+        end
+        
+        %============= Load stimuli
         for Cond = 1:numel(Params.ImageExp.ImageConds)                                                                                  	% For each experimental condition...
 
             for Stim = 1:numel(Params.ImageExp.ImByCond{Cond})                                                                             % For each file...
@@ -282,11 +313,15 @@ uicontrol(  'Style', 'pushbutton',...
                 end
                 
                 %============= Scale image
-                if Params.ImageExp.ScaleImage == 1
-                	Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg;                                        % Convert requested image size from degrees to pixels
-                    if [size(img,2), size(img,1)] ~= Params.ImageExp.SizePix                                                             	% If X and Y dimensions of image don't match requested...
-                        img = imresize(img, Params.ImageExp.SizePix([2,1]));                                                                % Resize image
+                if Params.ImageExp.Fullscreen == 0
+                    if size(img,2) == size(img,1)
+                        Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg;                                        % Convert requested image size from degrees to pixels
+                    else
+                        Scale                       = [1, size(img,2)/size(img,1)];
+                        Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg.*Scale;
                     end
+                elseif Params.ImageExp.Fullscreen == 1
+                    Params.ImageExp.SizePix     = [size(img,2), size(img,1)]; 
                 end
                 
                 %============= Convert to greyscale
@@ -295,7 +330,7 @@ uicontrol(  'Style', 'pushbutton',...
                 end
                 
                 %============= Add background image
-                if ~isempty(imalpha) && ~isempty(Params.ImageExp.BckgrndDir)                                                                % If image contains transparent pixels...         
+                if Params.ImageExp.UseAlpha == 1 && ~isempty(imalpha) && ~isempty(Params.ImageExp.BckgrndDir)                                                                % If image contains transparent pixels...         
                     Background = imread(Params.ImageExp.BackgroundFiles{Cond}{Stim});                                                       % Read in background images (e.g. phase scrambled version of stimuli)
                     Background = imresize(Background, Params.ImageExp.SizePix);                                                             % Resize background image
                     if Params.ImageExp.Greyscale == 1 
@@ -304,32 +339,15 @@ uicontrol(  'Style', 'pushbutton',...
                     Background(:,:,4) = ones(size(Background(:,:,1)))*255;
                     Params.ImageExp.BckgrndTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, Background);                                    	% Create a PTB offscreen texture for the background
                 else
-                    Params.ImageExp.BckgrndTex{Cond}(Stim) = 0;
+                    Params.ImageExp.BckgrndTex = [];
                 end
                 
-                %============= Add mask
-                if Params.ImageExp.MaskType > 1
-                    Mask.Dim        = Params.Display.PixPerDeg;                 % Dimensions [w, h] (pixels)
-                    Mask.ApRadius   = Params.Display.PixPerDeg;                 % radius of central aperture (pixels)
-                    Mask.Color      = Params.Display.Exp.BackgroundColor;       % RGB 0-255
-                    Mask.s          = 1;                                        % Standard deviation of Gaussian edge (if selcted) in degrees
-                    Mask.Taper      = 0.2;                                      % Spread of cosine edge as a proportion of aperture radius
-                    ReturnMaskTex   = 0;                                        % 0 = return mask as an image; 1 = return mask as a PTB texture handle
-                    switch Params.ImageExp.MaskTypes{Params.ImageExp.MaskType}
-                        case 'Circular'
-                            Mask.Edge = 0;          % 0 = hard edge;  
-                        case 'Gaussian'
-                            Mask.Edge = 1;          % 1 = gaussian edge;  
-                        case 'Cosine'
-                            Mask.Edge = 2;          % 2 = cosine edge;  
-                    end
-                    Params.ImageExp.MaskTex = SCNI_GenerateAlphaMask(Mask, Params.Display, ReturnMaskTex);
-                end
                 Params.ImageExp.ImgTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, img);                                                       % Create a PTB offscreen texture for the stimulus
                 StimCount = StimCount+1;
             end
 
         end
+
         delete(wbh);                                                                                                                      	% Close the waitbar figure window
         Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor);                                                                        % Clear background
         DrawFormattedText(Params.Display.win, sprintf('All %d stimuli loaded!\n\nClick the ''Run'' button in the SCNI Toolbar to start the experiment.', Params.ImageExp.TotalImages),  LoadTextPos(1), LoadTextPos(2), TextColor);
@@ -366,23 +384,32 @@ uicontrol(  'Style', 'pushbutton',...
         if Indx1 == 1 && Indx2 <= 4                     % If first 4 controls were updated...
             Params = RefreshImageList(Params);          % Refresh list of images
         end
+        if Indx1 == 2 && Indx2 == 1
+            set(Fig.UIhandle(2,2), 'enable', Fig.OffOn{1 + ~NewValue});
+        end
 
 
     end
 
     %====================== Refresh the list(s) of images =================
     function Params = RefreshImageList(Params)
-        
+
         switch Params.ImageExp.SubdirOpts{Params.ImageExp.SubdirOpt}
             case 'Load'
                 Params.ImageExp.AllImFiles 	= wildcardsearch(Params.ImageExp.ImageDir, ['*',Params.ImageExp.FileFormats{Params.ImageExp.FileFormat}]);
+             	if numel(Params.ImageExp.AllImFiles) > 1 && isempty(Params.ImageExp.AllImFiles{1})
+                    Params.ImageExp.AllImFiles = Params.ImageExp.AllImFiles(2:end);
+                end
                 Params.ImageExp.ImageConds  = {''};
-                Params.ImageExp.ImByCond{1} = Params.ImageExp.AllImFiles;
+                Params.ImageExp.ImByCond    = {Params.ImageExp.AllImFiles};
                 
             case 'Ignore'
                 Params.ImageExp.AllImFiles 	= regexpdir(Params.ImageExp.ImageDir, Params.ImageExp.FileFormats{Params.ImageExp.FileFormat},0);
+             	if numel(Params.ImageExp.AllImFiles) > 1 && isempty(Params.ImageExp.AllImFiles{1})
+                    Params.ImageExp.AllImFiles = Params.ImageExp.AllImFiles(2:end);
+                end
                 Params.ImageExp.ImageConds  = {''};
-                Params.ImageExp.ImByCond{1} = Params.ImageExp.AllImFiles;
+                Params.ImageExp.ImByCond    = {Params.ImageExp.AllImFiles};
                 
             case 'Conditions'
                 SubDirs                     = dir(Params.ImageExp.ImageDir);
@@ -396,6 +423,7 @@ uicontrol(  'Style', 'pushbutton',...
                 end
         end
         Params.ImageExp.TotalImages     = numel(Params.ImageExp.AllImFiles);
+
         
         %========== Find background images
         if ~isempty(Params.ImageExp.BckgrndDir)   
@@ -412,6 +440,17 @@ uicontrol(  'Style', 'pushbutton',...
             end
         end
         
+        %========== Calculate GPU memory required for pre-loading
+        if ~isempty(Params.ImageExp.AllImFiles)
+            for n = 1:numel(Params.ImageExp.AllImFiles)
+                temp            = dir(Params.ImageExp.AllImFiles{n});
+                MemoryTally(n)  = temp.bytes/10^6;
+            end
+            Params.ImageExp.TotalMemory = sum(MemoryTally);
+        else
+            Params.ImageExp.TotalMemory = 0;
+        end
+        
         %========== Update GUI
         if isfield(Fig, 'UIimages')
             ButtonIndx = find(~cellfun(@isempty, strfind(Fig.UIimages.Labels, 'Conditions')));
@@ -422,6 +461,9 @@ uicontrol(  'Style', 'pushbutton',...
             end
             StrIndx = find(~cellfun(@isempty, strfind(Fig.UIimages.Labels, 'Total images')));
             set(Fig.UIhandle(1,StrIndx), 'string', num2str(Params.ImageExp.TotalImages));
+            StrIndx = find(~cellfun(@isempty, strfind(Fig.UIimages.Labels, 'Total memory (MB)')));
+            set(Fig.UIhandle(1,StrIndx), 'string', sprintf('%.2f', Params.ImageExp.TotalMemory));
+            
         end
     end
 end

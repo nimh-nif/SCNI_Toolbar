@@ -6,7 +6,7 @@ NoCircles       = floor(Params.Display.Rect(3)/CircleSpacing(1));            	% 
 Params.Display.Grid.BullsEyeWidth = 1;                                        	% Pen width for bulls eye lines (pixels)
 for circleno = 1:NoCircles
     CircleDiameter(circleno,:)               = CircleSpacing*circleno;               
-    Params.Display.Grid.Bullseye(:,circleno) = CenterRect([0,0,CircleDiameter(circleno,:)], Params.Display.ExpRect)'; 
+    Params.Display.Grid.Bullseye(:,circleno) = CenterRect([0,0,CircleDiameter(circleno,:)], Params.Display.Rect)'; 
 end
-Params.Display.Grid.Meridians     = [Params.Display.ExpRect([3,3])/2, 0, Params.Display.ExpRect(3); 0, Params.Display.ExpRect(4), Params.Display.ExpRect([4,4])/2];
+Params.Display.Grid.Meridians     = [Params.Display.Rect([3,3])/2, 0, Params.Display.Rect(3); 0, Params.Display.Rect(4), Params.Display.Rect([4,4])/2];
 

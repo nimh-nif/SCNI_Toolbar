@@ -21,10 +21,13 @@
 %==========================================================================
 
 %================== CHECK SYSTEM
-Overwrite = 0;                                                            	% Overwrite previously converted data?
+Overwrite = 1;                                                            	% Overwrite previously converted data?
                    
 if ~strcmp(computer('arch'), 'win64')                                       % Check if we're on 64-bit Windows
     error('TDT to .mat file conversion can only be performed on Windows OS!');
+end
+if ~exist('actxcontrol', 'file')                                    
+    error('ActiveX control function is requried on Matlab path (not available on Octave)!');
 end
 try
   PCName = char(getHostName(java.net.InetAddress.getLocalHost()));        	% Which PC are we on?
@@ -60,7 +63,7 @@ NoSessions  = numel(Tanks);
 f = 1;
 for S = 1:NoSessions
     for B = 1:numel(SubTanks{S})
-        waitbar(f/numel(NoTanks),h, sprintf('Processing block %d of %d ...', f, NoSessions*NoTanks));
+        waitbar(f/NoTanks,h, sprintf('Processing block %d of %d ...', f, NoSessions*NoTanks));
         SkipBlock       = 0;
 
         [a BlockName]   = fileparts(TankPaths{S, B});
@@ -80,11 +83,13 @@ for S = 1:NoSessions
             if exist(SavePathFull,'dir')==0
                 mkdir(SavePathFull); 
             end
-            % tdtReading(TankPaths{S,B}, BlockName, SavePathFull);
-            data = TDT2mat(TankPaths{S,B}, 'VERBOSE', 1);
-            %TDTfft(data.streams.Wav1,1, 'FREQ',[0,200],'SPECTPLOT',1);
+            %SCNI_TDTRead(TankPaths{S,B}, BlockName, SavePathFull);
+            TDTdata    = TDT2mat_noStps(Tanks{S}, BlockName, 'VERBOSE', 1);
+          	Filename   = fullfile(savePath, SessionName, sprintf('TDTconv_%s_%s.mat',SessionName,BlockName));
+            save(Filename,'TDTdata','-v7.3');
         end
         f = f+1;
     end
+
 end
 delete(h);

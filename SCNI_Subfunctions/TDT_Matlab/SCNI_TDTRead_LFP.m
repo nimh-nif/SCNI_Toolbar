@@ -5,7 +5,7 @@ function TT = SCNI_TDTRead_LFP(tankName, blockName, savePath, ChNum)
 %
 %==========================================================================
 
-[TT, CloseTT] = SCNI_TDTRead_Init(TT);
+[TT, CloseTT] = SCNI_TDTRead_Init([], tankName, blockName);
 
 %================ Read LFP data
 maxEvts     = 9000000;

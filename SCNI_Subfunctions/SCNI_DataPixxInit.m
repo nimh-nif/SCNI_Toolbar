@@ -59,6 +59,4 @@ end
 if Params.DPx.TDTonDOUT == 1                                                                
     
     
-end
-
-c.Params = Params;  
+end  

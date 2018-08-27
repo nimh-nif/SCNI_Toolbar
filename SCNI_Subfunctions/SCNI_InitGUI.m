@@ -30,6 +30,12 @@ if ~exist('ParamsFile','var') || isempty(ParamsFile)                        % If
     [~, CompName] = system('hostname');                                     % Get the local computer's hostname
 	CompName(regexp(CompName, '\s')) = [];                                  % Remove white space
     Params.File = fullfile(Params.Dir, sprintf('%s.mat', CompName));        % Construct expected parameters filename
+    if ~exist(Params.File,'file')
+        ParamsFileMatches = wildcardsearch(Params.Dir, sprintf('%s*.mat', CompName));
+        if numel(ParamsFileMatches) > 1
+
+        end
+    end
     ParamsFile  = Params.File;
 else
     Params.File = ParamsFile;                                               

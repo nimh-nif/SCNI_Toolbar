@@ -172,9 +172,6 @@ end
 ColIndx = find(~cellfun(@isempty, strfind(Fig.UIpresent.Labels, 'Fixation color')));
 set(Fig.UIhandle(3,ColIndx), 'BackgroundColor', Params.Movie.FixColor, 'Callback',{@ChangeFixColor, p, n});
 
-
-ParamsOut = Params;
-
 %================= OPTIONS PANEL
 uicontrol(  'Style', 'pushbutton',...
             'String','Load Params',...
@@ -207,7 +204,8 @@ uicontrol(  'Style', 'pushbutton',...
             'HorizontalAlignment', 'left',...
             'Callback', {@OptionSelect, 3});  
 
-
+uiwait(Fig.Handle);     % Wait until GUI window is closed beofre returning Params
+ParamsOut = Params;     % Output 'Params' struct
 
 %% ========================== SUBFUNCTIONS ================================
 
@@ -218,10 +216,20 @@ uicontrol(  'Style', 'pushbutton',...
 
                 
             case 2  %============ Save parameters to file
-                Movie = Params.Movie;
+                Params  = SCNI_GenerateDesign(Params, 0);   
+                Movie   = Params.Movie;
                 save(Params.File, 'Movie', '-append');
                 
             case 3  %============ Exit settings
+                
+                %============= Generate design
+                Params.Design.Type          = 1;
+                Params.Design.NoCond      	= numel(Params.Movie.MovieConds);
+                Params.Design.TrialsPerRun	= ceil(Params.Movie.RunDuration/(Params.Movie.Duration+Params.Movie.ISI));
+                Params.Design.TotalStim    	= Params.Movie.TotalMovies;             
+                Params.Design.StimPerTrial 	= 1;                         	% How many stimuli to present per 'trial' (or reward period)
+                Params                      = SCNI_GenerateDesign(Params, 0);   
+                
                 ParamsOut = Params;
                 close(Fig.Handle);
                 return;
@@ -300,25 +308,25 @@ uicontrol(  'Style', 'pushbutton',...
         
         switch Params.Movie.SubdirOpts{Params.Movie.SubdirOpt}
             case 'Load'
-                Params.Movie.AllImFiles 	= wildcardsearch(Params.Movie.Dir, ['*',Params.Movie.FileFormats{Params.Movie.FileFormat}]);
+                Params.Movie.AllFiles 	= wildcardsearch(Params.Movie.Dir, ['*',Params.Movie.FileFormats{Params.Movie.FileFormat}]);
                 Params.Movie.MovieConds  = {''};
                 
             case 'Ignore'
-                Params.Movie.AllImFiles 	= regexpdir(Params.Movie.Dir, Params.Movie.FileFormats{Params.Movie.FileFormat},0);
+                Params.Movie.AllFiles 	= regexpdir(Params.Movie.Dir, Params.Movie.FileFormats{Params.Movie.FileFormat},0);
                 Params.Movie.MovieConds  = {''};
                 
             case 'Conditions'
                 SubDirs                     = dir(Params.Movie.Dir);
                 Params.Movie.MovieConds  = {SubDirs([SubDirs.isdir]).name};
                 Params.Movie.MovieConds(~cellfun(@isempty, strfind(Params.Movie.MovieConds, '.'))) = [];
-                Params.Movie.AllImFiles 	= [];
+                Params.Movie.AllFiles 	= [];
                 for cond = 1:numel(Params.Movie.MovieConds)
                     Params.Movie.ImByCond{cond} 	= regexpdir(fullfile(Params.Movie.Dir, Params.Movie.MovieConds{cond}), Params.Movie.FileFormats{Params.Movie.FileFormat},0);
                     Params.Movie.ImByCond{cond}(cellfun(@isempty, Params.Movie.ImByCond{cond})) = [];
-                    Params.Movie.AllImFiles      = [Params.Movie.AllImFiles; Params.Movie.ImByCond{cond}];
+                    Params.Movie.AllFiles      = [Params.Movie.AllFiles; Params.Movie.ImByCond{cond}];
                 end
         end
-        Params.Movie.TotalMovies     = numel(Params.Movie.AllImFiles);
+        Params.Movie.TotalMovies     = numel(Params.Movie.AllFiles);
         
         %========== Update GUI
         if isfield(Fig, 'UImovies')

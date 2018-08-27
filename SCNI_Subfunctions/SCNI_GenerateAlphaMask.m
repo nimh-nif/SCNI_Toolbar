@@ -1,4 +1,4 @@
-function [MaskTexture] = SCNI_GenerateAlphaMask(Mask, Display, PTB)
+function MaskTexture = SCNI_GenerateAlphaMask(Mask, Display, ReturnHandle)
 
 %======================== SCNI_GenerateAlphaMask.m ========================
 % Returns a PTB texture with varying alpha values that can be drawn over 
@@ -26,13 +26,12 @@ function [MaskTexture] = SCNI_GenerateAlphaMask(Mask, Display, PTB)
 %==========================================================================
 
 %=================== Check inputs
-if ~isfield(Display,'win')
-    PTB = 0;
-elseif isfield(Display,'win') && nargin<3
-    PTB = 1;
+if ~isfield(Display,'win') || nargin < 3
+    ReturnHandle = 0;
 end
 Mask.ApRadius   = floor(Mask.ApRadius);
 Mask.Dim        = ceil(Mask.Dim);
+MaskTexture     = [];
 if Mask.Edge == 1
     if ~isfield(Mask, 's')
         s = Mask.ApRadius/2;        
@@ -45,15 +44,14 @@ if Mask.Edge == 2 && ~isfield(Mask, 'Taper')
 end
 if Mask.ApRadius*2 > min(Mask.Dim)
     fprintf('ERROR: requested aperture radius is larger than smallest mask dimension!\n');
-    return
 end
 if find(mod(Mask.Dim,2))~=0                                              % All mask dimensions must be even number pixels
     Mask.Dim(find(mod(Mask.Dim,2))) = Mask.Dim(find(mod(Mask.Dim,2)))+1;	
 end
 
-mask    = ones(Mask.Dim(2), Mask.Dim(1), 2)*Mask.Colour(1);          	% Create a 2 layer mask 
+mask    = ones(Mask.Dim(2), Mask.Dim(1), 2)*Mask.Color(1);          	% Create a 2 layer mask 
 mask(:,:,2) = 255;                                                      % Mask begins fully opaque (alpha = 255)
-circle  = ones(Mask.ApRadius*2, Mask.ApRadius*2, 2)*Mask.Colour(1);    	% Create a 2 layer aperture
+circle  = ones(Mask.ApRadius*2, Mask.ApRadius*2, 2)*Mask.Color(1);    	% Create a 2 layer aperture
 left    = (Mask.Dim(1)/2)-Mask.ApRadius;
 right   = (Mask.Dim(1)/2)+Mask.ApRadius-1;
 top     = (Mask.Dim(2)/2)-Mask.ApRadius;
@@ -75,7 +73,7 @@ switch Mask.Edge
         circle(:,:,2) = 255*(1 - exp(-((x/s).^2)-((y/s).^2)));                          % Apply Gaussian to layer 2 of mask
 
         % METHOD 2: Gaussian blurring *requires Image Processing Toolbox*
-    %     mask = ones(2*texsize+1, 2*texsize+1, 2)*Mask.Colour(1);         % Create a m x n x [RGBA] matrix of background colour values
+    %     mask = ones(2*texsize+1, 2*texsize+1, 2)*Mask.Color(1);         % Create a m x n x [RGBA] matrix of background colour values
     %     [x y] = meshgrid(1:Stim.Height);
     %     C = sqrt((x-Stim.Width/2).^2+(y-Stim.Height/2).^2)<= Stim.Radius;
     %     Aperture = ones(Stim.Height, Stim.Width)*255;
@@ -98,14 +96,15 @@ switch Mask.Edge
 
         ImSize = max(size(image_window));                                   % Aperture is 1 pixel larger than requested, so...
         clear circle
-        circle = ones(ImSize,ImSize, 2)*Mask.Colour(1);
+        circle = ones(ImSize,ImSize, 2)*Mask.Color(1);
         circle(:,:,2) = (1-image_window)*255;
         circle(end,:,:) = [];
         circle(:,end,:) = [];
 end 
 mask(top:bottom,left:right,:) = circle;                                     % cut circular aperture in mask
-if PTB == 1
+
+if ReturnHandle == 1
     MaskTexture = Screen('MakeTexture', Display.win, mask);                 % Convert mask to texture
-elseif PTB == 0
+elseif ReturnHandle == 0
     MaskTexture = mask(:,:,2);
 end

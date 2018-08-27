@@ -1,4 +1,4 @@
-function Movie = SCNI_PlayMovies(Params, movieFile)
+function Movie = SCNI_PlayMovies(Params)
 
 %=========================== SCNI_PlayMovies.m ============================
 % This function serves as a template for how to write an experiment using
@@ -13,22 +13,19 @@ function Movie = SCNI_PlayMovies(Params, movieFile)
 %==========================================================================
 
 %================= SET DEFAULT PARAMETERS
-if nargin < 2 || ~isfield(Params, 'Movie')
-    
+if nargin == 0 || ~isfield(Params, 'Movie') || ~isfield(Params, 'Design')
     Params  = SCNI_PlayMoviesSettings(Params, 0);
-    Params  = SCNI_GenerateDesign(Params, 0);           
-    
-    %============== Keyboard shortcuts
-    KbName('UnifyKeyNames');
-    KeyNames                    = {'Space','X','uparrow','downarrow'};         
-    KeyFunctions                = {'Pause','Stop','VolUp','VolDown'};
-    Params.Movie.KeysList       = zeros(1,256); 
-    for k = 1:numel(KeyNames)
-        eval(sprintf('Params.Movie.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
-        eval(sprintf('Params.Movie.KeysList(Params.Movie.Keys.%s) = 1;', KeyFunctions{k}));
-        fprintf('Press ''%s'' for %s\n', KeyNames{k}, KeyFunctions{k});
-    end
+end
 
+%============== Keyboard shortcuts
+KbName('UnifyKeyNames');
+KeyNames                    = {'Space','X','uparrow','downarrow'};         
+KeyFunctions                = {'Pause','Stop','VolUp','VolDown'};
+Params.Movie.KeysList       = zeros(1,256); 
+for k = 1:numel(KeyNames)
+    eval(sprintf('Params.Movie.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
+    eval(sprintf('Params.Movie.KeysList(Params.Movie.Keys.%s) = 1;', KeyFunctions{k}));
+    fprintf('Press ''%s'' for %s\n', KeyNames{k}, KeyFunctions{k});
 end
 
 %================= PRE-ALLOCATE RUN AND REWARD FIELDS
@@ -102,17 +99,18 @@ Params.Display.GazeRect = Params.Movie.GazeRect;
 
 
 %================= BEGIN RUN
-FrameOnset = GetSecs;
+FrameOnset                  = GetSecs;
+Params.Run.MovieStartTime   = GetSecs;
 while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
 
-    if Params.Run.MovieCount > 1
-        Params.Run.MoiveIndx(Params.Run.MovieCount) = randi(numel(Params.Movie.AllFiles));                   % <<<< RANDOMIZE movie order
-        SCNI_SendEventCode(Params.Run.MoiveIndx(Params.Run.MovieCount), Params);                             % Send event code to connected neurophys systems
-        Params.Run.CurrentFile      = Params.Movie.AllFiles{Params.Run.MoiveIndx(Params.Run.MovieCount)};   
+%     if Params.Run.MovieCount > 1
+        Params.Run.MovieIndx(Params.Run.MovieCount) = randi(numel(Params.Movie.AllFiles));                   % <<<< RANDOMIZE movie order
+        SCNI_SendEventCode(Params.Run.MovieIndx(Params.Run.MovieCount), Params);                             % Send event code to connected neurophys systems
+        Params.Run.CurrentFile      = Params.Movie.AllFiles{Params.Run.MovieIndx(Params.Run.MovieCount)};   
         [~,Params.Movie.Filename]   = fileparts(Params.Run.CurrentFile);  
         [mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Run.CurrentFile); 
         Params.Run.mov = mov;
-    end
+%     end
 
     %================= Initialize DataPixx/ send event codes
     AdcStatus = SCNI_StartADC(Params);                                  % Start DataPixx ADC
@@ -164,7 +162,7 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
             Params.Run.StartTime  = ISIoffset;
         end
         Params.Run.EndMovie = CheckKeys(Params);                                                   % Check for keyboard input
-        if get(Params.Toolbar.StopButton,'value')==1                                    % Check for toolbar input
+        if isfield(Params.Toolbar,'StopButton') && get(Params.Toolbar.StopButton,'value')==1                                    % Check for toolbar input
             Params.Run.EndMovie = 1;
         end
     end
@@ -219,7 +217,7 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
         end
         [VBL FrameOnset(end+1)] = Screen('Flip', Params.Display.win);                   % Flip next frame
         Params.Run.EndMovie = CheckKeys(Params);                                                   % Check for keyboard input
-        if get(Params.Toolbar.StopButton,'value') == 1
+        if isfield(Params.Toolbar,'StopButton') && get(Params.Toolbar.StopButton,'value') == 1
             Params.Run.EndMovie = 1;
         end
         if Params.Movie.Paused == 0 

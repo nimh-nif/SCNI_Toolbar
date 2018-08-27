@@ -9,7 +9,7 @@ AdcStatus = Datapixx('GetAdcStatus');
 while AdcStatus.scheduleRunning == 1
     Datapixx('RegWrRd');
     AdcStatus = Datapixx('GetAdcStatus');
-	WaitSecs(0.01);
+	WaitSecs(0.002);
 end
 Datapixx('SetAdcSchedule', 0, Params.DPx.AnalogInRate, Params.DPx.nAdcLocalBuffSpls, Params.DPx.AnalogInCh, Params.DPx.adcBuffBaseAddr, Params.DPx.nAdcLocalBuffSpls);
 Datapixx('StartAdcSchedule');

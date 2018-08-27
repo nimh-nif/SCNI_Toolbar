@@ -1,6 +1,6 @@
-function [TT, CloseTT] = SCNI_TDTRead_Init(TT)
+function [TT, CloseTT] = SCNI_TDTRead_Init(TT, tankName, blockName)
 
-if ~exist('TT','var')                   % If TTank handle was not supplied...
+if ~exist('TT','var')|| isempty(TT)    	% If TTank handle was not supplied...
     TT = actxcontrol('TTank.X');        % Open TTank
     TT.ConnectServer('Local','Me');
     CloseTT = 1;

@@ -7,12 +7,13 @@ function SCNI_TDTRead_Analog(tankName, blockName,savePath)
 % 
 %==========================================================================
 
-[TT, CloseTT] = SCNI_TDTRead_Init;
+[TT, CloseTT] = SCNI_TDTRead_Init([], tankName, blockName);
 
 %============ Load session data from local machine
 
-Params.DPx.Analog
-ADCdegHV = [134 135];  % the QNX index for eye signal conversion (voltage to deg?)
+% EyeChannels = Params.DPx.Analog;
+% PDchannel   = Params.DPx.Analog;
+ADCdegHV    = [134 135];  % the QNX index for eye signal conversion (voltage to deg?)
 
 %============ Reading Eye signal
 maxEvts         = 9000000;
