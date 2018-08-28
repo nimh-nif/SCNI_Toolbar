@@ -24,7 +24,7 @@ switch Fix.Type
         Screen('FillOval', FixTexture, Fix.Color*255, [0,0,FixSize]);
     case 2                                                          %============== CROSS
         FixPos = [FixSize(1)/2, -FixSize(2)/2, 0, 0; 0, 0, FixSize(1)/2, -FixSize(2)/2];            % Specify line positions
-        Screen('FillOval', FixTexture, Params.Display.Exp.BackgroundColor*255, [0,0,FixSize]);   	% Draw filled circle same color as background
+        %Screen('FillOval', FixTexture, Params.Display.Exp.BackgroundColor*255, [0,0,FixSize]);   	% Draw filled circle same color as background
         Screen('DrawLines', FixTexture, FixPos, Fix.LineWidth, Fix.Color*255, FixSize/2);           % Draw cross in center
     case 3                                                          %============== SOLID SQUARE
         Screen('FillRect', FixTexture, Fix_Color*255, [0,0,FixSize]);

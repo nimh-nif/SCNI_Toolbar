@@ -40,17 +40,15 @@ Params.Reward.RunCount          = 0;                            % Count how many
 Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 
 %================= OPEN NEW PTB WINDOW?
-if ~isfield(Params.Display, 'win')
-    CloseOnFinish = 1;
+% if ~isfield(Params.Display, 'win')
     HideCursor;   
-    KbName('UnifyKeyNames');
     Screen('Preference', 'VisualDebugLevel', 0);   
     Params.Display.ScreenID = max(Screen('Screens'));
     [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.XScreenRect,[],[], [], []);
     Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                        % Enable alpha channel
     Params.Display.ExpRect  = Params.Display.Rect;
     Params                  = SCNI_InitializeGrid(Params);
-end
+% end
 
 %================= INITIALIZE DATAPIXX
 if Params.DPx.UseDPx == 1
@@ -82,8 +80,8 @@ Params = SCNI_InitializeGrid(Params);
 
 %================= CALCULATE SCREEN RECTANGLES
 if Params.ImageExp.Fullscreen == 1          %============ Fullscreen image
-    Params.ImageExp.RectExp     = Params.Display.Rect;
-    Params.ImageExp.RectMonk    = Params.Display.Rect + [Params.Display.Rect(3), 0, 0, 0];
+    Params.ImageExp.RectExp         = Params.Display.Rect;
+    Params.ImageExp.RectMonk        = Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0];
     if Params.ImageExp.FixType == 1                             % If fixation marker is OFF...
         Params.ImageExp.GazeRect 	= Params.ImageExp.RectExp;  % Anywhere on screen is valid eye position
     end
@@ -103,16 +101,22 @@ end
 %================= ADJUST FOR 3D FORMAT...
 if Params.ImageExp.SBS3D == 1
     NoEyes                              = 2;
+  	Params.ImageExp.SourceRectExp       = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
+    Params.ImageExp.SourceRectMonk      = [1, 1, Params.ImageExp.SizePix];
     Params.ImageExp.SourceRect{1}       = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
     Params.ImageExp.SourceRect{2}       = [(Params.ImageExp.SizePix(1)/2)+1, 1, Params.ImageExp.SizePix];
-    Params.Display.MonkeyFixRect(1,:)   = CenterRect([1, 1, Fix.Size], Params.Display.Rect./[1,1,2,1]); 
-    Params.Display.MonkeyFixRect(2,:)   = Params.Display.MonkeyFixRect(1,:) + Params.Display.Rect([2,1,1,1]).*[0.5,0,0,0];
+    Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+    Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
+    Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
     
 elseif Params.ImageExp.SBS3D == 0
     NoEyes                              = 1;
+	Params.ImageExp.SourceRectExp       = [1, 1, Params.ImageExp.SizePix];
+    Params.ImageExp.SourceRectMonk      = [1, 1, Params.ImageExp.SizePix];
     Params.ImageExp.SourceRect{1}       = [];
-    Params.Display.MonkeyFixRect(1,:)   = CenterRect([1, 1, Fix.Size], Params.Display.Rect); 
-    Params.Display.MonkeyFixRect(2,:)   = Params.Display.MonkeyFixRect(1,:);
+    Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+    Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size], Params.Display.Rect); 
+    Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:);
 end
 Params.Display.GazeRect = Params.ImageExp.GazeRect;
 
@@ -154,14 +158,15 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
         end
         Params.Run.StimOffTime  = GetSecs;
         while (GetSecs - Params.Run.StimOffTime) < ISI
+            
+            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                             % Clear previous frame
             for Eye = 1:NoEyes 
-                Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                       	% Clear previous frame
                 if Params.Display.PD.Position > 1
                     Screen('FillOval', Params.Display.win, Params.Display.PD.Color{1}*255, Params.Display.PD.SubRect(Eye,:));
                     Screen('FillOval', Params.Display.win, Params.Display.PD.Color{1}*255, Params.Display.PD.ExpRect);
                 end
                 if Params.ImageExp.FixType > 1
-                    Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.MonkeyFixRect(Eye,:));         % Draw fixation marker
+                    Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectMonk(Eye,:));         % Draw fixation marker
                 end
             end
 
@@ -187,6 +192,9 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
                 elseif Params.ImageExp.FixType == 1
                     Screen('FrameRect', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.ImageExp.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
                 end
+            end
+        	if Params.ImageExp.FixType > 1
+                Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectExp);
             end
             Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);                            % Draw current gaze position
             Params       	= SCNI_UpdateStats(Params); 
@@ -239,22 +247,24 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
 
             %=============== Begin drawing to displays
             Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                	% Clear previous frame
-            for Eye = 1:NoEyes                                                                                             	% For each individual eye view...
-                currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                               	% Select the correct stereo buffer
+                                                                                       
+        	%currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                               	% Select the correct stereo buffer
 
-                %============ Draw background texture
-                if ~isempty(BackgroundTex)          
-                    Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRect{1}, RectExp);     	% Draw to the experimenter's display
-                    Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRect{Eye}, RectMonk);  	% Draw to the subject's display
-                end
-                %============ Draw image texture
-                Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRect{1}, RectExp, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);        % Draw to the experimenter's display
-                Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRect{Eye}, RectMonk, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);     % Draw to the subject's display
-                %============ Draw mask texture
-                if isfield(Params.ImageExp,'MaskTex') & ~isempty(Params.ImageExp.MaskTex)
-                    Screen('DrawTexture', Params.Display.win, Params.ImageExp.MaskTex, Params.ImageExp.SourceRect{1}, RectExp);
-                    Screen('DrawTexture', Params.Display.win, Params.ImageExp.MaskTex, Params.ImageExp.SourceRect{Eye}, RectMonk);
-                end
+            %============ Draw background texture
+            if ~isempty(BackgroundTex)          
+                Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectExp, RectExp);     	% Draw to the experimenter's display
+                Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectMonk, RectMonk);  	% Draw to the subject's display
+            end
+            %============ Draw image texture
+            Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRectExp, RectExp, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);        % Draw to the experimenter's display
+            Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRectMonk, RectMonk, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);     % Draw to the subject's display
+            %============ Draw mask texture
+            if isfield(Params.ImageExp,'MaskTex') & ~isempty(Params.ImageExp.MaskTex)
+                Screen('DrawTexture', Params.Display.win, Params.ImageExp.MaskTex, Params.ImageExp.SourceRectExp, RectExp);
+                Screen('DrawTexture', Params.Display.win, Params.ImageExp.MaskTex, Params.ImageExp.SourceRectMonk, RectMonk);
+            end
+            
+          	for Eye = 1:NoEyes     
                 %============ Draw photodiode marker
                 if Params.Display.PD.Position > 1
                     Screen('FillOval', Params.Display.win, Params.Display.PD.Color{2}*255, Params.Display.PD.SubRect(Eye,:));
@@ -262,7 +272,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
                 end
                 %============ Draw fixation marker
                 if Params.ImageExp.FixType > 1
-                    Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.MonkeyFixRect(Eye,:));  	% Draw fixation marker
+                    Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectMonk(Eye,:));  	% Draw fixation marker
                 end
             end
 
@@ -288,6 +298,9 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
                 elseif Params.ImageExp.FixType == 1
                     Screen('FrameRect', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.ImageExp.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
                 end
+            end
+         	if Params.ImageExp.FixType > 1
+                Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectExp);
             end
             Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);    % Draw current gaze position
             Params         = SCNI_UpdateStats(Params);                                                      % Update statistics on experimenter's screen

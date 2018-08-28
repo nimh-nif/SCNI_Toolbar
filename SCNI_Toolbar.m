@@ -234,25 +234,12 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                         end
 
                     case 3   %================= Select current experiment
-                        CurrentExpIndx  = get(hObj, 'value');
-                        Params.Toolbar.CurrentExp 	=  Params.Toolbar.AllExpFiles{CurrentExpIndx};
-                        CheckReady;
-                        CheckData;
-
-                        
-                    case 4   %================= Set current run number
-                        CurrentRunNo  = str2num(get(hObj, 'string'));
-                        
-                        Params.Toolbar.CurrentRun = CurrentRunNo;
-                        
-                        
-                    case 5  %================= Select data save directory
-                        path = uigetdir('/rawdata/', 'Select directory to save data to');
+                      	path = uigetdir('/rawdata/', 'Select directory to save data to');
                         if path ~= 0
                             Params.Toolbar.SaveDir = path;
                             set(Fig.OptH(indx1, indx2), 'string', Params.Toolbar.SaveDir, 'backgroundcolor', Fig.ValidColor);
                         end
-   
+
                 end
 
             case 2 %=============== SESSION SETTINGS
