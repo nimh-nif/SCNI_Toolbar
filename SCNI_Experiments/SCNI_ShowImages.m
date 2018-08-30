@@ -103,19 +103,16 @@ if Params.ImageExp.SBS3D == 1
     NoEyes                              = 2;
   	Params.ImageExp.SourceRectExp       = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
     Params.ImageExp.SourceRectMonk      = [1, 1, Params.ImageExp.SizePix];
-    Params.ImageExp.SourceRect{1}       = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
-    Params.ImageExp.SourceRect{2}       = [(Params.ImageExp.SizePix(1)/2)+1, 1, Params.ImageExp.SizePix];
     Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
     Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
     Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
     
 elseif Params.ImageExp.SBS3D == 0
     NoEyes                              = 1;
-	Params.ImageExp.SourceRectExp       = [1, 1, Params.ImageExp.SizePix];
-    Params.ImageExp.SourceRectMonk      = [1, 1, Params.ImageExp.SizePix];
-    Params.ImageExp.SourceRect{1}       = [];
+	Params.ImageExp.SourceRectExp       = [];
+    Params.ImageExp.SourceRectMonk      = [];
     Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
-    Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size], Params.Display.Rect); 
+    Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size], Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0]); 
     Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:);
 end
 Params.Display.GazeRect = Params.ImageExp.GazeRect;
@@ -135,8 +132,7 @@ end
 %% ============================ BEGIN RUN =================================
 FrameOnset              = GetSecs;
 
-
-while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
+while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit == 0
 
     %================= Initialize DataPixx/ send event codes
     AdcStatus = SCNI_StartADC(Params);                                  % Start DataPixx ADC
@@ -157,7 +153,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
             end
         end
         Params.Run.StimOffTime  = GetSecs;
-        while (GetSecs - Params.Run.StimOffTime) < ISI
+        while (GetSecs - Params.Run.StimOffTime) < ISI && Params.Run.ExpQuit == 0
             
             Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                             % Clear previous frame
             for Eye = 1:NoEyes 
@@ -232,7 +228,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
 
         %% ================= BEGIN NEXT IMAGE PRESENTATION ================
         Params.Run.StimOnTime = GetSecs;
-        while (GetSecs-Params.Run.StimOnTime) < Params.ImageExp.DurationMs/10^3
+        while (GetSecs-Params.Run.StimOnTime) < Params.ImageExp.DurationMs/10^3 && Params.Run.ExpQuit == 0
 
             %=============== Get next texture
             Cond = Params.Design.CondMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get condition number from design matrix
@@ -246,14 +242,12 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
             end
 
             %=============== Begin drawing to displays
-            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                	% Clear previous frame
-                                                                                       
-        	%currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                               	% Select the correct stereo buffer
+            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                	% Clear previous frame                                                                          
 
             %============ Draw background texture
             if ~isempty(BackgroundTex)          
-                Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectExp, RectExp);     	% Draw to the experimenter's display
-                Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectMonk, RectMonk);  	% Draw to the subject's display
+                Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectExp, RectExp);           % Draw to the experimenter's display
+                Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectMonk, RectMonk);         % Draw to the subject's display
             end
             %============ Draw image texture
             Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRectExp, RectExp, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);        % Draw to the experimenter's display
@@ -278,11 +272,11 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
 
             %=============== Check current eye position
             [EyeX,EyeY]     = SCNI_GetEyePos(Params);
-            EyeRect         = repmat([round(EyeX), round(EyeY)],[1,2])+[-10,-10,10,10];              	% Get screen coordinates of current gaze position (pixels)
-            FixIn           = IsInFixWin(EyeX, EyeY, Params);                                           % Check if gaze position is inside fixation window
+            EyeRect         = repmat([round(EyeX), round(EyeY)],[1,2])+[-10,-10,10,10];                                         % Get screen coordinates of current gaze position (pixels)
+            FixIn           = IsInFixWin(EyeX, EyeY, Params);                                                                   % Check if gaze position is inside fixation window
 
             %=============== Check whether to deliver reward
-            ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);                                % Find first NaN elements in fix vector
+            ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);                          	% Find first NaN elements in fix matrix
             Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixIn];                             	% Save current fixation result to matrix
             Params      	= SCNI_CheckReward(Params);                                                           
 
@@ -325,7 +319,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
     
 
     %% ================= WAIT FOR ITI TO ELAPSE
-    while (GetSecs - FrameOnset(end)) < Params.ImageExp.ITIms/10^3
+    while (GetSecs - FrameOnset(end)) < Params.ImageExp.ITIms/10^3 && Params.Run.ExpQuit == 0
         for Eye = 1:NoEyes 
             Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                             	% Clear previous frame
             if Params.Display.PD.Position > 1
@@ -377,8 +371,15 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun
     
 end
 
+
+%============== Run was aborted by experimenter
+if Params.Run.ExpQuit == 1
+
+
+end
+    
 SCNI_SendEventCode('Block_End', Params);   
-EndRun(Params);
+SCNI_EndRun(Params);
  
 
 end
@@ -392,6 +393,7 @@ function EndRun = CheckKeys(Params)
         if keyCode(Params.ImageExp.Keys.Stop) == 1                                  % Experimenter pressed quit key
             SCNI_SendEventCode('ExpAborted', Params);                               % Inform neurophys. system
             SCNI_EndRun(Params);
+            EndRun = 1;
         end
     end
 end

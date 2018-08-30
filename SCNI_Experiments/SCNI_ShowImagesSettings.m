@@ -110,7 +110,7 @@ Fig.TitleFontSize = 18;
 
 %============= Prepare GUI panels
 Fig.PanelNames      = {'Image selection','Image transforms','Image presentation'};
-Fig.PannelHeights   = [220, 200, 250];
+Fig.PannelHeights   = [220, 200, 260];
 BoxPos{1}           = [Fig.Margin, Fig.Rect(4)-Fig.PannelHeights(1)*Fig.DisplayScale-Fig.Margin*2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(1)*Fig.DisplayScale];   
 for i = 2:numel(Fig.PanelNames)
     BoxPos{i}           = [Fig.Margin, BoxPos{i-1}(2)-Fig.PannelHeights(i)*Fig.DisplayScale-Fig.Margin/2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(i)*Fig.DisplayScale];
@@ -135,17 +135,17 @@ Fig.UItransform.Enabled     = [1, ~Params.ImageExp.Fullscreen, 1, 1, 1,1,1,1];
 Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 
-Fig.UIpresent.Labels        = {'Experimental design','Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)','Fixation window (deg)'};
-Fig.UIpresent.Style        	= {'Popup', 'Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit','Edit'};
-Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIMs, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg};
-Fig.UIpresent.Values        = {Params.ImageExp.DesignType,[],[],[],[],[],Params.ImageExp.FixType,[],[],[]};
-Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1,1,1];
+Fig.UIpresent.Labels        = {'Experimental design','Trials per run','Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)','Fixation window (deg)'};
+Fig.UIpresent.Style        	= {'Popup', 'Edit','Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit','Edit'};
+Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.TrialsPerRun, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIMs, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg};
+Fig.UIpresent.Values        = {Params.ImageExp.DesignType,[],[],[],[],[],[],Params.ImageExp.FixType,[],[],[]};
+Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1,1,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
 Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
 Fig.PanelVars(1).Fieldnames = {'', '', 'FileFormat', 'SubdirOpt', '', '', '','SBS3D','Preload'};
 Fig.PanelVars(2).Fieldnames = {'Fullscreen','SizeDeg','UseAlpha','MaskType','Greyscale','Rotation','Contrast'};
-Fig.PanelVars(3).Fieldnames = {'DesignType','StimPerTrial','DurationMs','ISIMs','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg'};
+Fig.PanelVars(3).Fieldnames = {'DesignType','TrialsPerRun','StimPerTrial','DurationMs','ISIMs','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg'};
 
 Fig.OffOn           = {'Off','On'};
 PanelStructs        = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};
@@ -361,11 +361,19 @@ ParamsOut = Params;     % Output 'Params' struct
 
         %============= Panel 1 controls for directory selection
         if Indx1 == 1 && Indx2 == 1         %===== Change image directory
-                    Params.ImageExp.ImageDir	= uigetdir('/projects/','Select stimulus directory');
+                    ImageDir	= uigetdir('/projects/','Select stimulus directory');
+                    if ImageDir == 0
+                        return;
+                    end
+                    Params.ImageExp.ImageDir = ImageDir;
                     set(Fig.UIhandle(1,1),'string',Params.ImageExp.ImageDir);
 
         elseif Indx1 == 1 && Indx2 == 2      %===== Change background image directory
-                    Params.ImageExp.BckgrndDir	= uigetdir('/projects/','Select background image directory');
+                    BckgrndDir	= uigetdir('/projects/','Select background image directory');
+                    if BckgrndDir == 0
+                        return;
+                    end
+                    Params.ImageExp.BckgrndDir = BckgrndDir;
                     set(Fig.UIhandle(1,2),'string',Params.ImageExp.BckgrndDir);
                     
         else                                %============= All other controls
