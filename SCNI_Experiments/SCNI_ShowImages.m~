@@ -357,7 +357,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
             end
         end
         if Eye.Pixels(1) < Params.Display.Rect(3)
-            Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);                            % Draw current gaze position
+        Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);                            % Draw current gaze position
         end
         Params       	= SCNI_UpdateStats(Params);
 

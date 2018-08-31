@@ -1,35 +1,38 @@
-function [EyeX, EyeY] = SCNI_GetEyePos(Params)
+function [Eye] = SCNI_GetEyePos(Params)
 
 %============================ SCNI_GetEyePos ==============================
-% This function returns the subject's current eye position in screen
-% coordinates (pixels), for checking fixations and plotting gaze online. 
+% This function returns the subject's current (i.e instantaneous) eye 
+% position in multiple coordinates (Volts, degrees, pixels), for checking 
+% fixations and plotting gaze online. 
 %
 
 if ~isfield(Params, 'Eye')
-    Params.Eye.UseMouse = 1;
+    Params.Eye.CalMode = 1;
 end
 
-if Params.Eye.UseMouse == 0                                                     %============= Use
-    [EyeX, EyeY, V]     = GetEyePix(c);                                         % Get instantaneous eye position
-    EyeChannels         = Params.DPx.ADCchannelsUsed([1,2]);
-    Datapixx('RegWrRd');                                                        % Update registers for GetAdcStatus
-    status = Datapixx('GetAdcStatus');          
-    Datapixx('RegWrRd');                                                        % Update registers for GetAdcStatus
-    V       = Datapixx('GetAdcVoltages');                                       % Read ADC voltages for all channels                
+if Params.Eye.CalMode > 1                                        	%============= Use real eye position data
+    Datapixx('RegWrRd');                                                                % Update registers for GetAdcStatus
+    status = Datapixx('GetAdcStatus');                                                  % Check ADC status
+    Datapixx('RegWrRd');                                                                % Update registers for GetAdcStatus
+    V       = Datapixx('GetAdcVoltages');                                               % Read ADC voltages for all channels                
     Datapixx('RegWrRd'); 
-    DVA     = (V(Params.Eye.DPxChannels)+ Params.Eye.Offset).*Params.Eye.Gain;  % Convert volts into degrees of visual angle
-    EyeX    = Params.Display.Rect(3)/2 + DVA(1)*Params.Display.PixPerDeg(1);    % Convert degrees to pixels (sign change in X to account for camera invertion?)
-    EyeY    = Params.Display.Rect(4)/2 + DVA(2)*Params.Display.PixPerDeg(2);      
-    EyeXc   = EyeX - Params.Display.Rect(3)/2;
-    EyeYc   = EyeY - Params.Display.Rect(4)/2;
+    Eye.PupilV  = V(Params.Eye.DPxChannels([3,6]));                                     % Get Left pupil and Right pupil (V)
+    Eye.Volts   = V(Params.Eye.DPxChannels([1,2,4,5]));                                 % Get Left X, Left Y, Right X, Right Y (V)
+    Eye.Degrees = (Eye.Volts + Params.Eye.Cal.Offset).*Params.Eye.Cal.Gain;             % Convert volts into degrees of visual angle from center
+    Eye.Pixels  = Eye.Degrees.*Params.Display.PixPerDeg;                                % Convert degrees into screen pixels
+    Eye.PixCntr = Params.Display.Rect([3,4])/2 + Eye.Pixels;                            % Center pixels relative to screen center
     
-elseif Params.Eye.UseMouse == 1                                             %============= Use mouse cursor to simulate eye position
-    [EyeX, EyeY, buttons] = GetMouse(Params.Display.win);                   % Get mouse cursor position (relative to subject display)
-    EyeXc                 = EyeX-Params.Display.Rect(3)/2;                  % Find pixel location relative to center of experimenter display
-    EyeYc                 = EyeY-Params.Display.Rect(4)/2;                
-    if EyeX > Params.Display.Rect(3) && EyeX < 2*Params.Display.Rect(3)     % If mouse cursor is entering monkey's display...
-        HideCursor;                                                         % Turn cursor off!
-    else                                                                    % Otherwise, mouse in on an experimenter display
-        ShowCursor;                                                         % Show cursor
-    end
+elseif Params.Eye.CalMode == 1                                   	%============= Use mouse cursor to simulate eye position
+    [EyeX, EyeY, buttons] = GetMouse(Params.Display.win);                               % Get mouse cursor position (relative to subject display)
+    Eye.PupilV  = [];                                                                   % Return empty for pupil size
+    Eye.Volts   = []; 
+    Eye.Pixels  = [EyeX, EyeY];                                                         
+    Eye.PixCntr = Eye.Pixels-Params.Display.Rect([3,4])/2;                              % Center coordinates
+    Eye.Degrees = Eye.Pixels./Params.Display.PixPerDeg;                                 % Convert pixels to degrees
+end
+
+if Eye.Pixels(1) > Params.Display.Rect(3)                               % If gaze cursor is entering monkey's display...
+    HideCursor;                                                         % Turn cursor off!
+else                                                                    % Otherwise, mouse is on an experimenter display
+    ShowCursor;                                                         % Show cursor
 end

@@ -70,7 +70,7 @@ if Success < 1
     Params.ImageExp.TrialsPerRun = 100;                                     % Number of trials per run
     Params.ImageExp.ITIms       = 2000;                                     % Inter-trial interval (ms)
     Params.ImageExp.DurationMs  = 300;
-    Params.ImageExp.ISIMs       = 300;
+    Params.ImageExp.ISIms       = 300;
     Params.ImageExp.ISIjitter   = 200;                                      % Maximum temporal jitter (+/- ms) to change each ISI by
     Params.ImageExp.PosJitter   = 2;                                        % Maximum spatial jitter (+/- deg) to move stimulus from center each trial
     Params.ImageExp.ScaleJitter = 0;                                        % Maximum scaling jitter (+/- % original) to scale stimulus by on each trial
@@ -137,7 +137,7 @@ Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 
 Fig.UIpresent.Labels        = {'Experimental design','Trials per run','Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)','Fixation window (deg)'};
 Fig.UIpresent.Style        	= {'Popup', 'Edit','Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit','Edit'};
-Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.TrialsPerRun, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIMs, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg};
+Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.TrialsPerRun, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIms, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg};
 Fig.UIpresent.Values        = {Params.ImageExp.DesignType,[],[],[],[],[],[],Params.ImageExp.FixType,[],[],[]};
 Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1,1,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
@@ -145,7 +145,7 @@ Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
 Fig.PanelVars(1).Fieldnames = {'', '', 'FileFormat', 'SubdirOpt', '', '', '','SBS3D','Preload'};
 Fig.PanelVars(2).Fieldnames = {'Fullscreen','SizeDeg','UseAlpha','MaskType','Greyscale','Rotation','Contrast'};
-Fig.PanelVars(3).Fieldnames = {'DesignType','TrialsPerRun','StimPerTrial','DurationMs','ISIMs','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg'};
+Fig.PanelVars(3).Fieldnames = {'DesignType','TrialsPerRun','StimPerTrial','DurationMs','ISIms','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg'};
 
 Fig.OffOn           = {'Off','On'};
 PanelStructs        = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};

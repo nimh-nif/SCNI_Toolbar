@@ -6,12 +6,10 @@ function [Params] = SCNI_PlaySound(Params)
 
 
 %================= Load audio file
-repetitions = 1;
-% wavFilename     = [PsychtoolboxRoot 'PsychDemos' filesep 'SoundFiles' filesep 'funk.wav'];
-% [waveData, freq] = audioread(wavFilename);       	% Load the .wav file
-% waveData        = waveData';                        % Transpose so that each row has 1 channel
-freq            = 44000;
-waveData      	= (rand([1, round(freq*0.5)])*2)-1;
+repetitions     = 1;
+wavFilename     = '/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/BE_Coo_mov53.wav';
+[waveData, freq] = audioread(wavFilename);       	% Load the .wav file
+waveData        = waveData';                        % Transpose so that each row has 1 channel
 nChannels       = size(waveData, 1);                
 nTotalFrames    = size(waveData, 2);                
 
@@ -32,7 +30,7 @@ if Params.DPx.UseAudio == 0         %================= Play wav file through PC 
         Params.Audio.Penalty = PsychPortAudio('OpenSlave', pamaster, 1);            % Create slave channel
         PsychPortAudio('FillBuffer', Params.Audio.Penalty, Noise);             		% Add noise to buffer
     end
-    PsychPortAudio('Start', Params.Audio.Penalty, 1);                           % Play noise
+    PsychPortAudio('Start', Params.Audio.Penalxty, 1);                               % Play noise
 
 elseif Params.DPx.UseAudio == 1         %================= Play wav file through DataPixx2
     Datapixx('Open');                                   % Open Datapixx
@@ -51,17 +49,5 @@ elseif Params.DPx.UseAudio == 1         %================= Play wav file through
     Datapixx('RegWrRd');                                % Synchronize Datapixx registers to local register cache
     if (exist('OCTAVE_VERSION'))    
         fflush(stdout);
-    end
-    while 1                                             % Wait until schedule stops, or until a key is pressed
-        Datapixx('RegWrRd');                            % Update registers for GetAudioStatus
-        status = Datapixx('GetAudioStatus');
-        if ~status.scheduleRunning                      
-            break;
-        end
-        if KbCheck
-            Datapixx('StopAudioSchedule');
-            Datapixx('RegWrRd');                        % Synchronize Datapixx registers to local register cache
-            break;
-        end
     end
 end

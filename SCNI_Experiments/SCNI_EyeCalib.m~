@@ -80,11 +80,10 @@ switch Params.Eye.MarkerType
         Params.Eye.FixTex = SCNI_GenerateFixMarker(Fix, Params);
     
     case 2   	%============ Image fixation marker
-        Params.Eye.ImgTex = SCNI_LoadImages(Params);        
+        
         
     case 3      %============ Movie fixation marker
-        
-        
+    
 end
 
 %================ PREPARE GRID FOR EXP. DISPLAY
@@ -92,7 +91,8 @@ Params = SCNI_InitializeGrid(Params);
 
 %================= CACLULATE TARGET POSITIONS
 Params.Eye.NoPoints = Params.Eye.NoPointsList{Params.Eye.CalType}(Params.Eye.NoPoint);
-Params              = SCNI_GenerateCalTargets(Params);
+Params = SCNI_GenerateCalTargets(Params);
+    
 Params.Eye.GazeRect = [1, 1, Params.Eye.FixDist.*Params.Display.PixPerDeg];
 
 
@@ -184,15 +184,23 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
         while (GetSecs-Params.Run.StimOnTime) < Params.Eye.Duration/10^3 && Params.Run.ExpQuit == 0
 
             %=============== Get next texture
-            Pos     = Params.Design.PosMatrix(Params.Run.Number, Params.Run.StimCount);                 	% Get position number from design matrix
-            Stim    = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);                 	% Get stimulus number from design matrix
-            SCNI_SendEventCode(Stim, Pos);                                                                  % Send stimulus position number to neurophys. system 
-            if  Params.Eye.MarkerType > 1
-                Params.Eye.FixTex = Params.Eye.ImgTex(Stim);                                                % Get texture handle for next stimulus
+            Pos     = Params.Design.PosMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get condition number from design matrix
+            Stim    = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get stimulus number from design matrix
+            SCNI_SendEventCode(Stim, Params);                                                                               % Send stimulus number to neurophys. system 
+            ImageTex = Params.Eye.ImgTex{Cond}(Stim);                                                                 	% Get texture handle for next stimulus
+            if isfield(Params.Eye, 'BckgrndTex') && ~isempty(Params.Eye.BckgrndTex)                               % If background textures were loaded...
+                BackgroundTex = Params.Eye.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
+            else
+                BackgroundTex = [];
             end
-            
+
             %=============== Begin drawing to displays
-            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);               	% Clear previous frame                                                                          
+            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                	% Clear previous frame                                                                          
+
+            %============ Draw image texture
+%             Screen('DrawTexture', Params.Display.win, ImageTex, Params.Eye.SourceRectExp, RectExp, Params.Eye.Rotation, [], Params.Eye.MarkerContrast);        % Draw to the experimenter's display
+%             Screen('DrawTexture', Params.Display.win, ImageTex, Params.Eye.SourceRectMonk, RectMonk, Params.Eye.Rotation, [], Params.Eye.MarkerContrast);     % Draw to the subject's display
+
           	for Eye = 1:NoEyes     
                 %============ Draw photodiode marker
                 if Params.Display.PD.Position > 1

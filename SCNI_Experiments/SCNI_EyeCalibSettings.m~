@@ -38,8 +38,8 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
         end
     end
     Params.Eye.Cal.Labels       = {'Left','Right','Version','Vergence'};
-    Params.Eye.Cal.Offset       = {[0,0],[0,0],[0,0],[0,0]};
-    Params.Eye.Cal.Gain         = {[0,0],[0,0],[0,0],[0,0]};
+    Params.Eye.Cal.Offset       = {[0,0],[0,0],[0,0], [0,0]};
+    Params.Eye.Cal.Gain         = {[0,0], [0,0],[0,0], [0,0]};
     Params.Eye.Cal.Sign         = {1, 1, 1, 1};
 
 
