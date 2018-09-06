@@ -43,6 +43,11 @@ Params.Reward.TTLDur            = 0.05;                         % Set TTL pulse 
 Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
 Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 
+if ~isfield(Params, 'Eye')
+    Params = SCNI_EyeCalibSettings(Params);
+end
+Params.Eye.CalMode = 2;
+
 %================= OPEN NEW PTB WINDOW?
 % if ~isfield(Params.Display, 'win')
     HideCursor;   
@@ -55,9 +60,9 @@ Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 % end
 
 %================= INITIALIZE DATAPIXX
-if Params.DPx.UseDPx == 1
+%if Params.DPx.UseDPx == 1
     Params = SCNI_DataPixxInit(Params);
-end
+%end
 
 %================= INITIALIZE KEYBOARD SHORTCUTS
 KbName('UnifyKeyNames');
@@ -119,8 +124,7 @@ elseif Params.ImageExp.SBS3D == 0
     Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size], Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0]); 
     Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:);
 end
-Params.Display.GazeRect = Params.ImageExp.GazeRect;
-
+Params.Eye.GazeRect = Params.ImageExp.GazeRect;
 
 
 %================= LOAD / GENERATE STIMULUS ORDER
@@ -172,8 +176,8 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
 
             %=============== Check current eye position
             Eye         = SCNI_GetEyePos(Params);                                                           % Get screen coordinates of current gaze position (pixels)
-            EyeRect   	= repmat(round(Eye.Pixels([1,2])),[1,2])+[-10,-10,10,10];                           % Get screen coordinates of current gaze position (pixels)
-            [FixIn, FixDist]= IsInFixWin(Eye.Pixels(1), Eye.Pixels(2), [], [], Params);                   	% Check if gaze position is inside fixation window
+            EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2])+[-10,-10,10,10];            % Get screen coordinates of current gaze position (pixels)
+            [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, [], [], Params);            	% Check if gaze position is inside fixation window
 
             %=============== Check whether to deliver reward
             ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
@@ -196,7 +200,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
         	if Params.ImageExp.FixType > 1
                 Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectExp);
             end
-            if Eye.Pixels(1) < Params.Display.Rect(3)
+            if Eye(Params.Eye.EyeToUse).Pixels(1) < Params.Display.Rect(3)
                 Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);      % Draw current gaze position
             end
             Params       	= SCNI_UpdateStats(Params); 
@@ -277,13 +281,13 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
             end
 
             %=============== Check current eye position
-          	Eye         = SCNI_GetEyePos(Params);                                                  	% Get screen coordinates of current gaze position (pixels)
-            EyeRect   	= repmat(round(Eye.Pixels([1,2])),[1,2])+[-10,-10,10,10];                 	% Prepare rect to draw current gaze position                                   % Get screen coordinates of current gaze position (pixels)
-            [FixIn, FixDist]= IsInFixWin(Eye.Pixels(1), Eye.Pixels(2), [], [], Params);                                                         	% Check if gaze position is inside fixation window
+          	Eye         = SCNI_GetEyePos(Params);                                                             	% Get screen coordinates of current gaze position (pixels)
+            EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2])+[-10,-10,10,10];              	% Prepare rect to draw current gaze position                                   
+            [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, [], [], Params);               	% Check if gaze position is inside fixation window
 
             %=============== Check whether to deliver reward
-            ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);                          	% Find first NaN elements in fix matrix
-            Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];                    	% Save current fixation result to matrix
+            ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);            	% Find first NaN elements in fix matrix
+            Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];    	% Save current fixation result to matrix
             Params      	= SCNI_CheckReward(Params);                                                           
 
             %=============== Draw experimenter's overlay
@@ -302,7 +306,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
          	if Params.ImageExp.FixType > 1
                 Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectExp);
             end
-            if Eye.Pixels(1) < Params.Display.Rect(3)
+            if Eye(Params.Eye.EyeToUse).Pixels(1) < Params.Display.Rect(3)
                 Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);    % Draw current gaze position
             end
             Params         = SCNI_UpdateStats(Params);                                                      % Update statistics on experimenter's screen
@@ -337,8 +341,8 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
         end
 
         %=============== Check current eye position
-        Eye         = SCNI_GetEyePos(Params);                                                  	% Get screen coordinates of current gaze position (pixels)
-        EyeRect   	= repmat(round(Eye.Pixels([1,2])),[1,2]) +[-10,-10,10,10];                  % Prepare rect to draw current gaze position
+        Eye         = SCNI_GetEyePos(Params);                                                           % Get screen coordinates of current gaze position (pixels)
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2]) +[-10,-10,10,10];            % Prepare rect to draw current gaze position
         
         %=============== Check whether to deliver reward
         Params       	= SCNI_CheckReward(Params);                                                          
@@ -356,7 +360,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
                 Screen('FrameRect', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.ImageExp.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
             end
         end
-        if Eye.Pixels(1) < Params.Display.Rect(3)
+        if Eye(Params.Eye.EyeToUse).Pixels(1) < Params.Display.Rect(3)
             Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);                            % Draw current gaze position
         end
         Params       	= SCNI_UpdateStats(Params);
@@ -433,37 +437,6 @@ function Params	= AllocateRand(Params)
     end
 end
 
-%================= CHECK GAZE POSITION
-function [inside, distance] = IsInFixWin(EyeX, EyeY, TargetX, TargetY, Params)
-
-    if isempty(TargetX) || isempty(TargetY)     % If target coordinates were not provided...                       
-        TargetX = Params.Display.Rect(3)/2;  	% Calculate eye position relative to center of screen
-        TargetY = Params.Display.Rect(4)/2;
-    end
-    rect    = Params.ImageExp.GazeRect;         % Gaze window rectangle
-    shape   = Params.ImageExp.FixType>1;        % Gaze window shape
-    DiffX   = EyeX - TargetX;                   % Calculate distance between eye and target
-    DiffY   = EyeY - TargetY;                   
-
-    switch shape
-        case 0  %========= Rectangular ROI
-            if (EyeX >= rect(RectLeft) && EyeX <= rect(RectRight) && ...
-                    EyeY >= rect(RectTop) && EyeY <= rect(RectBottom) )
-                inside = 1;
-            else
-                inside = 0;
-            end
-            
-        case 1  %========= Circular ROI
-            if sqrt(DiffX^2 + DiffY^2) > diff(rect([RectLeft, RectRight]))/2
-                inside = 0;
-            elseif sqrt(DiffX^2 + DiffY^2) <= diff(rect([RectLeft, RectRight]))/2
-                inside = 1;
-            end
-    end
-    distance = sqrt((DiffX/Params.Display.PixPerDeg(1))^2 + (DiffY/Params.Display.PixPerDeg(2))^2); % Distance in degrees
-
-end
 
 %================= UPDATE EXPERIMENTER'S DISPLAY STATS
 function Params = SCNI_UpdateStats(Params)

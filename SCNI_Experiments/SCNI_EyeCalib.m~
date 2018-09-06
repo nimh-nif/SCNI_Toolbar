@@ -80,10 +80,11 @@ switch Params.Eye.MarkerType
         Params.Eye.FixTex = SCNI_GenerateFixMarker(Fix, Params);
     
     case 2   	%============ Image fixation marker
-        
+        Params.Eye.ImgTex = SCNI_LoadImages(Params);        
         
     case 3      %============ Movie fixation marker
-    
+        
+        
 end
 
 %================ PREPARE GRID FOR EXP. DISPLAY
@@ -91,8 +92,7 @@ Params = SCNI_InitializeGrid(Params);
 
 %================= CACLULATE TARGET POSITIONS
 Params.Eye.NoPoints = Params.Eye.NoPointsList{Params.Eye.CalType}(Params.Eye.NoPoint);
-Params = SCNI_GenerateCalTargets(Params);
-    
+Params              = SCNI_GenerateCalTargets(Params);
 Params.Eye.GazeRect = [1, 1, Params.Eye.FixDist.*Params.Display.PixPerDeg];
 
 
@@ -107,10 +107,12 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
 
     for StimNo = 1:Params.Eye.StimPerTrial                              % Loop through stimuli for this trial
         Params.Run.CurrentStimNo = StimNo;
+        LocIndx     = Params.Eye.Target.LocationOrder(StimNo);
+        GazeRect    = Params.Eye.Target.GazeRect{LocIndx};
         
         %% ================== WAIT FOR ISI TO ELAPSE ======================
         Params.Run.StimOffTime  = GetSecs;
-        while (GetSecs - Params.Run.StimOffTime) < Params.Eye.ISIms && Params.Run.ExpQuit == 0
+        while (GetSecs - Params.Run.StimOffTime) < Params.Eye.ISIms/10^3 && Params.Run.ExpQuit == 0
             
             Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                             % Clear previous frame
             for Eye = 1:NoEyes 
@@ -122,9 +124,9 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
 
             %=============== Check current eye position
             Eye         = SCNI_GetEyePos(Params);                                                           % Get screen coordinates of current gaze position (pixels)
-            EyeRect   	= repmat(round(Eye.Pixels([1,2])),[1,2]) +[-10,-10,10,10];                        	% Prepare rect to draw current gaze position
-            [FixIn, FixDist]= IsInFixWin(Eye.Pixels([1,2]), [], Params);                                   	% Check if gaze position is inside fixation window
-
+            EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels([1,2])),[1,2]) +[-10,-10,10,10]; 	% Prepare rect to draw current gaze position
+            [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, Params.Eye.Target.FixLocations(LocIndx,:), [], Params);            % Check if gaze position is inside fixation window
+            
             %=============== Check whether to deliver reward
             ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
             Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];   % Save current fixation result to matrix
@@ -138,7 +140,7 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
             end
             if Params.Display.Exp.GazeWinOn == 1
                 if Params.Eye.MarkerType > 1
-                    Screen('FrameOval', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.Eye.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
+                    Screen('FrameOval', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
                 elseif Params.Eye.MarkerType == 1
                     Screen('FrameRect', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.Eye.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
                 end
@@ -168,39 +170,22 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
         end
 
         %================= SET NEXT STIMULUS RECT
-        RectExp     = Params.Eye.RectExp;
-        RectMonk    = Params.Eye.RectMonk;
-        if Params.Eye.ScaleJitter ~= 0
-            RectExp     = Params.Eye.RectExp * Params.Run.ScaleJitter(Params.Run.StimCount);
-            RectMonk    = Params.Eye.RectMonk * Params.Run.ScaleJitter(Params.Run.StimCount);
-        end
-        if Params.Eye.PosJitter ~= 0
-            RectExp     = Params.Eye.RectExp + repmat(Params.Run.PosJitter(Params.Run.StimCount,:),[1,2]);
-            RectMonk    = Params.Eye.RectMonk + repmat(Params.Run.PosJitter(Params.Run.StimCount,:),[1,2]);
-        end
+        FixRectExp     = Params.Eye.Target.FixRects{LocIndx};
+        FixRectMonk    = FixRectExp + Params.Display.Rect([3,1,3,1]);
 
         %% ================= BEGIN NEXT IMAGE PRESENTATION ================
         Params.Run.StimOnTime = GetSecs;
         while (GetSecs-Params.Run.StimOnTime) < Params.Eye.Duration/10^3 && Params.Run.ExpQuit == 0
 
             %=============== Get next texture
-            Pos     = Params.Design.PosMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get condition number from design matrix
-            Stim    = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get stimulus number from design matrix
-            SCNI_SendEventCode(Stim, Params);                                                                               % Send stimulus number to neurophys. system 
-            ImageTex = Params.Eye.ImgTex{Cond}(Stim);                                                                 	% Get texture handle for next stimulus
-            if isfield(Params.Eye, 'BckgrndTex') && ~isempty(Params.Eye.BckgrndTex)                               % If background textures were loaded...
-                BackgroundTex = Params.Eye.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
-            else
-                BackgroundTex = [];
+            if Params.Eye.MarkerType > 1
+                Stim    = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);             	% Get stimulus number from design matrix
+                Params.Eye.FixTex = Params.Eye.ImgTex(Stim);                                                % Get texture handle for next stimulus
             end
-
+            %SCNI_SendEventCode(Stim, LocIndx);                                                                  % Send stimulus position number to neurophys. system 
+            
             %=============== Begin drawing to displays
-            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                	% Clear previous frame                                                                          
-
-            %============ Draw image texture
-%             Screen('DrawTexture', Params.Display.win, ImageTex, Params.Eye.SourceRectExp, RectExp, Params.Eye.Rotation, [], Params.Eye.MarkerContrast);        % Draw to the experimenter's display
-%             Screen('DrawTexture', Params.Display.win, ImageTex, Params.Eye.SourceRectMonk, RectMonk, Params.Eye.Rotation, [], Params.Eye.MarkerContrast);     % Draw to the subject's display
-
+            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);               	% Clear previous frame                                                                          
           	for Eye = 1:NoEyes     
                 %============ Draw photodiode marker
                 if Params.Display.PD.Position > 1
@@ -208,17 +193,17 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
                     Screen('FillOval', Params.Display.win, Params.Display.PD.Color{2}*255, Params.Display.PD.ExpRect);
                 end
                 %============ Draw fixation marker
-             	Screen('DrawTexture', Params.Display.win, Params.Eye.FixTex, [], Params.Display.FixRectMonk(Eye,:), Params.Eye.Rotation, [], Params.Eye.MarkerContrast);  	% Draw fixation marker
+             	Screen('DrawTexture', Params.Display.win, Params.Eye.FixTex, [], FixRectMonk(Eye,:), [], [], Params.Eye.MarkerContrast);  	% Draw fixation marker
             end
 
             %=============== Check current eye position
         	Eye         = SCNI_GetEyePos(Params);                                                           % Get screen coordinates of current gaze position (pixels)
-            EyeRect   	= repmat(round(Eye.Pixels([1,2])),[1,2]) +[-10,-10,10,10];                        	% Prepare rect to draw current gaze position
-            [FixIn, FixDist]= IsInFixWin(Eye.Pixels([1,2]), [], Params);                                   	% Check if gaze position is inside fixation window
-
+          	EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels([1,2])),[1,2]) +[-10,-10,10,10]; 	% Prepare rect to draw current gaze position
+            [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, Params.Eye.Target.FixLocations(LocIndx,:), [], Params);            % Check if gaze position is inside fixation window
+            
             %=============== Check whether to deliver reward
-            ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);                          	% Find first NaN elements in fix matrix
-            Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];                    	% Save current fixation result to matrix
+            ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);       	% Find first NaN elements in fix matrix
+            Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];  	% Save current fixation result to matrix
             Params      	= SCNI_CheckReward(Params);                                                           
 
             %=============== Draw experimenter's overlay
@@ -234,7 +219,7 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
                     Screen('FrameRect', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.Eye.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
                 end
             end
-            Screen('DrawTexture', Params.Display.win, Params.Eye.FixTex, [], Params.Display.FixRectMonk(Eye,:), Params.Eye.Rotation, [], Params.Eye.MarkerContrast);  	% Draw fixation marker
+            Screen('DrawTexture', Params.Display.win, Params.Eye.FixTex, [], FixRectExp, [], [], Params.Eye.MarkerContrast);  	% Draw fixation marker
             if Eye.Pixels(1) < Params.Display.Rect(3)
                 Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);    % Draw current gaze position
             end
@@ -270,8 +255,8 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
         end
 
         %=============== Check current eye position
-        Eye         = SCNI_GetEyePos(Params);                                                           % Get screen coordinates of current gaze position (pixels)
-      	EyeRect   	= repmat(round(Eye.Pixels([1,2])),[1,2]) +[-10,-10,10,10];                        	% Prepare rect to draw current gaze position
+        Eye         = SCNI_GetEyePos(Params);                                                               % Get screen coordinates of current gaze position (pixels)
+      	EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels([1,2])),[1,2]) +[-10,-10,10,10];       	% Prepare rect to draw current gaze position
             
         %=============== Check whether to deliver reward
         Params       	= SCNI_CheckReward(Params);                                                          
@@ -364,34 +349,6 @@ function SCNI_EndRun(Params)
     return;
 end
 
-%================= CHECK GAZE POSITION
-function [inside, distance] = IsInFixWin(EyeXY, TargetXY, Params)
-
-    if isempty(TargetXY)                            % If target coordinates were not provided...                       
-        TargetXY = Params.Display.Rect([3,4])/2;  	% Calculate eye position relative to center of screen
-    end
-    rect    = Params.Eye.GazeRect;              % Gaze window rectangle
-    shape   = Params.Eye.MarkerType>1;         	% Gaze window shape
-    DiffXY  = EyeXY - TargetXY;                	% Calculate distance between eye and target
-         
-    switch shape
-        case 1  %========= Rectangular ROI
-            if (EyeXY(1) >= rect(RectLeft) && EyeXY(1) <= rect(RectRight) && ...
-                    EyeXY(2) >= rect(RectTop) && EyeXY(2) <= rect(RectBottom) )
-                inside = 1;
-            else
-                inside = 0;
-            end
-            
-        case 0  %========= Circular ROI
-            if sqrt(sum(DiffXY.^2)) > diff(rect([RectLeft, RectRight]))/2
-                inside = 0;
-            elseif sqrt(sum(DiffXY.^2)) <= diff(rect([RectLeft, RectRight]))/2
-                inside = 1;
-            end
-    end
-    distance = sqrt(sum((DiffXY./Params.Display.PixPerDeg).^2));    % Distance in degrees
-end
 
 %================= UPDATE EXPERIMENTER'S DISPLAY STATS
 function Params = SCNI_UpdateStats(Params)

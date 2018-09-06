@@ -63,6 +63,7 @@ if Success < 1 || ~isfield(Params, 'Movie')                                     
     Params.Movie.Rotation       = 0;
     Params.Movie.Contrast       = 1;
     Params.Movie.SizeDeg        = [15, 10];
+    Params.Movie.FirstFrameDur  = [];                       % Duration to play static image of first frame for (ms)
     
     %============== Behavioural parameters
     Params.Movie.GazeRectBorder = 2;                        % Distance of gaze window border from edge of movie frame (degrees)
@@ -96,7 +97,7 @@ Fig.TitleFontSize = 18;
 
 %============= Prepare GUI panels
 Fig.PanelNames      = {'Movie selection','Movie transforms','Presentation'};
-Fig.PannelHeights   = [200, 220, 200];
+Fig.PannelHeights   = [200, 220, 240];
 BoxPos{1}           = [Fig.Margin, Fig.Rect(4)-Fig.PannelHeights(1)*Fig.DisplayScale-Fig.Margin*2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(1)*Fig.DisplayScale];   
 for i = 2:numel(Fig.PanelNames)
     BoxPos{i}           = [Fig.Margin, BoxPos{i-1}(2)-Fig.PannelHeights(i)*Fig.DisplayScale-Fig.Margin/2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(i)*Fig.DisplayScale];
@@ -118,17 +119,17 @@ Fig.UItransform.Enabled     = [1, ~Params.Movie.Fullscreen, 1, 1, 1,1,1,1];
 Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 
-Fig.UIpresent.Labels        = {'Run duration (s)', 'Duration per movie (s)', 'Inter-stim interval (s)', 'Fixation marker','Fixation size (deg)','Fixation color','Gaze contingent reward','Gaze rect border (deg)'};
-Fig.UIpresent.Style        	= {'Edit','Edit','Edit','Popupmenu','Edit','PushButton','Checkbox','Edit'};
-Fig.UIpresent.Defaults     	= {Params.Movie.RunDuration, Params.Movie.Duration, Params.Movie.ISI, Params.Movie.FixTypes,Params.Movie.FixSize,[],[], Params.Movie.GazeRectBorder};
-Fig.UIpresent.Values        = {[],[],[],Params.Movie.FixType,[],[],Params.Movie.FixRequired,[]};
-Fig.UIpresent.Enabled       = [1,1,1,1,0,0,1,Params.Movie.FixRequired];
+Fig.UIpresent.Labels        = {'Run duration (s)', 'Duration per movie (s)', 'Inter-stim interval (s)', 'Fixation marker','Fixation size (deg)','Fixation color','Gaze contingent reward','Gaze rect border (deg)','Pre-calibrate','First frame dur (ms)'};
+Fig.UIpresent.Style        	= {'Edit','Edit','Edit','Popupmenu','Edit','PushButton','Checkbox','Edit','Checkbox','Edit'};
+Fig.UIpresent.Defaults     	= {Params.Movie.RunDuration, Params.Movie.Duration, Params.Movie.ISI, Params.Movie.FixTypes,Params.Movie.FixSize,[],[], Params.Movie.GazeRectBorder, [],Params.Movie.FirstFrameDur};
+Fig.UIpresent.Values        = {[],[],[],Params.Movie.FixType,[],[],Params.Movie.FixRequired,[],Params.Movie.PreCalib,[]};
+Fig.UIpresent.Enabled       = [1,1,1,1,0,0,1,Params.Movie.FixRequired,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
 Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
 Fig.PanelVars(1).Fieldnames     = {'Dir','FileFormat','SubdirOpt','MovieConds','TotalMovies',[],[]};
 Fig.PanelVars(2).Fieldnames     = {'Fullscreen','SizeDeg','Rotation','Contrast','AudioOn','AudioVol','Rate'};
-Fig.PanelVars(3).Fieldnames     = {'RunDuration','Duration','ISI','FixType','FixSize','','FixRequired','GazeRectBorder'};
+Fig.PanelVars(3).Fieldnames     = {'RunDuration','Duration','ISI','FixType','FixSize','','FixRequired','GazeRectBorder','PreCalib','FirstFrameDur'};
 
 OfforOn         = {'Off','On'};
 PanelStructs    = {Fig.UImovies, Fig.UItransform, Fig.UIpresent};
@@ -281,8 +282,10 @@ ParamsOut = Params;     % Output 'Params' struct
         FixIndx = [1,2]+find(~cellfun(@isempty, strfind(Fig.PanelVars(3).Fieldnames, 'FixType')));
         if Params.Movie.FixType == 1
             set(Fig.UIhandle(3,FixIndx),'enable','off');
+            Params.Movie.FixOn          = 0;
         elseif Params.Movie.FixType > 1
             set(Fig.UIhandle(3,FixIndx),'enable','on');
+            Params.Movie.FixOn          = 1;
         end
         GazeRectIndx = find(~cellfun(@isempty, strfind(Fig.PanelVars(3).Fieldnames, 'GazeRectBorder')));
         if Params.Movie.FixRequired == 1

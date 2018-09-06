@@ -54,12 +54,6 @@ Params.Reward.TTLDur            = 0.05;                         % Set TTL pulse 
 Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
 Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 
-if ~isfield(Params, 'Eye')
-    Params = SCNI_EyeCalibSettings(Params);
-end
-Params.Eye.CalMode = 2;
-
-
 %================= OPEN NEW PTB WINDOW?
 % if ~isfield(Params.Display, 'win')
     CloseOnFinish = 1;
@@ -89,12 +83,12 @@ end
 Params.Run.MovieIndx = randi(numel(Params.Movie.AllFiles), [1, Params.Movie.TrialsPerRun]);  	% <<<< RANDOMIZED (FUDGE) movie order
 
 %================= GENERATE FIXATION TEXTURE
-Fix.Size        = Params.Movie.FixSize*Params.Display.PixPerDeg;
 if Params.Movie.FixType > 1
     Fix.Type        = Params.Movie.FixType-1;           % Fixation marker format
     Fix.Color       = Params.Movie.FixColor;           	% Fixation marker color (RGB, 0-1)
     Fix.MarkerSize  = Params.Movie.FixSize;            	% Fixation marker diameter (degrees)
     Fix.LineWidth   = 4;                                % Fixation marker line width (pixels)
+    Fix.Size        = Fix.MarkerSize*Params.Display.PixPerDeg;
     Params.Movie.FixTex = SCNI_GenerateFixMarker(Fix, Params);
 end
 
@@ -126,6 +120,7 @@ elseif Params.Movie.SBS == 0
     Params.Display.FixRectMonk(2,:)	= Params.Display.FixRectMonk(1,:);
 end
 Params.Eye.GazeRect = Params.Movie.GazeRect;
+
 
 
 %================= BEGIN RUN
@@ -166,8 +161,8 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];         	% Get screen coordinates of current gaze position (pixels)
+        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params);               	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
         ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
@@ -202,7 +197,7 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
             SCNI_SendEventCode('Stim_Off', Params);                           	% Send event code to connected neurophys systems
             Params.Run.StimOffTime = ISIoffset;                                	% Record time stamp at which stimulus was removed
         elseif Params.Run.StimIsOn == 0
-            if Params.Run.MovieCount == 1                                      	% If this is the first stimulus of the current trial...                                                          
+            if Params.Run.MovieCount == 1                                                    	% If this is the first stimulus of the current trial...                                                          
                 SCNI_SendEventCode('Fix_On', Params);                        	% Send event code to connected neurophys systems
             end
         end
@@ -212,7 +207,7 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
     
     %================= BEGIN CURRENT MOVIE PLAYBACK
-    Params.Run.StimOnTime = GetSecs;
+    MovieStarted = 0;
     while Params.Run.EndMovie == 0 && (FrameOnset(end)-Params.Run.StimOnTime) < Params.Movie.Duration
         
         %=============== Get next frame and draw to displays
@@ -235,8 +230,8 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params);	% Check if gaze position is inside fixation window
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];         	% Get screen coordinates of current gaze position (pixels)
+        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params);             	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
         ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
