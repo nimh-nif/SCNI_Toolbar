@@ -68,6 +68,7 @@ for k = 1:numel(KeyNames)
     eval(sprintf('Params.Eye.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
     eval(sprintf('Params.Eye.KeysList(Params.Eye.Keys.%s) = 1;', KeyFunctions{k}));
 end
+Params.Eye.Keys.Interval = 0.2; 
 
 %================= GENERATE FIXATION TEXTURE
 switch Params.Eye.MarkerType
@@ -256,7 +257,7 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);                                                               % Get screen coordinates of current gaze position (pixels)
-      	EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels([1,2])),[1,2]) +[-10,-10,10,10];       	% Prepare rect to draw current gaze position
+      	EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2]) +[-10,-10,10,10];                % Prepare rect to draw current gaze position
             
         %=============== Check whether to deliver reward
         Params       	= SCNI_CheckReward(Params);                                                          
@@ -311,7 +312,7 @@ end
 function EndRun = CheckKeys(Params)
     EndRun = 0;
     [keyIsDown,secs,keyCode] = KbCheck([], Params.Eye.KeysList);        	% Check keyboard for relevant key presses 
-    if keyIsDown && secs > Params.Run.LastPress+0.1                       	% If key is pressed and it's more than 100ms since last key press...
+    if keyIsDown && secs > Params.Run.LastPress+Params.Eye.Keys.Interval 	% If key is pressed and it's more than 100ms since last key press...
         Params.Run.LastPress   = secs;                                    	% Log time of current key press
         if keyCode(Params.Eye.Keys.Stop) == 1                           	% Experimenter pressed quit key
             SCNI_SendEventCode('ExpAborted', Params);                     	% Inform neurophys. system
@@ -329,10 +330,11 @@ end
 
 %=============== UPDATE CENTER GAZE POSITION
 function Params = SCNI_UpdateCenter(Params)
-
+    Eye         = SCNI_GetEyePos(Params);                                   % Get screen coordinates of current gaze position (pixels)
+    Params.Eye.Cal.Offset{Params.Eye.EyeToUse}  =  -Eye(Params.Eye.EyeToUse).Volts;
     
-
-
+    
+    Params.Eye.Cal.Offset{Params.Eye.EyeToUse}
 end
 
 %=============== END RUN
@@ -342,8 +344,7 @@ function SCNI_EndRun(Params)
     return;
 end
 
-
-%================= UPDATE EXPERIMENTER'S DISPLAY STATS
+%================= UPDATE EXPERIMENTER'S DISPLAY STATSc
 function Params = SCNI_UpdateStats(Params)
 
     %=============== Initialize experimenter display
@@ -374,6 +375,9 @@ function Params = SCNI_UpdateStats(Params)
                                     'Time elapsed    %02d:%02.0f\n\n',...
                                     'Reward count    %d\n\n',...
                                     'Valid fixation  %.0f %%'];
+        Params.Run.EyeTextFormat = ['Offset (V)      %.2f,  %.2f\n\n',...
+                                    'Gain (V/deg)    %.2f,  %.2f\n\n',...
+                                    'Invert          %d\n\n'];
         if Params.Display.Rect(3) > 1920
            Screen('TextSize', Params.Display.win, 40);
            Screen('TextFont', Params.Display.win, 'Courier');
@@ -390,6 +394,9 @@ function Params = SCNI_UpdateStats(Params)
 	Params.Run.TextContent      = [Params.Run.Number, Params.Run.TrialCount, Params.Eye.TrialsPerRun, Params.Run.CurrentStimNo, Params.Eye.StimPerTrial, Params.Run.CurrentMins, Params.Run.CurrentSecs, Params.Reward.RunCount, Params.Run.ValidFixPercent];
     Params.Run.TextString       = sprintf(Params.Run.TextFormat, Params.Run.TextContent);
 
+    Params.Run.EyeTextContent   = [Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, Params.Eye.Cal.Sign{Params.Eye.EyeToUse}];
+    Params.Run.EyeTextString    = [sprintf('Eye             %s\n\n', Params.Eye.Cal.Labels{Params.Eye.EyeToUse}), sprintf(Params.Run.EyeTextFormat, Params.Run.EyeTextContent)];
+    
     %========= Update stats bars
     Params.Run.Bar.Prog = {Params.Run.CurrentPercent, Params.Run.ValidFixPercent};
     for B = 1:numel(Params.Run.Bar.Labels)
@@ -404,4 +411,5 @@ function Params = SCNI_UpdateStats(Params)
         end
     end
     DrawFormattedText(Params.Display.win, Params.Run.TextString, Params.Run.TextRect(1), Params.Run.TextRect(2), Params.Run.TextColor);
+    DrawFormattedText(Params.Display.win, Params.Run.EyeTextString, Params.Run.TextRect(1), sum(Params.Run.TextRect([2,4]))+100, [1,0,0]*255);
 end

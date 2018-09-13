@@ -198,12 +198,12 @@ TipStr = {  'Set the viewing distance in centimetres (distance from observer to 
             'Set the diameter of the photodiode marker (pixels)',...
             'Set the contrast of the photdiode marker'};
 Tags        = {'VD','IPD','ScreenDim','Pixels','PixPerDeg','PDmarkerPos','PDmarkerSize', 'PDmarkerColor'};
-if ~isfield(Params.Display, 'Rect')
-    Params.Display.XScreenRect  = Resolution;
-    Params.Display.Rect         = Resolution;
-    Params.Display.PixPerCm   	= Params.Display.Rect([3,4])./Params.Display.ScreenDims;                         % Calculate number of pixels per centimetre
-    Params.Display.PixPerDeg 	= (Params.Display.PixPerCm*Params.Display.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
-end
+
+Params.Display.XScreenRect  = Screen('Rect',1);
+Params.Display.Rect         = Resolution;
+Params.Display.PixPerCm   	= Params.Display.Rect([3,4])./Params.Display.ScreenDims;                         % Calculate number of pixels per centimetre
+Params.Display.PixPerDeg 	= (Params.Display.PixPerCm*Params.Display.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
+
 PDpositions         = {'None','Bottom left','Top left','Top right','Bottom right'};
 PDcolorVals        	= {'OFF', 'ON'};
 DefaultAns          = {Params.Display.ViewingDist,Params.Display.IPD,Params.Display.ScreenDims,Params.Display.Rect([3,4]), Params.Display.PixPerDeg, PDpositions, Params.Display.PD.Diameter, Params.Display.PD.Color};     

@@ -36,11 +36,11 @@ if Params.Eye.CalMode > 1                                        	%=============
     
 elseif Params.Eye.CalMode == 1                                   	%============= Use mouse cursor to simulate eye position
     [EyeX, EyeY, buttons] = GetMouse(Params.Display.win);                                	% Get mouse cursor position (relative to subject display)
-    Eye(1).PupilV  = [];                                                                    % Return empty for pupil size
-    Eye(1).Volts   = []; 
-    Eye(1).Pixels  = [EyeX, EyeY];                                                         
+    Eye(1).PupilV  = [];                                                                    % Return empty for pupil size 
+    Eye(1).Pixels  = [EyeX, EyeY];                                                          % 
     Eye(1).PixCntr = Eye(1).Pixels-Params.Display.Rect([3,4])/2;                           	% Center coordinates
     Eye(1).Degrees = Eye(1).Pixels./Params.Display.PixPerDeg;                              	% Convert pixels to degrees
+	Eye(1).Volts   = (Eye(1).Degrees./Params.Eye.Cal.Gain{1})+Params.Eye.Cal.Offset{1};     % Convert degrees to volts
 end
 
 if Eye(1).Pixels(1) > Params.Display.Rect(3)                          	% If gaze cursor is entering monkey's display...

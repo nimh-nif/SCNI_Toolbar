@@ -104,7 +104,9 @@ if Params.Movie.Fullscreen == 1
     Params.Movie.RectMonk   = Params.Display.Rect + [Params.Display.Rect(3), 0, 0, 0];
     Params.Movie.GazeRect  	= Params.Movie.RectExp;
 elseif Params.Movie.Fullscreen == 0
-    Params.Movie.RectExp    = CenterRect([1, 1, Movie.width, Movie.height]*Params.Movie.Scale, Params.Display.Rect); 
+    MovieWidthPix           = Params.Movie.SizeDeg*Params.Display.PixPerDeg(2);
+    MovieHeightPix          = (Movie.height/Movie.width)*MovieWidthPix;
+    Params.Movie.RectExp    = CenterRect([1, 1, MovieWidthPix, MovieHeightPix], Params.Display.Rect); 
     Params.Movie.RectMonk   = Params.Movie.RectExp + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0];
     Params.Movie.GazeRect 	= Params.Movie.RectExp + [-1,-1, 1, 1]*Params.Movie.GazeRectBorder*Params.Display.PixPerDeg(1);  	% Rectangle specifying gaze window on experimenter's display (overridden if fullscreen is selected)
 end
@@ -216,17 +218,18 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
     while Params.Run.EndMovie == 0 && (FrameOnset(end)-Params.Run.StimOnTime) < Params.Movie.Duration
         
         %=============== Get next frame and draw to displays
-        if Params.Movie.Paused == 0
-            MovieTex = Screen('GetMovieImage', Params.Display.win, mov);                                                    % Get texture handle for next frame
-        end
+       	MovieTex = Screen('GetMovieImage', Params.Display.win, mov);                                                    % Get texture handle for next frame
+
         Screen('FillRect', Params.Display.win, Params.Movie.Background*255);                                             	% Clear previous frame
         for Eye = 1:NoEyes                                                                                                  % For each individual eye view...
             currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                                    % Select the correct stereo buffer
-            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp, Params.Movie.Rotation, [], Params.Movie.Contrast);      % Draw to the experimenter's display
-            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{Eye}, Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
+            if MovieTex > 0
+                Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp, Params.Movie.Rotation, [], Params.Movie.Contrast);      % Draw to the experimenter's display
+                Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{Eye}, Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
+            end
             if Params.Display.PD.Position > 1
-                Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Params.Movie.Paused+1}*255, Params.Display.PD.SubRect(Eye,:));
-                Screen('FillOval', Params.Display.win, Params.Display.PD.Color{~Params.Movie.Paused+1}*255, Params.Display.PD.ExpRect);
+                Screen('FillOval', Params.Display.win, Params.Display.PD.Color{2}*255, Params.Display.PD.SubRect(Eye,:));
+                Screen('FillOval', Params.Display.win, Params.Display.PD.Color{2}*255, Params.Display.PD.ExpRect);
             end
             if Params.Movie.FixOn == 1
                 Screen('DrawTexture', Params.Display.win, Params.Movie.FixTex, [], Params.Display.FixRectMonk(Eye,:));  	% Draw fixation marker
@@ -274,7 +277,9 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== 
         Params.Run.EndMovie = CheckKeys(Params);                                     	% Check for keyboard input
-        Screen('Close', MovieTex);                                                      % Close the last movie frame texture
+        if MovieTex > 0
+            Screen('Close', MovieTex);                                                 	% Close the last movie frame texture
+        end
     end
 
     %================= END MOVIE PLAYBACK
@@ -306,17 +311,7 @@ function EndMovie = CheckKeys(Params)
     [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
     if keyIsDown && secs > Params.Run.LastPress+0.1                              	% If key is pressed and it's more than 100ms since last key press...
         Params.Run.LastPress   = secs;                                            	% Log time of current key press
-        if keyCode(Params.Movie.Keys.Pause) == 1                                    % Experimenter pressed pause key
-            Params.Movie.Paused      = ~Params.Movie.Paused;                        % Toggle pause status
-            if Params.Movie.Paused == 1                                             % If paused...
-                Params.Movie.PauseTime = Screen('GetMovieTimeIndex', Params.Run.mov);          % Get the time point of pause
-                Screen('PlayMovie',Params.Run.mov, Params.Movie.Rate, Params.Movie.Loop, 0);
-            elseif Params.Movie.Paused == 0                                         % If unpaused...
-                Screen('SetMovieTimeIndex', Params.Run.mov, Params.Movie.PauseTime);        	% Set the movie time point to when paused
-                Screen('PlayMovie',Params.Run.mov, Params.Movie.Rate, Params.Movie.Loop, Params.Movie.AudioOn*Params.Movie.AudioVol);
-                Params.Run.StartTime = GetSecs-Params.Movie.PauseTime;              % Refresh start time
-            end
-        elseif keyCode(Params.Movie.Keys.VolUp) == 1
+        if keyCode(Params.Movie.Keys.VolUp) == 1
             Params.Movie.AudioVol = min([1, Params.Movie.AudioVol+Params.Movie.VolInc]);
             Screen('PlayMovie',Params.Run.mov, Params.Movie.Rate, Params.Movie.Loop, Params.Movie.AudioOn*Params.Movie.AudioVol);
         elseif keyCode(Params.Movie.Keys.VolDown) == 1
@@ -371,11 +366,11 @@ function Params = SCNI_UpdateStats(Params)
 	Params.Run.ValidFixPercent = nanmean(nanmean(Params.Run.ValidFixations(1:Params.Run.TrialCount,:,3)))*100;
 
     %========= Update clock
-    if Params.Movie.Paused == 1   
-         Params.Run.CurrentTime   = Params.Movie.PauseTime;
-    elseif Params.Movie.Paused == 0 
+%     if Params.Movie.Paused == 1   
+%          Params.Run.CurrentTime   = Params.Movie.PauseTime;
+%     elseif Params.Movie.Paused == 0 
         Params.Run.CurrentTime   = GetSecs-Params.Run.StartTime;                                            % Calulate time elapsed
-    end
+%     end
     Params.Run.CurrentMins      = floor(Params.Run.CurrentTime/60);                    
     Params.Run.TotalMins        = floor(Params.Run.Duration/60);
     Params.Run.CurrentSecs      = rem(Params.Run.CurrentTime, 60);

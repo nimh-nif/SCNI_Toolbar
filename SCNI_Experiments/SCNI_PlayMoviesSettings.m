@@ -217,7 +217,6 @@ ParamsOut = Params;     % Output 'Params' struct
 
                 
             case 2  %============ Save parameters to file
-                Params  = SCNI_GenerateDesign(Params, 0);   
                 Movie   = Params.Movie;
                 save(Params.File, 'Movie', '-append');
                 
