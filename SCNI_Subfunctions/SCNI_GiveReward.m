@@ -12,6 +12,14 @@ if Params.DPx.AnalogReward == 1 %=========== USE ANALOG OUT
     disp(Datapixx('GetDacStatus'));
     Params.Reward.RunCount = Params.Reward.RunCount + 1;
     
+%     Datapixx('RegWrRd');
+%     nChannels = Datapixx('GetDacNumChannels');
+%     dacRanges = Datapixx('GetDacRanges');
+%     Datapixx('SetDacVoltages', [0; 10]);
+%     WaitSecs(3);
+%     Datapixx('RegWrRd');
+%     Datapixx('SetDacVoltages', [0 ; 0]);
+    
 elseif Params.DPx.AnalogReward == 0 %=========== USE DIGITAL OUT
     bitValues           = 1;
     DecValues           = bi2de(bitValues);                         % Re-convert binary to decimal

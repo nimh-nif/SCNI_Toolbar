@@ -1,4 +1,4 @@
-function SCNI_SendEventCode(event, Params)
+function Params = SCNI_SendEventCode(event, Params)
 
 %========================== SCNI_SendEventCode.m ==========================
 % Sends the provided event code number to the appropriate neurophysiology
@@ -13,6 +13,10 @@ function SCNI_SendEventCode(event, Params)
 %
 %==========================================================================
 
+if ~isfield(Params,'EventCodes')                                    % If event codes were not already loaded...
+    Params.EventCodes  = SCNI_LoadEventCodes;                       % Load standard event codes
+end
+    
 if isa(event,'double')      %================== Event input is a double
     EventNumber     = event;
     if EventNumber > 8000	
@@ -21,11 +25,9 @@ if isa(event,'double')      %================== Event input is a double
     elseif EventNumber <= 8000
         EventString     = num2str(event);
     end
+    NumToSend = EventNumber;
     
 elseif ischar(event)    %================== Event input is a string
-    if ~isfield(Params,'EventCodes')                                    % If event codes were not already loaded...
-        Params.EventCodes  = SCNI_LoadEventCodes;                       % Load standard event codes
-    end
     EventNumber = find(~cellfun(@isempty, strfind(lower({Params.EventCodes.String}), lower(event))));
     if isempty(EventNumber)                                             % If the provided string does not match a standard event string...
         EventString = strfind(EventString, '_');                        % Try removing whitespace and underscores from input string
@@ -34,19 +36,18 @@ elseif ischar(event)    %================== Event input is a string
             error('''%s'' is not a recognized event string!', event);   
         end
     end
- 	EventString     = event;
+ 	EventString	= event;
+    NumToSend   = Params.EventCodes(EventNumber).TDTnumber; 
 end
 
 %================= Send event number to TDT over digital output
-if isfield(Params,'TDT') && Params.TDT.Enabled == 1
-    if ~isfield(Params.EventCodes,'DirectConnect') || Params.EventCodes.DirectConnect == 1
-        DirectConnect = 1;
-    else
+if Params.DPx.TDTonDOUT == 1                    % Is TDT connected to DataPixx via Digital outputs?
+    if Params.DPx.UseInterface == 0             % If TDT is NOT connected to DataPixx via the SCNI interface box...
+        DirectConnect = 1; 
+    elseif Params.DPx.UseInterface == 1         % If TDT IS connected to DataPixx via the SCNI interface box...
         DirectConnect = 0;
     end
-    
-    
-    SCNI_SetBitsTDT(Params.EventCodes(EventNumber).TDTnumber, DirectConnect);
+    SCNI_SetBitsTDT(NumToSend, DirectConnect);
 end
 
 %================= Send event string to OpenEphys over ethernet

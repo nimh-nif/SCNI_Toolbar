@@ -37,6 +37,8 @@ end
 if Success < 1                                                      % If the parameters could not be loaded...
     Params.Reward.TaskTypes         = {'Fixation','Saccade to target','Lever press'};
     Params.Reward.TaskType          = 1;
+    Params.Reward.Contingencies     = {'Time-based','Trial-based'};
+    Params.Reward.Contingency       = 1;
     
     Params.Reward.Proportion        = 0.7;                          % Set proportion of reward interval that fixation must be maintained for (0-1)
     Params.Reward.MeanIRI           = 4;                            % Set mean interval between reward delivery (seconds)
@@ -44,12 +46,13 @@ if Success < 1                                                      % If the par
     Params.Reward.LastRewardTime    = GetSecs;                      % Initialize last reward delivery time (seconds)
     Params.Reward.NextRewardInt     = Params.Reward.MeanIRI + rand(1)*Params.Reward.RandIRI;           	% Generate random interval before first reward delivery (seconds)
     Params.Reward.TTLDur            = 0.05;                         % Set TTL pulse duration (seconds)
+    Params.Reward.TTLnumber         = 1;                            % Set how many TTL pulses to send per reward
     Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
     
-    Params.Audio.Penalty.Type       = 'noise';
-    Params.Audio.Penalty.Duration   = 0.5;
-    Params.Audio.Penalty.Volume     = 1;
-    Params.Audio.Penalty.WavFile    = '/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/BE_Scream_mov64.wav';
+%     Params.Audio.Penalty.Type       = 'noise';
+%     Params.Audio.Penalty.Duration   = 0.5;
+%     Params.Audio.Penalty.Volume     = 1;
+%     Params.Audio.Penalty.WavFile    = '/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/BE_Scream_mov64.wav';
     
 end
 

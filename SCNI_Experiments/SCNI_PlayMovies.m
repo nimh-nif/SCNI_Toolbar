@@ -19,8 +19,8 @@ end
 
 %============== Keyboard shortcuts
 KbName('UnifyKeyNames');
-KeyNames                    = {'Space','X','uparrow','downarrow'};         
-KeyFunctions                = {'Pause','Stop','VolUp','VolDown'};
+KeyNames                    = {'Escape','R','S'};         
+KeyFunctions                = {'Stop','Reward','Sound'};
 Params.Movie.KeysList       = zeros(1,256); 
 for k = 1:numel(KeyNames)
     eval(sprintf('Params.Movie.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
@@ -42,8 +42,9 @@ Params.Run.MovieCount           = 1;                            % Start movie co
 Params.Run.TrialCount           = 1;
 Params.Run.ExpQuit              = 0;
 Params.Run.EndMovie             = 0;
-Params.Run.CurrentFile          = Params.Movie.ImByCond{1}{1};
+Params.Run.CurrentFile          = Params.Movie.AllFiles{4};
 Params.Run.StimIsOn             = 0;
+Params.Run.NoTTLs               = 35;
 
 Params.Reward.Proportion        = 0.7;                          % Set proportion of reward interval that fixation must be maintained for (0-1)
 Params.Reward.MeanIRI           = 4;                            % Set mean interval between reward delivery (seconds)
@@ -59,6 +60,14 @@ if ~isfield(Params, 'Eye')
 end
 Params.Eye.CalMode = 2;
 
+DefaultCalfile  = '/projects/SCNI/SCNI_Datapixx/Settings/Jasper_180919_calib.mat';
+[file,path]     = uigetfile('*_calib.mat', 'Select calibration parameters file', DefaultCalfile);
+CalibrationFile = fullfile(path, file);
+load(CalibrationFile);
+
+Params.Eye.EyeToUse                         = Cal.CurrentEye;
+Params.Eye.Cal.Gain{Params.Eye.EyeToUse}     = Cal.EyeGain;
+Params.Eye.Cal.Offset{Params.Eye.EyeToUse}   = Cal.EyeOffset;
 
 %================= OPEN NEW PTB WINDOW?
 % if ~isfield(Params.Display, 'win')
@@ -80,7 +89,8 @@ end
 
 %================= LOAD FIRST MOVIE FILE
 [mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Run.CurrentFile); 
-Params.Run.mov = mov;
+Params.Run.mov              = mov;
+[~,Params.Movie.Filename]   = fileparts(Params.Run.CurrentFile);  
 if isempty(Params.Movie.Duration)
     Params.Movie.Duration = Movie.duration;
 end
@@ -100,9 +110,20 @@ end
 
 %================= CALCULATE SCREEN RECTANGLES
 if Params.Movie.Fullscreen == 1
-    Params.Movie.RectExp    = Params.Display.Rect;
-    Params.Movie.RectMonk   = Params.Display.Rect + [Params.Display.Rect(3), 0, 0, 0];
+    ScreenAR    = Params.Display.Rect(3)/Params.Display.Rect(4);
+    MovieAR     = Movie.width/Movie.height;
+    if ScreenAR == MovieAR
+        Params.Movie.RectExp    = Params.Display.Rect;
+    elseif ScreenAR < MovieAR
+        YOffset              	= abs((Params.Display.Rect(4)- Params.Display.Rect(3)/MovieAR)/2);
+        Params.Movie.RectExp    = [Params.Display.Rect(1), YOffset, Params.Display.Rect(3), Params.Display.Rect(4)-YOffset];
+    elseif ScreenAR > MovieAR
+        XOffset              	= abs((Params.Display.Rect(3)- Params.Display.Rect(4)/MovieAR)/2);
+        Params.Movie.RectExp    = [XOffset, Params.Display.Rect(2), Params.Display.Rect(3)-XOffset, Params.Display.Rect(4)];
+    end
+    Params.Movie.RectMonk   = Params.Movie.RectExp + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0];
     Params.Movie.GazeRect  	= Params.Movie.RectExp;
+    
 elseif Params.Movie.Fullscreen == 0
     MovieWidthPix           = Params.Movie.SizeDeg*Params.Display.PixPerDeg(2);
     MovieHeightPix          = (Movie.height/Movie.width)*MovieWidthPix;
@@ -135,17 +156,16 @@ FrameOnset                  = GetSecs;
 while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
     
     Params.Run.MovieStartTime   = GetSecs;
-%     if Params.Run.MovieCount > 1
+	if Params.Run.MovieCount > 1
         SCNI_SendEventCode(Params.Run.MovieIndx(Params.Run.MovieCount), Params);                             % Send event code to connected neurophys systems
         Params.Run.CurrentFile      = Params.Movie.AllFiles{Params.Run.MovieIndx(Params.Run.MovieCount)};   
         [~,Params.Movie.Filename]   = fileparts(Params.Run.CurrentFile);  
         [mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Run.CurrentFile); 
         Params.Run.mov = mov;
-%     end
+	end
 
     %================= Initialize DataPixx/ send event codes
     AdcStatus = SCNI_StartADC(Params);                                  % Start DataPixx ADC
-    %ScannerOn = SCNI_WaitForTTL(Params, NoTTLs, 1, 1);                 % Wait for TTL pulses from MRI scanner
     SCNI_SendEventCode('Trial_Start', Params);                       	% Send event code to connected neurophys systems
 
    	%================= START PLAYBACK
@@ -168,12 +188,12 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2])+[-10,-10,10,10];                        % Get screen coordinates of current gaze position (pixels)
+        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
-        ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
-     	Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];   % Save current fixation result to matrix
+        ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);                     % Find first NaN elements in fix vector
+     	Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];               % Save current fixation result to matrix
        	Params       	= SCNI_CheckReward(Params);                                                           
 
         %=============== Draw experimenter's overlay
@@ -212,6 +232,11 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
         Params.Run.EndMovie = CheckKeys(Params);                                                                                    % Check for keyboard input
     end
 
+    %================= Wait for TTL sync?
+    if Params.Run.MovieCount == 1 && ~isempty(Params.DPx.ScannerChannel)              	% If this is the first trial...
+        ScannerOn               = SCNI_WaitForTTL(Params, Params.Run.NoTTLs, 1, 1);   	% Wait for TTL pulses from MRI scanner
+        Params.Run.StartTime  	= GetSecs;                                              % Reset start time to after TTLs
+    end
     
     %================= BEGIN CURRENT MOVIE PLAYBACK
     Params.Run.StimOnTime = GetSecs;
@@ -219,14 +244,13 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
         
         %=============== Get next frame and draw to displays
        	MovieTex = Screen('GetMovieImage', Params.Display.win, mov);                                                    % Get texture handle for next frame
-
         Screen('FillRect', Params.Display.win, Params.Movie.Background*255);                                             	% Clear previous frame
-        for Eye = 1:NoEyes                                                                                                  % For each individual eye view...
+        if MovieTex > 0
+            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp, Params.Movie.Rotation, [], Params.Movie.Contrast);      % Draw to the experimenter's display
+            Screen('DrawTexture', Params.Display.win, MovieTex, [], Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
+        end
+     	for Eye = 1:NoEyes  
             currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                                    % Select the correct stereo buffer
-            if MovieTex > 0
-                Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp, Params.Movie.Rotation, [], Params.Movie.Contrast);      % Draw to the experimenter's display
-                Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{Eye}, Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
-            end
             if Params.Display.PD.Position > 1
                 Screen('FillOval', Params.Display.win, Params.Display.PD.Color{2}*255, Params.Display.PD.SubRect(Eye,:));
                 Screen('FillOval', Params.Display.win, Params.Display.PD.Color{2}*255, Params.Display.PD.ExpRect);
@@ -238,8 +262,8 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params);	% Check if gaze position is inside fixation window
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
+        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, [], Params.Movie.FixOn==0, Params);	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
         ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
@@ -311,14 +335,12 @@ function EndMovie = CheckKeys(Params)
     [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
     if keyIsDown && secs > Params.Run.LastPress+0.1                              	% If key is pressed and it's more than 100ms since last key press...
         Params.Run.LastPress   = secs;                                            	% Log time of current key press
-        if keyCode(Params.Movie.Keys.VolUp) == 1
-            Params.Movie.AudioVol = min([1, Params.Movie.AudioVol+Params.Movie.VolInc]);
-            Screen('PlayMovie',Params.Run.mov, Params.Movie.Rate, Params.Movie.Loop, Params.Movie.AudioOn*Params.Movie.AudioVol);
-        elseif keyCode(Params.Movie.Keys.VolDown) == 1
-            Params.Movie.AudioVol = max([0, Params.Movie.AudioVol-Params.Movie.VolInc]);
-            Screen('PlayMovie',Params.Run.mov, Params.Movie.Rate, Params.Movie.Loop, Params.Movie.AudioOn*Params.Movie.AudioVol);
-        elseif keyCode(Params.Movie.Keys.Stop) == 1                     
+        if keyCode(Params.Movie.Keys.Stop) == 1                     
             EndMovie = 1;
+        elseif keyCode(Params.Movie.Keys.Reward) == 1                          	% Experimenter pressed manual reward key
+            Params = SCNI_GiveReward(Params);
+      	elseif keyCode(Params.Movie.Keys.Sound) == 1                          	% Experimenter pressed audio key
+            Params = SCNI_PlaySound(Params);   
         end
     end
 end

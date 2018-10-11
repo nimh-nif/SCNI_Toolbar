@@ -76,8 +76,8 @@ end
 
 
 
-PlayAudio(Params.Audio.Tones(2), Params)
-PlayAudio(Params.Audio.Wave(1), Params)
+% PlayAudio(Params.Audio.Tones(2), Params)
+% PlayAudio(Params.Audio.Wave(1), Params)
 
 ParamsOut = Params;
 

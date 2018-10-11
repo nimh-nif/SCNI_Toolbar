@@ -418,8 +418,8 @@ function Params = SCNI_UpdateStats(Params)
            Screen('TextSize', Params.Display.win, 40);
            Screen('TextFont', Params.Display.win, 'Courier');
         end
-        Params.Run.GainBoxRects{1}    = repmat([Params.Run.TextRect(1)+350, sum(Params.Run.TextRect([2,4]))+200],[1,2]) + [0,0,160,80];
-        Params.Run.GainBoxRects{2}    = Params.Run.GainBoxRects{1}+[180,0,180,0];
+        Params.Run.GainBoxRects{1}    = repmat([Params.Run.TextRect(1)+220, sum(Params.Run.TextRect([2,4]))+100],[1,2]) + [0,0,200,50];
+        Params.Run.GainBoxRects{2}    = Params.Run.GainBoxRects{1}+[100,0,100,0];
     end
 
 	Params.Run.ValidFixPercent = nanmean(nanmean(Params.Run.ValidFixations(1:Params.Run.TrialCount,:,3)))*100;

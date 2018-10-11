@@ -14,10 +14,17 @@ function SCNI_SetBitsTDT(val, dc)
 %   03/22/2018 - Updated to allow for connection via SCNI DataPixx-TDT interface
 %==========================================================================
 
-if nargin == 1 || dc == 0
-    MaxBits = 15;
-else
-    MaxBits = 13;
+% if nargin == 1 || dc == 0
+%     MaxBits = 15;
+% else
+%     MaxBits = 13;
+% end
+if dc == 1
+    StrobeCh    = 9;                    % Which channel/ bit TDT expects strobe on?
+    MaxBits     = 15;
+elseif dc == 0
+  	StrobeCh    = 6; 
+    MaxBits     = 16;
 end
 if ~strcmp(class(val),'double')  || val > (2^MaxBits)-1
     error('Input value ''val'' must be a double in the range 0-%d!', (2^MaxBits)-1);
@@ -28,7 +35,7 @@ if ~Datapixx('IsReady')                                         % If Datapixx is
    Datapixx('RegWrRd');                                         
 end
 
-StrobeCh            = 9;                                       % Which channel/ bit TDT expects strobe on?
+
 BinaryValue         = de2bi(val);                               % Convert input decimal to binary
 bitValues           = [zeros(1,StrobeCh), BinaryValue, zeros(1, MaxBits-length(BinaryValue))]; % Insert value in bit mask
 DecValues           = bi2de(bitValues);                         % Convert binary back to decimal
@@ -36,7 +43,9 @@ status              = Datapixx('GetDoutStatus');              	% Get digital out
 Datapixx('SetDoutValues', DecValues);%, bitMask);             	% Set digital output
 Datapixx('RegWrRd');        
 
-bitValues(StrobeCh) = 1;                                        % Set strobe bit high                   
+if dc == 1
+    bitValues(StrobeCh) = 1;                                  	% Set strobe bit high     
+end
 DecValues           = bi2de(bitValues);                         % Re-convert binary to decimal
 Datapixx('SetDoutValues', DecValues);%, bitMask);             	% Set digital output
 Datapixx('RegWrRd');

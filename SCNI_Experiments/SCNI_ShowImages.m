@@ -28,6 +28,7 @@ Params.Run.TrialCount           = 1;                            % Start trial co
 Params.Run.StimCount            = 1;
 Params.Run.ExpQuit              = 0;
 Params.Run.StimIsOn             = 0;
+Params.Run.FixIsOn              = 0;
 if ~isfield(Params.Run, 'Number')                               % If run count field does not exist...
     Params.Run.Number          	= 1;                            % This is the first run of the session
 else
@@ -66,7 +67,7 @@ Params.Eye.CalMode = 2;
 
 %================= INITIALIZE KEYBOARD SHORTCUTS
 KbName('UnifyKeyNames');
-KeyNames                    = {'X','R','S'};         
+KeyNames                    = {'Escape','R','S'};         
 KeyFunctions                = {'Stop','Reward','Sound'};
 Params.ImageExp.KeysList       = zeros(1,256); 
 for k = 1:numel(KeyNames)
@@ -143,11 +144,16 @@ FrameOnset              = GetSecs;
 while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit == 0
 
     %================= Initialize DataPixx/ send event codes
-    AdcStatus = SCNI_StartADC(Params);                                  % Start DataPixx ADC
-    %ScannerOn = SCNI_WaitForTTL(Params, NoTTLs, 1, 1);                 % Wait for TTL pulses from MRI scanner
-    SCNI_SendEventCode('Trial_Start', Params);                       	% Send event code to connected neurophys systems
+    AdcStatus = SCNI_StartADC(Params);                                      % Start DataPixx ADC
+    
+    %================= Wait for TTL sync?
+    if Params.Run.StimCount == 1 && ~isempty(Params.DPx.ScannerChannel)   	% If this is the first trial...
+    	ScannerOn               = SCNI_WaitForTTL(Params, NoTTLs, 1, 1);   	% Wait for TTL pulses from MRI scanner
+        Params.Run.StartTime  	= GetSecs;                                 	% Reset start time to after TTLs
+    end
+    SCNI_SendEventCode('Trial_Start', Params);                              % Send event code to connected neurophys systems
 
-    for StimNo = 1:Params.ImageExp.StimPerTrial                         % Loop through stimuli for this trial
+    for StimNo = 1:Params.ImageExp.StimPerTrial                             % Loop through stimuli for this trial
         Params.Run.CurrentStimNo = StimNo;
         
         %% ================== WAIT FOR ISI TO ELAPSE ======================
@@ -212,7 +218,8 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
                 SCNI_SendEventCode('Stim_Off', Params);                                                 % Send event code to connected neurophys systems
                 Params.Run.StimOffTime = ISIoffset;                                                     % Record time stamp at which stimulus was removed
             elseif Params.Run.StimIsOn == 0
-                if StimNo == 1                                                                          % If this is the first stimulus of the current trial...                                                          
+                if Params.Run.FixIsOn == 0                                                           	% If this is the first stimulus of the current trial...  
+                    Params.Run.FixIsOn = 1;
                     SCNI_SendEventCode('Fix_On', Params);                                             	% Send event code to connected neurophys systems
                 end
             end
@@ -241,14 +248,16 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
         while (GetSecs-Params.Run.StimOnTime) < Params.ImageExp.DurationMs/10^3 && Params.Run.ExpQuit == 0
 
             %=============== Get next texture
-            Cond = Params.Design.CondMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get condition number from design matrix
-            Stim = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get stimulus number from design matrix
-            SCNI_SendEventCode(Stim, Params);                                                                               % Send stimulus number to neurophys. system 
-            ImageTex = Params.ImageExp.ImgTex{Cond}(Stim);                                                                 	% Get texture handle for next stimulus
-            if isfield(Params.ImageExp, 'BckgrndTex') && ~isempty(Params.ImageExp.BckgrndTex)                               % If background textures were loaded...
-                BackgroundTex = Params.ImageExp.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
-            else
-                BackgroundTex = [];
+            if Params.Run.StimIsOn == 0                                                                                         % If this is first frame of stimulus presentation...
+                Cond = Params.Design.CondMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get condition number from design matrix
+                Stim = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get stimulus number from design matrix
+                SCNI_SendEventCode(Stim, Params);                                                                               % Send stimulus number to neurophys. system 
+                ImageTex = Params.ImageExp.ImgTex{Cond}(Stim);                                                                 	% Get texture handle for next stimulus
+                if isfield(Params.ImageExp, 'BckgrndTex') && ~isempty(Params.ImageExp.BckgrndTex)                               % If background textures were loaded...
+                    BackgroundTex = Params.ImageExp.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
+                else
+                    BackgroundTex = [];
+                end
             end
 
             %=============== Begin drawing to displays
@@ -329,6 +338,9 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
         Params.Run.StimCount = Params.Run.StimCount+1;                                                      % Count as one stimulus presentation
     end
     
+    %% ================= ANALYSE FIXATION
+    %Params = SCNI_CheckTrialEyePos(Params);
+    
 
     %% ================= WAIT FOR ITI TO ELAPSE
     while (GetSecs - FrameOnset(end)) < Params.ImageExp.ITIms/10^3 && Params.Run.ExpQuit == 0
@@ -370,11 +382,13 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.ExpQuit
         if Params.Run.StimIsOn == 1
             Params.Run.StimIsOn     = 0;
             SCNI_SendEventCode('Stim_Off', Params);                                                         % Send event code to connected neurophys systems
-            SCNI_SendEventCode('Fix_Off', Params);                                                          % Send event code to connected neurophys systems
             Params.Run.StimOffTime  = ISIoffset;
             Params.Run.StimOnTime   = ISIoffset;
         end
-        
+        if Params.Run.FixIsOn == 1
+            Params.Run.FixIsOn = 0;
+            SCNI_SendEventCode('Fix_Off', Params);                                                          % Send event code to connected neurophys systems
+        end
         %=============== Check experimenter's input
         Params.Run.ExpQuit = CheckKeys(Params);                                                     % Check for keyboard input
         if isfield(Params.Toolbar,'StopButton') && get(Params.Toolbar.StopButton,'value')==1    	% Check for toolbar input

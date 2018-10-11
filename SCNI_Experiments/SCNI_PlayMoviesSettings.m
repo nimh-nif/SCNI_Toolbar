@@ -127,7 +127,7 @@ Fig.UIpresent.Enabled       = [1,1,1,1,0,0,1,Params.Movie.FixRequired,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
 Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
-Fig.PanelVars(1).Fieldnames     = {'Dir','FileFormat','SubdirOpt','MovieConds','TotalMovies',[],[]};
+Fig.PanelVars(1).Fieldnames     = {'Dir','FileFormat','SubdirOpt','MovieConds','TotalMovies','SBS','Dome'};
 Fig.PanelVars(2).Fieldnames     = {'Fullscreen','SizeDeg','Rotation','Contrast','AudioOn','AudioVol','Rate'};
 Fig.PanelVars(3).Fieldnames     = {'RunDuration','Duration','ISI','FixType','FixSize','','FixRequired','GazeRectBorder','PreCalib','FirstFrameDur'};
 
@@ -328,6 +328,7 @@ ParamsOut = Params;     % Output 'Params' struct
                     Params.Movie.AllFiles      = [Params.Movie.AllFiles; Params.Movie.ImByCond{cond}];
                 end
         end
+        Params.Movie.AllFiles   = Params.Movie.AllFiles(~cellfun(@isempty, Params.Movie.AllFiles));
         Params.Movie.TotalMovies     = numel(Params.Movie.AllFiles);
         
         %========== Update GUI

@@ -15,21 +15,30 @@ for r = 1:Cal.RepsPerLoc
     Cal.LocationOrder	= [Cal.LocationOrder, randperm(Params.Eye.NoPoints, Params.Eye.NoPoints)];    	% Generate pseudo-random order of locations
 end
 Cal.FixmarkerRect     = [0, 0, Params.Eye.MarkerDiam*Params.Display.PixPerDeg];                        	% Size of fixation marker rect (pixels)
-Cal.GazeSourceRect    = [0, 0, Params.Eye.FixDist*2*Params.Display.PixPerDeg];                          % Size of gaze window rect (pixels)
+Cal.GazeSourceRect    = [0, 0, Params.Eye.FixDist*2*Params.Display.PixPerDeg];                        	% Size of gaze window rect (pixels)
 
 %============= GENERATE TARGET POSITIONS (DEGREES)
 if Params.Eye.CalType == 1          %======= Rectangular target grid
-    Cal.FixLocDirections  = [0,0; 1,1; 1,0; 1,-1; 0,-1; -1,-1; -1,0; -1,1; 0,1];                                % Specify XY locations for 9-point grid
-    Cal.FixLocations      = Cal.FixLocDirections*Params.Eye.PointDist.*repmat(Params.Display.PixPerDeg,[Params.Eye.NoPoints,1]);	% Scale grid to specified eccentricity (pixels)
-    Cal.FixLocations      = Cal.FixLocations + repmat(Params.Display.Rect([3,4])/2, [Params.Eye.NoPoints,1]);    	% Add half a display width and height offsets to center locations
-    Cal.FixLocationsDeg   = Cal.FixLocDirections*Params.Eye.PointDist; 
+    StepSize    = 1/Params.Eye.NoPoint;
+  	x           = -1:StepSize:1;
+    y           = x;
+    [X,Y]       = meshgrid(x,y);
+    Cal.FixLocDirections  = [reshape(X,[numel(X),1]), reshape(Y,[numel(Y),1])];
+    Cal.FixLocations      = Cal.FixLocDirections*Params.Eye.PointDist;
     
 elseif Params.Eye.CalType == 2      %======= Radial taget grid
-    
-    
-    Params.Eye.PointDist
-    
+    Cal.FixLocAngles        = 0:45:315;
+    Cal.Radii               = linspace(Params.Eye.PointDist, Params.Eye.PointDist*Params.Eye.NoPoint, Params.Eye.NoPoint);
+    Cal.FixLocDirections    = [0,0];
+    for r = 1:numel(Cal.Radii)
+        Cal.FixLocDirections    = [Cal.FixLocDirections; sind(Cal.FixLocAngles')*Cal.Radii(r), cosd(Cal.FixLocAngles')*Cal.Radii(r)];
+    end
+    Cal.FixLocations      = Cal.FixLocDirections;
 end
+Cal.FixLocations      = Cal.FixLocations.*repmat(Params.Display.PixPerDeg,[Params.Eye.NoPoints,1]);          % Scale grid to specified eccentricity (pixels)
+Cal.FixLocations      = Cal.FixLocations + repmat(Params.Display.Rect([3,4])/2, [Params.Eye.NoPoints,1]);  	 % Add half a display width and height offsets to center locations
+Cal.FixLocationsDeg   = Cal.FixLocDirections*Params.Eye.PointDist; 
+
    
 %============= ADJUST FOR STEREOSCOPIC PRESENTATION
 if Params.Eye.UseSBS3D == 0                                                                                 % If presenting in 2D...

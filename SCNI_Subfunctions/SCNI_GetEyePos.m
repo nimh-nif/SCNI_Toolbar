@@ -23,8 +23,8 @@ if Params.Eye.CalMode > 1                                        	%=============
         EyeToUse = Params.Eye.EyeToUse;
     end
     for e = EyeToUse                                                                        % For each eye...
-        Eye(e).PupilV  = V(Params.Eye.DPxChannels(Params.Eye.Pupilchannels{e}));         	% Get Left pupil and Right pupil (V)
-        Eye(e).Volts   = V(Params.Eye.DPxChannels(Params.Eye.XYchannels{e}));            	% Get Left X, Left Y, Right X, Right Y (V)
+        Eye(e).PupilV  = V(Params.Eye.Pupilchannels{e});                                    % Get Left pupil and Right pupil (V)
+        Eye(e).Volts   = V(Params.Eye.XYchannels{e});                                       % Get Left X, Left Y, Right X, Right Y (V)
         Eye(e).Degrees = (Eye(e).Volts + Params.Eye.Cal.Offset{e}).*Params.Eye.Cal.Gain{e};	% Convert volts into degrees of visual angle from center
         Eye(e).Pixels  = Eye(e).Degrees.*Params.Display.PixPerDeg;                      	% Convert degrees into screen pixels
         Eye(e).PixCntr = Params.Display.Rect([3,4])/2 + Eye(e).Pixels;                     	% Center pixels relative to screen center
@@ -35,6 +35,7 @@ if Params.Eye.CalMode > 1                                        	%=============
     end
     
 elseif Params.Eye.CalMode == 1                                   	%============= Use mouse cursor to simulate eye position
+    EyeToUse = 1;
     [EyeX, EyeY, buttons] = GetMouse(Params.Display.win);                                	% Get mouse cursor position (relative to subject display)
     Eye(1).PupilV  = [];                                                                    % Return empty for pupil size 
     Eye(1).Pixels  = [EyeX, EyeY];                                                          % 
@@ -43,7 +44,7 @@ elseif Params.Eye.CalMode == 1                                   	%=============
 	Eye(1).Volts   = (Eye(1).Degrees./Params.Eye.Cal.Gain{1})+Params.Eye.Cal.Offset{1};     % Convert degrees to volts
 end
 
-if Eye(1).Pixels(1) > Params.Display.Rect(3)                          	% If gaze cursor is entering monkey's display...
+if Eye(EyeToUse).Pixels(1) > Params.Display.Rect(3)                  	% If gaze cursor is entering monkey's display...
     HideCursor;                                                         % Turn cursor off!
 else                                                                    % Otherwise, mouse is on an experimenter display
     ShowCursor;                                                         % Show cursor

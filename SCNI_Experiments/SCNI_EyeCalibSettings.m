@@ -24,7 +24,7 @@ elseif exist('ParamsFile','var')
     end
 end
 [Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
-
+Params.Eye.FixPercent     	= 80;
 %=========== Load default parameters
 if Success < 1 || ~isfield(Params, 'Eye')                                         	% If the parameters could not be loaded...
     
@@ -34,7 +34,7 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
         if ~isempty(ChIndx)
             Params.Eye.DPxChannels(ch) = ChIndx;
         else
-            Params.Eye.DPxChannels(ch) = 0;
+            Params.Eye.DPxChannels(ch) = NaN;
         end
     end
     Params.Eye.CalibFile        = '';
@@ -62,7 +62,7 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
     Params.Eye.MarkerContrast   = 1;                        
     Params.Eye.Duration         = 1000;                     % Duration of each target presentation (ms)
     Params.Eye.TimeToFix        = 300;                      % Time from stimulus onset for subject to fixate target before abort (ms)
-    Params.Eye.FixDur           = [];                       % Duration taregt must be fixated for valid trial (default = until target disappears)
+    Params.Eye.FixPercent     	= 80;                       % Percentage duration target must be fixated for a valid trial (default = until target disappears)
     Params.Eye.FixDist          = 4;                        % Maximum distance gaze can stray from center of target (degrees)
     Params.Eye.StimPerTrial     = 5;                      	% Number of stimulus presentations per trial
     Params.Eye.TrialsPerRun     = 100;                  	% Number of trials per run
@@ -125,9 +125,9 @@ Fig.UIappearance.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScal
 Fig.UIappearance.Xwidth   	= [180, 200]*Fig.DisplayScale;
 
 
-Fig.UItiming.Labels         = {'Target duration (ms)','Fix duration (ms)','Fixation radius (deg)', 'Stim per trial','Trials per run', 'Inter-trial interval (ms)', 'Inter-stimulus interval (ms)'};
+Fig.UItiming.Labels         = {'Target duration (ms)','Fix duration (%)','Fixation radius (deg)', 'Stim per trial','Trials per run', 'Inter-trial interval (ms)', 'Inter-stimulus interval (ms)'};
 Fig.UItiming.Style          = {'edit','edit','edit','edit','edit','edit','edit'};
-Fig.UItiming.Defaults       = {Params.Eye.Duration, Params.Eye.FixDur, Params.Eye.FixDist, Params.Eye.StimPerTrial, Params.Eye.TrialsPerRun, Params.Eye.ITIms, Params.Eye.ISIms};
+Fig.UItiming.Defaults       = {Params.Eye.Duration, Params.Eye.FixPercent, Params.Eye.FixDist, Params.Eye.StimPerTrial, Params.Eye.TrialsPerRun, Params.Eye.ITIms, Params.Eye.ISIms};
 Fig.UItiming.Values         = {[],[],[],[],[],[],[]};
 Fig.UItiming.Enabled        = [1,1,1,1,1,1,1,1];
 Fig.UItiming.Ypos           = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
@@ -176,7 +176,7 @@ for p = 1:numel(Fig.PanelNames)
                     'FontSize', Fig.FontSize,...
                     'Callback', {@UpdateParams, p, n});
                 
-        if p == 2 && n == 6 
+        if p == 2 && n == 7 
             uicontrol(  'Style', 'pushbutton',...
                         'string','...',...
                         'Parent', Fig.PannelHandl(p),...
@@ -237,6 +237,12 @@ ParamsOut = Params;     % Output 'Params' struct
                 save(Params.File, 'Eye', '-append');
 
             case 3  %============ Run experiment
+                if Params.Eye.MarkerType == 2
+                    if ~isfield(Params.Display,'win')
+                        Params.Display.win = [];
+                    end
+                    Params = LoadImages(Params.Display.win, Params);
+                end
                 ParamsOut = Params;
                 close(Fig.Handle);
                 return;
@@ -249,13 +255,13 @@ ParamsOut = Params;     % Output 'Params' struct
     function UpdateParams(hObj, Evnt, Indx1, Indx2)
 
         %============= Panel 1 controls for directory selection
-        if Indx1 == 2 && Indx2 == 6         %===== Change stimulus directory
+        if Indx1 == 2 && Indx2 == 7         %===== Change stimulus directory
             ImageDir	= uigetdir('/projects/','Select stimulus directory');
             if ImageDir == 0
                 return;
             end
             Params.Eye.MarkerDir = ImageDir;
-            set(Fig.UIhandle(1,1),'string',Params.Eye.MarkerDir);
+            set(Fig.UIhandle(2,7),'string',Params.Eye.MarkerDir);
      
             
         elseif Indx1 == 1 & ismember([1,2,4,5,6], Indx2)             	%============= All other controls
@@ -302,5 +308,63 @@ ParamsOut = Params;     % Output 'Params' struct
         
     end
 
+
+    %==================== Pre-load selected images into GPU ===============
+    function Params = LoadImages(win, Params)
+        
+        if nargin == 0 || isempty(win)
+            Screen('Preference', 'VisualDebugLevel', 0);   
+            Params.Display.ScreenID = max(Screen('Screens'));
+            [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.Rect,[],[], [], []);
+            Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                                              % Enable alpha channel
+        end
+        LoadTextPos = (Params.Display.Rect([3,4])./[4,2]);
+        TextColor   = [1,1,1]*255;
+        Screen(Params.Display.win,'TextSize',60); 
+        wbh         = waitbar(0, '');                                                                                                       % Open a waitbar figure
+        StimCount   = 1;
+        
+        Params.Eye.AllStim = wildcardsearch(Params.Eye.MarkerDir, '*.png');
+        
+        %============= Load stimuli
+    	for Stim = 1:numel(Params.Eye.AllStim)                                                                                 % For each file...
+
+            %============= Update experimenter display
+            message = sprintf('Loading image %d of %d...\n',Stim, numel(Params.Eye.AllStim));
+            Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor);                                             	% Clear background
+            DrawFormattedText(Params.Display.win, message, LoadTextPos(1), LoadTextPos(2), TextColor);
+            Screen('Flip', Params.Display.win, [], 0);                                                                                	% Draw to experimenter display
+
+            waitbar(StimCount/Params.ImageExp.TotalImages, wbh, message);                                                               % Update waitbar
+            [keyIsDown, secs, keyCode, deltaSecs] = KbCheck();                                                                          % Check if escape key is pressed
+            if keyIsDown && keyCode(KbName('Escape'))                                                                                   % If so...
+                break;                                                                                                                  % Break out of loop
+            end
+
+            %============= Load next file
+            img = imread(Params.Eye.AllStim{Stim});                                                                         % Load image file
+            [~,~, imalpha] = imread(Params.Eye.AllStim{Stim});                                                          % Read alpha channel
+            if ~isempty(imalpha)                                                                                                 	% If image file contains transparency data...
+                img(:,:,4) = imalpha;                                                                                           	% Combine into a single RGBA image matrix
+            else
+                img(:,:,4) = ones(size(img,1),size(img,2))*255;
+            end
+
+            %============= Scale image
+%             if size(img,2) == size(img,1)
+%                 Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg;                                        % Convert requested image size from degrees to pixels
+%             else
+%                 Scale                       = [1, size(img,2)/size(img,1)];
+%                 Params.ImageExp.SizePix     = Params.ImageExp.SizeDeg.*Params.Display.PixPerDeg.*Scale;
+%             end
+
+            Params.Eye.ImgTex(Stim)     = Screen('MakeTexture', Params.Display.win, img);                                                       % Create a PTB offscreen texture for the stimulus
+        end
+        delete(wbh);                                                                                                                      	% Close the waitbar figure window
+        Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor);                                                                        % Clear background
+        DrawFormattedText(Params.Display.win, sprintf('All %d stimuli loaded!\n\nClick the ''Run'' button in the SCNI Toolbar to start the experiment.', Stim),  LoadTextPos(1), LoadTextPos(2), TextColor);
+        Screen('Flip', Params.Display.win);
+        
+    end
 
 end

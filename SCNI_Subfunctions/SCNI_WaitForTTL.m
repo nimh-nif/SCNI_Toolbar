@@ -20,15 +20,14 @@ Datapixx('RegWrRd');                                                        % Wr
 Datapixx('RegWrRd');                                                        % Give time for ADCs to convert, then read back data to local cache
 
 ScannerThresh   = 2.5;                                                      % Set voltage threshold (V)
-ScannerChannel  = find(~cellfun(@isempty, strfind(Params.DPx.ADCchannelLabels, 'Scanner')));    % Find which ADC channel the scanner is connected to
+ScannerChannel  = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInLabels, 'Scanner')));    % Find which ADC channel the scanner is connected to
 TTLcount        = 0;
 ScannerOn       = 0;
 
 while TTLcount < NoTTLs
     
     if Print == 1 && NoTTLs > 1                                                     % Print update to experimenter's screen only if waiting for more than 1 TTL pulse
-        currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Params.Display.ExperimenterBuffer);
-        DrawFormattedText(Params.Display.win, sprintf('Waiting for TTL pulse %d/ %d from scanner...', TTLcount+1, NoTTLs), 'center','center', Params.Display.TextColor);
+        DrawFormattedText(Params.Display.win, sprintf('Waiting for TTL pulse %d/ %d from scanner on DataPixx ADC channel %d...', TTLcount+1, NoTTLs, ScannerChannel-1), 500,'center', [1,1,1]*255);
         Screen('Flip', Params.Display.win);  
     end
     
@@ -63,7 +62,7 @@ end
 function CheckPress(Params)
     [keyIsDown, secs, keyCode, deltaSecs] = KbCheck();            	% Check if any key is pressed
     if keyIsDown 
-        if keyCode(KbName(Params.Run.Exit_Key))                    	% If so...
+        if keyCode(KbName('Escape'))                                % If so...
             Screen('CloseAll');
             Datapixx('Close');
             ShowCursor;

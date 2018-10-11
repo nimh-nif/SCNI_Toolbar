@@ -449,6 +449,7 @@ ParamsOut = Params;     % Output 'Params' struct
         end
         
         %========== Calculate GPU memory required for pre-loading
+        Params.ImageExp.AllImFiles = Params.ImageExp.AllImFiles(~cellfun(@isempty, Params.ImageExp.AllImFiles));
         if ~isempty(Params.ImageExp.AllImFiles)
             for n = 1:numel(Params.ImageExp.AllImFiles)
                 temp            = dir(Params.ImageExp.AllImFiles{n});

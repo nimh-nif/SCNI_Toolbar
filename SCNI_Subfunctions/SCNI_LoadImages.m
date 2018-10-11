@@ -7,7 +7,6 @@ function H = SCNI_LoadImages(Params, StimDirs, FileFormat, BckgDirs)
 % of the offscreen textures are returned ready for fast drawing to screen.
 %
 % 
-%
 %==========================================================================
 
 
@@ -40,53 +39,53 @@ wbh             = waitbar(0, '');                                      	% Open a
 for nd = 1:numel(StimDirs)                                            	% For each stimulus directory...
 
     if isfield(Params,'window')                                                                 % If a PTB window is open...
-        currentbuffer = Screen('SelectStereoDrawBuffer', Params.window, c.ExperimenterBuffer);  % Select experimenter's display    
+        currentbuffer = Screen('SelectStereoDrawBuffer', Params.window, ExperimenterBuffer);  % Select experimenter's display    
         Screen('FillRect', Params.window, Params.Display.Exp.BackgroundColor(1));               % Clear background
         DrawFormattedText(Params.window, sprintf('Loading image %d/%d...', n, TotalStim), LoadingTextPosX, LoadingTextPosY, TextColor);
         Screen('Flip', Params.window, [], 0);                                                	% Draw to experimenter display
     end
     
-    for Stim = 1:numel(c.StimFiles{Cond})                                                       % For each file...
+    for Stim = 1:numel(StimFiles{Cond})                                                        % For each file...
 
         %============= Update experimenter display
-        message = sprintf('Loading image %d of %d (Condition %d/ %d)...\n',Stim,numel(c.StimFiles{Cond}),Cond,c.NoCond);
-        waitbar(Stim/numel(c.StimFiles{Cond}), wbh, message);                                   % Update waitbar
+        message = sprintf('Loading image %d of %d (Condition %d/ %d)...\n',Stim,numel(StimFiles{Cond}),Cond,NoCond);
+        waitbar(Stim/numel(StimFiles{Cond}), wbh, message);                                     % Update waitbar
         [keyIsDown, secs, keyCode, deltaSecs] = KbCheck();                                      % Check if escape key is pressed
-        if keyIsDown && keyCode(c.Key_Exit)                                                     % If so...
+        if keyIsDown && keyCode(KbName('Escape'))                                             	% If so...
             break;                                                                              % Break out of loop
         end
 
         %============= Load next file
-        img = imread(fullfile(c.StimDir{Cond}, c.StimFiles{Cond}(Stim).name));                  % Load image file
-        [a,b, imalpha] = imread(fullfile(c.StimDir{Cond}, c.StimFiles{Cond}(Stim).name));       % Read alpha channel
+        img = imread(fullfile(StimDir{Cond}, StimFiles{Cond}(Stim).name));                      % Load image file
+        [a,b, imalpha] = imread(fullfile(StimDir{Cond}, StimFiles{Cond}(Stim).name));           % Read alpha channel
         if ~isempty(imalpha)                                                                    % If image file contains transparency data...
             img(:,:,4) = imalpha;                                                               % Combine into a single RGBA image matrix
         else
             img(:,:,4) = ones(size(img,1),size(img,2))*255;
         end
-        if [size(img,2), size(img,1)] ~= c.ImgSize                                              % If X and Y dimensions of image don't match requested...
-            img = imresize(img, c.ImgSize([2,1]));                                              % Resize image
+        if [size(img,2), size(img,1)] ~= ImgSize                                                % If X and Y dimensions of image don't match requested...
+            img = imresize(img, ImgSize([2,1]));                                                % Resize image
         end
-        if c.Stim_Color == 0                                                                    % If color was set to zero...
+        if Stim_Color == 0                                                                      % If color was set to zero...
             img(:,:,1:3) = repmat(rgb2gray(img(:,:,1:3)),[1,1,3]);                              % Convert RGB(A) image to grayscale
         end
 
-        if ~isempty(imalpha) && c.Stim_AddBckgrnd == 1 && ~isempty(c.BckgrndDir{Cond})        	% If image contains transparent pixels...         
-            Background = imread(fullfile(c.BckgrndDir{Cond}, c.BackgroundFiles{Cond}(Stim).name));	% Read in phase scrambled version of stimulus
-            Background = imresize(Background, c.ImgSize);                                       % Resize background image
-            if c.Stim_Color == 0
+        if ~isempty(imalpha) && Stim_AddBckgrnd == 1 && ~isempty(BckgrndDir{Cond})              % If image contains transparent pixels...         
+            Background = imread(fullfile(BckgrndDir{Cond}, BackgroundFiles{Cond}(Stim).name));	% Read in phase scrambled version of stimulus
+            Background = imresize(Background, ImgSize);                                         % Resize background image
+            if Stim_Color == 0
                 Background = repmat(rgb2gray(Background),[1,1,3]);
             end
             Background(:,:,4) = ones(size(Background(:,:,1)))*255;
-            c.BlockBKGs{Cond}(Stim) = Screen('MakeTexture', Params.window, Background);         % Create a PTB offscreen texture for the background
+            BlockBKGs{Cond}(Stim) = Screen('MakeTexture', Params.window, Background);         % Create a PTB offscreen texture for the background
         else
-            c.BlockBKGs{Cond}(Stim) = 0;
+            BlockBKGs{Cond}(Stim) = 0;
         end
-        c.BlockIMGs{Cond}(Stim) = Screen('MakeTexture', Params.window, img);                    % Create a PTB offscreen texture for the stimulus
+        BlockIMGs{Cond}(Stim) = Screen('MakeTexture', Params.window, img);                    % Create a PTB offscreen texture for the stimulus
     end
 
 end
 
 delete(wbh);                                                                                    % Close the waitbar figure window
-Screen('FillRect', Params.window, c.Col_bckgrndRGB);                                            % Clear background
+Screen('FillRect', Params.window, Col_bckgrndRGB);                                            % Clear background
 Screen('Flip', Params.window);

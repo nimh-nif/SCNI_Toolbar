@@ -21,7 +21,7 @@ FixRect    	= [0,0,FixSize];
 
 switch Fix.Type
     case 1                                                          %============== FILLED CIRCLE
-        Screen('FillOval', FixTexture, Fix.Color*255, [0,0,FixSize]);
+        Screen('FillOval', FixTexture, Fix.Color*255, [0,0,FixSize-[2,0]]);
     case 2                                                          %============== CROSS
         FixPos = [FixSize(1)/2, -FixSize(2)/2, 0, 0; 0, 0, FixSize(1)/2, -FixSize(2)/2];            % Specify line positions
         %Screen('FillOval', FixTexture, Params.Display.Exp.BackgroundColor*255, [0,0,FixSize]);   	% Draw filled circle same color as background
