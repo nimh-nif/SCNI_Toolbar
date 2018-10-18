@@ -12,7 +12,6 @@ if ~isfield(Params,'Reward')
     Params.Reward.NextRewardInt     = 2;
     Params.Reward.MeanIRI           = 4;
     Params.Reward.RandIRI           = 2;
-    
 end
 
 if GetSecs > Params.Reward.LastRewardTime + Params.Reward.NextRewardInt                              	% If next reward is due...                       

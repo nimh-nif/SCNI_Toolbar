@@ -12,6 +12,7 @@ function [Params, Success, Fig] = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, Op
 %
 %==========================================================================
 
+%============ Check inputs
 Params.File   	= [];
 Fig             = [];
 Success         = 0;
@@ -20,12 +21,19 @@ if ishghandle(GUIhandle)                                                    % If
     figure(GUIhandle);                                                      % Bring current GUI window to front
     Success     = 2;
     return; 
-end                 	
+end  
+if ~exist('OpenGUI','var')                                                  % If input argument OpenGUI was not provided...
+    OpenGUI = 1;                                                            % Default is to open a GUI window
+end
+
+%============ Check paths
 Fullmfilename   = mfilename('fullpath');                                    % Get m-filename
 [Path,~]       	= fileparts(Fullmfilename);                                 % Get path of m-file
 SCNI_ToolbarDir = fileparts(Path);                                          % Get path of SCNI Toolbar
 addpath(genpath(SCNI_ToolbarDir));                                          % Add SCNI Toolbar directories to Matlab path
 Params.Dir      = fullfile(Path, '../SCNI_Parameters');                     % Get the directory containing parameter files
+
+
 if ~exist('ParamsFile','var') || isempty(ParamsFile)                        % If a ParamsFile input was not provided, or is empty...
     [~, CompName] = system('hostname');                                     % Get the local computer's hostname
 	CompName(regexp(CompName, '\s')) = [];                                  % Remove white space
@@ -37,9 +45,24 @@ if ~exist('ParamsFile','var') || isempty(ParamsFile)                        % If
         end
     end
     ParamsFile  = Params.File;
-else
-    Params.File = ParamsFile;                                               
+    
+elseif exist('ParamsFile','var') & ~isempty(ParamsFile)                     % If 'ParamsFile' input was provided...
+    if ischar(ParamsFile) && exist(ParamsFile,'file')                     	% If it is a file string... 
+        Params = load(ParamsFile);                                          % Load it
+    elseif isstruct(ParamsFile)                                             % If it's a structure...
+        Params  = ParamsFile;                                               % Copy it
+%         if isfield(Params, 'File') && exist(Params.File,'file')            	% If parameters file exists...
+%             Params      = load(Params.File);                              	% Load the parameters and assign to structure 'Params'
+%             Params.File = ParamsFile;
+%         end
+    end
+    Success     = 1;
+    if OpenGUI == 0                                               	% If OpenGUI flag was zero...
+        return;                                                             
+    end
 end
+
+%============ Get figure window parameters
 Fig.ScreenSize   = get(0,'screensize');                                   	% Get size of display (pixels)
 Fig.DisplayScale = Fig.ScreenSize(4)/1080;                                	% Calculate display scale relative to 1080p
 if Fig.DisplayScale <= 1
@@ -51,17 +74,7 @@ elseif Fig.DisplayScale > 1
 end
 Fig.MsgBoxRect = [Fig.ScreenSize([3,4]), round([400, 150]*Fig.DisplayScale)];
 
-if ~exist('OpenGUI','var')                                                  % If input argument OpenGUI was not provided...
-    OpenGUI = 1;                                                            % Default is to open a GUI window
-end
-if isfield(Params, 'File') && exist(Params.File,'file')                     % If parameters file exists...
-    Params      = load(Params.File);                                        % Load the parameters and assign to structure 'Params'
-    Params.File = ParamsFile;
-    Success     = 1;
-    if OpenGUI == 0                                                         % If OpenGUI flag was zero...
-        return;                                                             
-    end
-end
+%============ Check that Params struct has requested field
 if ~isempty(Fieldname)
     if ~exist(Params.File,'file') || ~isfield(Params, Fieldname)
         if ~exist(Params.File,'file')                                           

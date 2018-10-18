@@ -1,9 +1,11 @@
 function ParamsOut = SCNI_EyeCalibSettings(ParamsFile, OpenGUI)
 
 %========================= SCNI_EyeCalibSettings.m ========================
+% This function provides a graphical user interface for setting parameters 
+% related to eye tracker calibration. Parameters can be saved and loaded, 
+% and the updated parameters are returned in the structure 'Params'.
 %
-%
-%
+%==========================================================================
 
 persistent Params Fig;
 
@@ -23,8 +25,9 @@ elseif exist('ParamsFile','var')
         ParamsFile  = Params.File;
     end
 end
-[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
-Params.Eye.FixPercent     	= 80;
+
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
+
 %=========== Load default parameters
 if Success < 1 || ~isfield(Params, 'Eye')                                         	% If the parameters could not be loaded...
     
@@ -43,9 +46,8 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
     Params.Eye.Cal.Labels       = {'Left','Right','Version','Vergence'};
     Params.Eye.Cal.Offset       = {[0,0],[0,0],[0,0],[0,0]};
     Params.Eye.Cal.Gain         = {[6,6],[6,6],[6,6],[6,6]};
-    Params.Eye.Cal.Sign         = {1, 1, 1, 1};
+    Params.Eye.Cal.Sign         = {[1,1], [1,1], [1,1], [1,1]};
     Params.Eye.EyeToUse         = 1;
-
     Params.Eye.CalModes         = {'Mouse simulation','Manual calibration','Auto calibration','Fix. training - staircase'};
     Params.Eye.CalMode          = 1;
     Params.Eye.CenterOnly       = 1;
@@ -70,7 +72,8 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
     Params.Eye.ISIms            = 300;                      % Inter-stimulus interval (ms)
     Params.Eye.UseSBS3D         = 0;                        % Use side-by-side stereoscopic 3D presentation?
     Params.Eye.DisparityRange   = [0, 0];                   % Range of binocular disparities to present targets at (min, max) (degrees)
-
+    Params.Eye.XYselected      	= 1;                        % X position is selected by default
+    Params.Eye.GainIncrement   	= 0.1;                      % Increment size for manual changes of gain (degrees per Volt)
 elseif Success > 1
     ParamsOut = Params;
 	return;
@@ -109,18 +112,18 @@ end
 
 Fig.UIinputs.Labels         = {'Eye XY channels', 'Eye pupil channels','Eye to use','Offset XY (V)','Degrees per V','Inverted'};
 Fig.UIinputs.Style          = {'Edit','Edit','popup','Edit','Edit','Checkbox'};
-Fig.UIinputs.Defaults       = {num2str(Params.Eye.XYchannels{Params.Eye.EyeToUse}), num2str(Params.Eye.Pupilchannels{Params.Eye.EyeToUse}), Params.Eye.Cal.Labels, [], [], []};
-Fig.UIinputs.Values         = {[],[],Params.Eye.EyeToUse, Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, Params.Eye.Cal.Sign{Params.Eye.EyeToUse}==-1};
+Fig.UIinputs.Defaults       = {num2str(Params.Eye.XYchannels{Params.Eye.EyeToUse}), num2str(Params.Eye.Pupilchannels{Params.Eye.EyeToUse}), Params.Eye.Cal.Labels, Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, {[],[]}};
+Fig.UIinputs.Values         = {[],[],Params.Eye.EyeToUse, Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, Params.Eye.Cal.Sign{Params.Eye.EyeToUse}};
 Fig.UIinputs.Enabled        = [0, 0, 1, 0, 0, 0];
 Fig.UIinputs.Tips           = {'','','','','',''};
 Fig.UIinputs.Ypos           = [(Fig.PannelHeights(1)-50):-20:10]*Fig.DisplayScale;
 Fig.UIinputs.Xwidth         = [180, 200]*Fig.DisplayScale;
 
 Fig.UIappearance.Labels    	= {'Calibration mode','Center only','Target layout', 'No. targets', 'Target spacing (deg)','Marker type','Marker directory','Marker diameter (deg)','Marker color'};
-Fig.UIappearance.Style     	= {'popup', 'checkbox','popup','popup', 'edit','popup','edit', 'edit', 'edit'};
-Fig.UIappearance.Defaults 	= {Params.Eye.CalModes, [], Params.Eye.CalTypes, Params.Eye.NoPointsList{Params.Eye.CalType}, Params.Eye.PointDist, Params.Eye.MarkerTypes, Params.Eye.MarkerDir, Params.Eye.MarkerDiam, Params.Eye.MarkerColor};
+Fig.UIappearance.Style     	= {'popup', 'checkbox','popup','popup', 'edit','popup','edit', 'edit', 'pushbutton'};
+Fig.UIappearance.Defaults 	= {Params.Eye.CalModes, [], Params.Eye.CalTypes, Params.Eye.NoPointsList{Params.Eye.CalType}, Params.Eye.PointDist, Params.Eye.MarkerTypes, Params.Eye.MarkerDir, Params.Eye.MarkerDiam, []};
 Fig.UIappearance.Values   	= {Params.Eye.CalMode, Params.Eye.CenterOnly, Params.Eye.CalType, Params.Eye.NoPoint, [], Params.Eye.MarkerType, [], [], []};
-Fig.UIappearance.Enabled   	= [1,1,1,1,1,1,Params.Eye.MarkerType>1,1,Params.Eye.MarkerType<1];
+Fig.UIappearance.Enabled   	= [1,1,1,1,1,1,Params.Eye.MarkerType>1,1,1];
 Fig.UIappearance.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UIappearance.Xwidth   	= [180, 200]*Fig.DisplayScale;
 
@@ -146,7 +149,7 @@ Fig.UItiming.Tips           = {'Duration of each target presentation (ms)',...
 
 Fig.PanelVars(1).Fieldnames = {'XYchannels','Pupilchannels','EyeToUse','Cal.Offset','Cal.Gain','Cal.Sign'};
 Fig.PanelVars(2).Fieldnames = {'CalMode','CenterOnly','CalType','NoPoint','PointDist','MarkerType','MarkerDir','MarkerDiam', 'MarkerColor'};
-Fig.PanelVars(3).Fieldnames = {'Duration','FixDur','FixDist','StimPerTrial','TrialsPerRun','ITIms','ISIms'};
+Fig.PanelVars(3).Fieldnames = {'Duration','FixPercent','FixDist','StimPerTrial','TrialsPerRun','ITIms','ISIms'};
 
 Fig.OffOn           = {'Off','On'};
 PanelStructs        = {Fig.UIinputs, Fig.UIappearance, Fig.UItiming};
@@ -166,16 +169,29 @@ for p = 1:numel(Fig.PanelNames)
                     'Parent', Fig.PannelHandl(p),...
                     'HorizontalAlignment', 'left',...
                     'FontSize', Fig.FontSize);
-        Fig.UIhandle(p,n) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
-                    'String', PanelStructs{p}.Defaults{n},...
-                    'Value', PanelStructs{p}.Values{n},...
-                    'Enable', Fig.OffOn{PanelStructs{p}.Enabled(n)+1},...
-                    'Position', [Fig.Margin + PanelStructs{p}.Xwidth(1), PanelStructs{p}.Ypos(n), PanelStructs{p}.Xwidth(2), 20*Fig.DisplayScale],...
-                    'Parent', Fig.PannelHandl(p),...
-                    'HorizontalAlignment', 'left',...
-                    'FontSize', Fig.FontSize,...
-                    'Callback', {@UpdateParams, p, n});
-                
+        if p == 1 && n >= 4
+            for xy = 1:2
+            	Fig.UIhandle(p,n) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
+                        'String', PanelStructs{p}.Defaults{n}(xy),...
+                        'Value', PanelStructs{p}.Values{n}(xy),...
+                        'Enable', Fig.OffOn{PanelStructs{p}.Enabled(n)+1},...
+                        'Position', [Fig.Margin + PanelStructs{p}.Xwidth(1)+((xy-1)*(PanelStructs{p}.Xwidth(2)/2+Fig.Margin)), PanelStructs{p}.Ypos(n), PanelStructs{p}.Xwidth(2)/2, 20*Fig.DisplayScale],...
+                        'Parent', Fig.PannelHandl(p),...
+                        'HorizontalAlignment', 'left',...
+                        'FontSize', Fig.FontSize,...
+                        'Callback', {@UpdateParams, p, n, xy});
+            end
+        else
+            Fig.UIhandle(p,n) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
+                        'String', PanelStructs{p}.Defaults{n},...
+                        'Value', PanelStructs{p}.Values{n},...
+                        'Enable', Fig.OffOn{PanelStructs{p}.Enabled(n)+1},...
+                        'Position', [Fig.Margin + PanelStructs{p}.Xwidth(1), PanelStructs{p}.Ypos(n), PanelStructs{p}.Xwidth(2), 20*Fig.DisplayScale],...
+                        'Parent', Fig.PannelHandl(p),...
+                        'HorizontalAlignment', 'left',...
+                        'FontSize', Fig.FontSize,...
+                        'Callback', {@UpdateParams, p, n});
+        end
         if p == 2 && n == 7 
             uicontrol(  'Style', 'pushbutton',...
                         'string','...',...
@@ -186,6 +202,8 @@ for p = 1:numel(Fig.PanelNames)
 
     end
 end
+set(Fig.UIhandle(2,9), 'backgroundcolor', Params.Eye.MarkerColor);
+
 
 %================= OPTIONS PANEL
 uicontrol(  'Style', 'pushbutton',...
@@ -285,6 +303,12 @@ ParamsOut = Params;     % Output 'Params' struct
                     NewValue = get(hObj, 'value');
                 case 'popupmenu'
                     NewValue = get(hObj, 'value');
+                case 'pushbutton'
+                    Color = uisetcolor(Params.Eye.MarkerColor);
+                    if numel(Color)>1
+                        set(hObj, 'Background', Color);
+                        NewValue = Color;
+                    end
             end
             eval(sprintf('Params.Eye.%s = %d;', Fig.PanelVars(Indx1).Fieldnames{Indx2}, NewValue));
         end

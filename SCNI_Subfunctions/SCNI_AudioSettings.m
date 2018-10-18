@@ -21,7 +21,7 @@ elseif exist('ParamsFile','var')
         ParamsFile  = Params.File;
     end
 end
-[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
 
 %=========== Load default parameters
 if Success < 1 || ~isfield(Params, 'Audio')                                         	% If the parameters could not be loaded...
@@ -38,35 +38,31 @@ if Success < 1 || ~isfield(Params, 'Audio')                                     
     Params.Audio.WakeUp         = 4;        % List of possible audio files to play when subject falls asleep
 
 
-
 end
 
-
-
-
-
 Params                      = InitAudio(Params);                  	% Initialize audio buffers
-
-
 
 %============ Generate some tones
 Params.Audio.Tones(1).Name      = 'FixOn';          % Tone name (e.g. use description)
 Params.Audio.Tones(1).Freq      = 500;              % Tone frequency (Hz)
 Params.Audio.Tones(1).Dur       = 0.3;              % Tone duration (seconds)
 Params.Audio.Tones(1).Vol       = 0.2;              % Tone volume (relative to master volume)
-Params.Audio.Tones(1).Type      = 'puretone';         
+Params.Audio.Tones(1).Type      = 'puretone'; 
+Params.Audio.Tones(1).SampleRate= Params.Audio.SampleRate;
 
 Params.Audio.Tones(2).Name      = 'Error';       	% Tone name (e.g. use description)
 Params.Audio.Tones(2).Freq      = 200;              % Tone frequency (Hz)
 Params.Audio.Tones(2).Dur       = 0.3;              % Tone duration (seconds)
 Params.Audio.Tones(2).Vol       = 0.5;              % Tone volume (relative to master volume)
 Params.Audio.Tones(2).Type      = 'puretone';     
+Params.Audio.Tones(2).SampleRate= Params.Audio.SampleRate;
 
 Params.Audio.Tones(3).Name      = 'WakeUp';       	% Tone name (e.g. use description)
 Params.Audio.Tones(3).Freq      = 500;              % Tone frequency (Hz)
 Params.Audio.Tones(3).Dur       = 0.3;              % Tone duration (seconds)
 Params.Audio.Tones(3).Vol       = 0.5;              % Tone volume (relative to master volume)
 Params.Audio.Tones(3).Type      = 'white_noise';     
+Params.Audio.Tones(3).SampleRate= Params.Audio.SampleRate;
 
 for t = 1:numel(Params.Audio.Tones)
     Params.Audio.Tones(t).Wave      = GenerateWave(Params.Audio.Tones(t), Params);

@@ -14,7 +14,7 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(Fig.Handle)
     Fig.Fontsize      = 14;
     Fig.GazeWinPos    = [1, 400, 1100, 600];
     if ismac && exist('c','var')
-        Fig.GazeWinPos = Fig.GazeWinPos+[Params.Display.Rect(3)*2,0,0,0];
+        Fig.GazeWinPos = Fig.GazeWinPos+[c.Display.Rect(3)*2,0,0,0];
     end
     Fig.Handle        = figure('name','SCNI_PlotEyeData','position',Fig.GazeWinPos,'color',Fig.Background);
     FirstPlot           = 1;
@@ -29,7 +29,12 @@ if nargin == 0 || ~isfield(s, 'Fig') || ~ishandle(Fig.Handle)
     Fig.ChangeInc     = 0.05;                             % Increment size when adjusting voltages with arrow keys (V)
     Fig.EpochInc  	= 10;                               % Increment size when adjusting time windows with arrow keys (ms)
     
-
+    %========= 
+    if nargin == 0
+        c.adcRate           = 1000;                              % Default ADC smapling rate (Hz)
+        c.Display.Rect      = [0,0,1920, 1080];
+        c.Display.PixPerDeg	= [35, 35];
+    end
  	c.EyeInvertX        = 0;
     c.EyeInvertY        = 0;
 
@@ -96,8 +101,7 @@ end
 
 s.ph(1) = plot(EyePos(1,:), EyePos(2,:),'-k','color', [0.5, 0.5, 0.5]);
 hold on;
-for stim = 1:
-    GazeRect = Params.Eye.Target.GazeRect{LocIndices(stim)};
+for n = 1:3
     plot(Params.Display.Rect([1,3]), Params.Display.Rect([4,4])/2, '--k', 'linewidth',2);
     hold on;
     plot(Params.Display.Rect([3,3])/2, Params.Display.Rect([2,4]), '--k', 'linewidth',2);
@@ -133,7 +137,7 @@ if FirstPlot == 1
   	xlabel(Fig.Axh(2),'X position (degrees)','fontsize', Fig.Fontsize);
     ylabel(Fig.Axh(2),'Y position (degrees)','fontsize', Fig.Fontsize);
     grid on                                                         
-    Fig.DisplayFrame = rectangle('position', [0,0,Params.Display.RectDeg]-[Params.Display.RectDeg,0,0]/2,'edgecolor',[1 0 0],'linewidth',2);
+    Fig.DisplayFrame = rectangle('position', [0,0,c.Display.RectDeg]-[c.Display.RectDeg,0,0]/2,'edgecolor',[1 0 0],'linewidth',2);
     hold on
     Fig.DVAcenter(1) = plot(DVA_Xrange, [0 0], '--r');            % Draw cross-hairs to mark center of display (DVA)
     Fig.DVAcenter(2) = plot([0 0], DVA_Yrange, '--r');            % Draw cross-hairs to mark center of display (DVA)
@@ -153,23 +157,23 @@ if FirstPlot == 1
 else
     axes(Fig.Axh(3));
 end
-Fig.TimeStamps = (1:size(EyePos,2))*Params.DPx.AnalogInRate/1000;
+Fig.TimeStamps = (1:size(EyePos,2))*c.adcRate/1000;
 
 s.ph(5) = plot(Fig.TimeStamps, EyePos(1,:),'-r','color',[1,0.5,0.5]);
 hold on;
 s.ph(6) = plot(Fig.TimeStamps, EyePos(2,:),'-b','color',[0.5,0.5,1]);
-s.ph(7) = plot(s.FixWinTimes*Params.DPx.AnalogInRate, repmat(mean(EyePos(1,EpochWinSamples{3})),[1,2]),'-r','linewidth',2);
-s.ph(8) = plot(s.FixWinTimes*Params.DPx.AnalogInRate, repmat(mean(EyePos(2,EpochWinSamples{3})),[1,2]),'-b','linewidth',2);
+s.ph(7) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(1,EpochWinSamples{3})),[1,2]),'-r','linewidth',2);
+s.ph(8) = plot(s.FixWinTimes*c.adcRate, repmat(mean(EyePos(2,EpochWinSamples{3})),[1,2]),'-b','linewidth',2);
 if FirstPlot == 1
     xlabel('Time (ms)','fontsize', Fig.Fontsize);
     ylabel('Voltage (V)','fontsize', Fig.Fontsize);
     grid on;
     legend(s.ph(7:8),{'X','Y'},'fontsize', Fig.Fontsize);
     Ylims = s.VoltageRange;
-    Fig.EpochH(1) = patch(s.InitWinTimes([1,1,2,2])*Params.DPx.AnalogInRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(1,:),'facealpha', 0.3,'edgecolor', 'none');
-    Fig.EpochH(2) = patch(s.SacWinTimes([1,1,2,2])*Params.DPx.AnalogInRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(2,:),'facealpha', 0.3,'edgecolor', 'none');
-    Fig.EpochH(3) = patch(s.FixWinTimes([1,1,2,2])*Params.DPx.AnalogInRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(3,:),'facealpha', 0.3,'edgecolor', 'none');
-    plot([0, TargetDuration*Params.DPx.AnalogInRate], [0 0], '-k', 'linewidth', 4);
+    Fig.EpochH(1) = patch(s.InitWinTimes([1,1,2,2])*c.adcRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(1,:),'facealpha', 0.3,'edgecolor', 'none');
+    Fig.EpochH(2) = patch(s.SacWinTimes([1,1,2,2])*c.adcRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(2,:),'facealpha', 0.3,'edgecolor', 'none');
+    Fig.EpochH(3) = patch(s.FixWinTimes([1,1,2,2])*c.adcRate, Ylims([1,2,2,1]), zeros(1,4),'facecolor',s.EpochColors(3,:),'facealpha', 0.3,'edgecolor', 'none');
+    plot([0, TargetDuration*c.adcRate], [0 0], '-k', 'linewidth', 4);
     uistack(Fig.EpochH, 'bottom')
 end
 
@@ -447,20 +451,20 @@ end
                 end
 
         end
-        set(Fig.EpochH(Indx2), 'xdata', Fig.EpochValues{Indx2}([1,1,2,2])*Params.DPx.AnalogInRate);     % Update epoch patch location
+        set(Fig.EpochH(Indx2), 'xdata', Fig.EpochValues{Indx2}([1,1,2,2])*c.adcRate);     % Update epoch patch location
 
         %========== Update epoch stats
         s.InitWinTimes  = Fig.EpochValues{1};
         s.SacWinTimes   = Fig.EpochValues{2};
         s.FixWinTimes   = Fig.EpochValues{3};
         for n = 1:3
-            EpochWinSamples{n}  = round(Fig.EpochValues{n}(1)*Params.DPx.AnalogInRate)+1:round(Fig.EpochValues{n}(2)*Params.DPx.AnalogInRate);
+            EpochWinSamples{n}  = round(Fig.EpochValues{n}(1)*c.adcRate)+1:round(Fig.EpochValues{n}(2)*c.adcRate);
         end
 
         if Indx2 == 3   % For fixation epoch update...
             if Params.Eye.EyeToUse <= 2
-                set(s.ph(7), 'Xdata', s.FixWinTimes*Params.DPx.AnalogInRate, 'Ydata', repmat(mean(c.EyePos(Fig.EyeIndx{Params.Eye.EyeToUse}(1),EpochWinSamples{3})),[1,2]));
-                set(s.ph(8), 'Xdata', s.FixWinTimes*Params.DPx.AnalogInRate, 'Ydata', repmat(mean(c.EyePos(Fig.EyeIndx{Params.Eye.EyeToUse}(2),EpochWinSamples{3})),[1,2]));
+                set(s.ph(7), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePos(Fig.EyeIndx{Params.Eye.EyeToUse}(1),EpochWinSamples{3})),[1,2]));
+                set(s.ph(8), 'Xdata', s.FixWinTimes*c.adcRate, 'Ydata', repmat(mean(c.EyePos(Fig.EyeIndx{Params.Eye.EyeToUse}(2),EpochWinSamples{3})),[1,2]));
             elseif Params.Eye.EyeToUse == 3
 
 

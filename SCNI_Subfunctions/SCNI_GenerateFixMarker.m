@@ -27,7 +27,7 @@ switch Fix.Type
         %Screen('FillOval', FixTexture, Params.Display.Exp.BackgroundColor*255, [0,0,FixSize]);   	% Draw filled circle same color as background
         Screen('DrawLines', FixTexture, FixPos, Fix.LineWidth, Fix.Color*255, FixSize/2);           % Draw cross in center
     case 3                                                          %============== SOLID SQUARE
-        Screen('FillRect', FixTexture, Fix_Color*255, [0,0,FixSize]);
+        Screen('FillRect', FixTexture, Fix.Color*255, [0,0,FixSize]);
     case 4                                                          %============== BINOCULAR CROSSHAIRS
         FixPos = [FixSize(1)/2, FixSize(2)/4, 0, 0; 0, 0, FixSize(1)/2, FixSize(2)/4];
         Screen('DrawLines', FixTexture, FixPos, Fix.LineWidth, Fix.Color, FixSize/2);

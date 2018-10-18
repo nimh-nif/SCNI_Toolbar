@@ -1,18 +1,25 @@
-function [Params] = SCNI_PlaySound(Params)
+function [Params] = SCNI_PlaySound(Params, Tone)
 
 %============================ SCNI_PlaySound.m =============================
 % Play a pre-loaded audio clip to the subject. This can be used to alert 
-% the animal to the start of the next trial.
+% the animal to the start of the next trial. The second input 'Tone' is an
+% optional structure, which should contain the waveform and frequency data
+% for a loaded audio file.
+%
 
 
 %================= Load audio file
 repetitions     = 1;
-wavFilename     = '/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/BE_Coo_mov53.wav';
-[waveData, freq] = audioread(wavFilename);       	% Load the .wav file
-waveData        = waveData';                        % Transpose so that each row has 1 channel
+if nargin < 2
+    wavFilename     = '/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/BE_Coo_mov53.wav';
+    [waveData, freq] = audioread(wavFilename);       	% Load the .wav file
+    waveData        = waveData';                        % Transpose so that each row has 1 channel    
+else
+    waveData   	= Tone.Wave;
+    freq        = Tone.SampleRate;
+end
 nChannels       = size(waveData, 1);                
-nTotalFrames    = size(waveData, 2);                
-
+nTotalFrames    = size(waveData, 2);    
 
 if Params.DPx.UseAudio == 0         %================= Play wav file through PC audiocard
     if ~isfield(Params,'Audio') || ~isfield(Params.Audio,'Penalty')

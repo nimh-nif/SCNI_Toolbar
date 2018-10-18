@@ -16,7 +16,7 @@ if nargin == 0 || ~isfield(Params,'Eye')
 end
 
 %================= PRE-ALLOCATE RUN AND REWARD FIELDS
-Params.Run.ValidFixations       = nan(Params.Eye.TrialsPerRun, (Params.Eye.Duration+Params.Eye.ISIms)*10^-3*Params.DPx.AnalogInRate, 3);
+Params.Run.ValidFixations       = nan(Params.Eye.TrialsPerRun, round((Params.Eye.Duration+Params.Eye.ISIms)*10^-3*Params.DPx.AnalogInRate), 3);
 Params.Run.LastRewardTime       = GetSecs;
 Params.Run.StartTime            = GetSecs;
 Params.Run.LastPress            = GetSecs;
@@ -43,13 +43,12 @@ Params.Reward.TTLDur            = 0.05;                         % Set TTL pulse 
 Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
 Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 NoEyes                        	= 1;
-Params.Eye.XYselected           = 1;
-Params.Eye.GainIncrement        = 0.1;
 
 
 %================= OPEN NEW PTB WINDOW?
 % if ~isfield(Params.Display, 'win')
-    HideCursor;   
+    HideCursor;  
+    ListenChar(2);                                              % Ignore keyboard input to command line 
     Screen('Preference', 'VisualDebugLevel', 0);   
     Params.Display.ScreenID = max(Screen('Screens'));
     [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.XScreenRect,[],[], [], []);
@@ -64,8 +63,8 @@ Params = SCNI_DataPixxInit(Params);
 
 %================= INITIALIZE KEYBOARD SHORTCUTS
 KbName('UnifyKeyNames');
-KeyNames                    = {'Escape','R','S','C','E','RightArrow','UpArrow','DownArrow'};         
-KeyFunctions                = {'Stop','Reward','Sound','Center','ChangeEye','ChangeXY','GainInc','GainDec'};
+KeyNames                    = {'Escape','R','A','C','E','S','M','RightArrow','UpArrow','DownArrow','I'};         
+KeyFunctions                = {'Stop','Reward','Audio','Center','ChangeEye','Save','Mouse','ChangeXY','GainInc','GainDec','Invert'};
 Params.Eye.KeysList       = zeros(1,256); 
 for k = 1:numel(KeyNames)
     eval(sprintf('Params.Eye.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
@@ -340,7 +339,7 @@ function [Params] = CheckKeys(Params)
             Params.Run.ExpQuit = 1;
         elseif keyCode(Params.Eye.Keys.Reward) == 1                      	% Experimenter pressed manual reward key
             Params = SCNI_GiveReward(Params);
-        elseif keyCode(Params.Eye.Keys.Sound) == 1                          % Experimenter pressed play sound key
+        elseif keyCode(Params.Eye.Keys.Audio) == 1                          % Experimenter pressed play sound key
             Params = SCNI_PlaySound(Params); 
         elseif keyCode(Params.Eye.Keys.Center) == 1                         % Experimenter pressed 'center' key
             Params = SCNI_UpdateCenter(Params);
@@ -362,21 +361,46 @@ function [Params] = CheckKeys(Params)
           	if Params.Eye.XYselected > 2
                 Params.Eye.XYselected = 1;
             end
+        elseif keyCode(Params.Eye.Keys.Invert) == 1
+            Params.Eye.Cal.Sign{Params.Eye.EyeToUse}(Params.Eye.XYselected) = -Params.Eye.Cal.Sign{Params.Eye.EyeToUse}(Params.Eye.XYselected);
+      	elseif keyCode(Params.Eye.Keys.Save) == 1
+            %Params = SaveCal(Params);
+    	elseif keyCode(Params.Eye.Keys.Mouse) == 1
+            Params = SCNI_UpdateCenterFromMouse(Params);
         end
     end
+end
+
+%=============== SAVE CALIBRATION PARAMETERS
+function SaveCal(Params)
+    
+    
 end
 
 %=============== UPDATE CENTER GAZE POSITION
 function Params = SCNI_UpdateCenter(Params)
     Eye         = SCNI_GetEyePos(Params);                                   % Get screen coordinates of current gaze position (pixels)
     Params.Eye.Cal.Offset{Params.Eye.EyeToUse}  =  -Eye(Params.Eye.EyeToUse).Volts;
-    Params.Eye.Cal.Offset{Params.Eye.EyeToUse}
+end
+
+%=============== UPDATE CENTER GAZE POSITION BASED ON MOUSE CURSOR
+function Params = SCNI_UpdateCenterFromMouse(Params)
+    [EyeX, EyeY, buttons] = GetMouse(Params.Display.win);                                   % Get mouse cursor position (relative to top left)
+    if EyeX > 0 && EyeY > 0
+        Eye.Pixels  = [EyeX, EyeY];                                                        	% 
+        Eye.PixCntr = Eye.Pixels-Params.Display.Rect([3,4])/2;                           	% Center coordinates
+        Eye.Degrees = Eye.PixCntr./Params.Display.PixPerDeg;                              	% Convert pixels to degrees
+        Eye.Volts   = (Eye.Degrees./Params.Eye.Cal.Gain{Params.Eye.EyeToUse})+Params.Eye.Cal.Offset{Params.Eye.EyeToUse};	% Convert degrees to volts
+        Eye.Volts
+        Params.Eye.Cal.Offset{Params.Eye.EyeToUse}  =  -Eye.Volts;                          % Update voltage offset
+    end
 end
 
 %=============== END RUN
 function SCNI_EndRun(Params)
     Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);     % Clear screens
     Screen('Flip', Params.Display.win); 
+    ListenChar(1); 
     return;
 end
 
@@ -412,8 +436,8 @@ function Params = SCNI_UpdateStats(Params)
                                     'Reward count    %d\n\n',...
                                     'Valid fixation  %.0f %%'];
         Params.Run.EyeTextFormat = ['Offset (V)      %.2f,  %.2f\n\n',...
-                                    'Gain (V/deg)    %.2f,  %.2f\n\n',...
-                                    'Invert          %d\n\n'];
+                                    'Gain (deg/V)    %.2f,  %.2f\n\n',...
+                                    'Invert          %d,    %d\n\n'];
         if Params.Display.Rect(3) > 1920
            Screen('TextSize', Params.Display.win, 40);
            Screen('TextFont', Params.Display.win, 'Courier');
