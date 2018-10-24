@@ -176,8 +176,8 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
         %% ================= BEGIN NEXT IMAGE PRESENTATION ================
         
         for stage = 1:numel(StageDurations)
-            Params.Run.StimOnTime   = GetSecs;
-            PDstatus                = 2;
+            Params.Run.StimOnTime = GetSecs;
+            PDstatus    = StimOn(stage)+1;
 
             while (GetSecs-Params.Run.StimOnTime) < StageDurations(stage) && Params.Run.EndRun == 0
 
@@ -269,16 +269,14 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                 if isfield(Params.Toolbar,'StopButton') && get(Params.Toolbar.StopButton,'value') == 1
                     Params.Run.EndRun = 1;
                 end
-                
-                %============== Reset photodiode status for next frame
-                PDstatus    = StimOn(stage)+1;
+
             end
             Params.Run.StimCount = Params.Run.StimCount+1;                                                      % Count as one stimulus presentation
         end
     end
     
     %% ================= ANALYSE FIXATION
-    Params = SCNI_CheckTrialEyePos(Params);
+    %Params = SCNI_CheckTrialEyePos(Params);
     
 
     %% ================= WAIT FOR ITI TO ELAPSE

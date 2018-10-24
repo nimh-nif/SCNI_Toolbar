@@ -4,6 +4,14 @@ function [Params] = SCNI_GiveReward(Params)
 % Sends the pre-loaded reward delivery square wave out to the solenoid via
 % the specified DAC / Digital OUT channel of the DataPixx2.
 
+
+if ~isfield(Params.DPx, 'AnalogReward')
+    if ~isfield(Params, 'Run')
+        Params.Run.MaxTrialDur = Params.DPx.AnalogOutRate;
+    end
+    Params = SCNI_DataPixxInit(Params);
+end
+
 if Params.DPx.AnalogReward == 1 %=========== USE ANALOG OUT
     Delay = 0;
     Datapixx('SetDacSchedule', Delay, Params.DPx.AnalogOutRate, Params.DPx.ndacsamples, Params.DPx.RewardChnl, Params.DPx.dacBuffAddr, Params.DPx.ndacsamples);

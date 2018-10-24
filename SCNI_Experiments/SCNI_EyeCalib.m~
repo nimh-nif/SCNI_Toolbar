@@ -44,13 +44,24 @@ Params.Reward.RunCount          = 0;                            % Count how many
 Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 
 %================= OPEN NEW PTB WINDOW?
-Params = SCNI_OpenWindow(Params);
+% if ~isfield(Params.Display, 'win')
+    HideCursor;  
+    ListenChar(2);                                              % Ignore keyboard input to command line 
+    Screen('Preference', 'VisualDebugLevel', 0);   
+    Params.Display.ScreenID = max(Screen('Screens'));
+    [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.XScreenRect,[],[], [], []);
+    Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                        % Enable alpha channel
+    Params.Display.ExpRect  = Params.Display.Rect;
+% end
 
 %================= INITIALIZE SETTINGS
 Params 	= SCNI_InitializeGrid(Params);
 Params	= SCNI_GetPDrect(Params, Params.Display.UseSBS3D);
 Params  = SCNI_DataPixxInit(Params);
-Params  = SCNI_InitKeyboard(Params);
+
+
+%================= INITIALIZE KEYBOARD SHORTCUTS
+Params = SCNI_InitKeyboard(Params);
 
 
 %================= GENERATE FIXATION TEXTURE
@@ -78,10 +89,6 @@ Params = SCNI_InitializeGrid(Params);
 Params.Eye.NoPoints = Params.Eye.NoPointsList{Params.Eye.CalType}(Params.Eye.NoPoint);
 Params              = SCNI_GenerateCalTargets(Params);
 Params.Eye.GazeRect = [1, 1, Params.Eye.FixDist.*Params.Display.PixPerDeg];
-
-if Params.Eye.CalMode == 1              % Is mouse simulation mode is selected...
-    Params.Eye.EyeToUse = 1;            % Default to left eye only
-end
 
 if Params.Display.UseSBS3D == 0
     NoEyes           	= 1;

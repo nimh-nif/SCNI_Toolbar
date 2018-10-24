@@ -14,17 +14,19 @@ if nargin == 0 || ~isfield(Params,'GF')
     Params = SCNI_GazeFollowingSettings(Params, 0);
 end
 
-%================= LOAD STIMULUS SET PARAMS
-StimParamsFile 	= wildcardsearch(Params.GF.StimDir, '*.mat');
-Stim            = load(StimParamsFile{1});
-Params.GF.Stim  = Stim.Stim;
-Params.GF.TargetGazeRadius = 1.5;
+%================= CHECK EXISTING DATA
+% if exist(Params.Toolbar.Session.Fullfile, 'file')
+%     load(Params.Toolbar.Session.Fullfile);
+% end
 
+%================= LOAD STIMULUS SET PARAMS
+StimParamsFile      = wildcardsearch(Params.GF.StimDir, '*.mat');
+Stim                = load(StimParamsFile{1});
+Params.GF.Stim      = Stim.Stim;
+
+Params.GF.TargetGazeRadius  = 1.5;
 Params.GF.TrialStageDur     = [Params.GF.InitialFix, Params.GF.TargetDur, Params.GF.CueDur, Params.GF.RespFixDur, 500, 1000]/10^3;
 Params.GF.StagesPerTrial    = 6;
-Params.GF.PDlevels          = logspace(0,2,Params.GF.StagesPerTrial)*2.5; %logspace(0, 255, Params.GF.StagesPerTrial);
-
-Params.Eye.CalMode  = 1;
 
 %================= PRE-ALLOCATE RUN AND REWARD FIELDS
 Params.Run.MaxDuration          = sum(Params.GF.TrialStageDur);
@@ -37,7 +39,7 @@ Params.Run.TextColor            = [1,1,1]*255;
 Params.Run.TextRect             = [100, 100, [100, 100]+[200,300]];
 Params.Run.MaxTrialDur          = 5;                            % Maximum trial duration (seconds)
 Params.Run.TrialCount           = 1;                            % Start trial count at 1
-Params.Run.ExpQuit              = 0;
+Params.Run.EndRun              = 0;
 if ~isfield(Params.Run, 'Number')                               % If run count field does not exist...
     Params.Run.Number          	= 1;                            % This is the first run of the session
 else
@@ -47,7 +49,6 @@ end
 if ~isfield(Params, 'Reward')
     Params.Reward.Proportion        = 0.7;                          % Set proportion of reward interval that fixation must be maintained for (0-1)
     Params.Reward.LastRewardTime    = GetSecs;                      % Initialize last reward delivery time (seconds)
-    %Params.Reward.NextRewardInt     = Params.Reward.MeanIRI + rand(1)*Params.Reward.RandIRI;           	% Generate random interval before first reward delivery (seconds)
     Params.Reward.TTLDur            = 0.05;                         % Set TTL pulse duration (seconds)
     Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
 end
@@ -57,49 +58,24 @@ if ~isfield(Params, 'Eye')
     Params = SCNI_EyeCalibSettings(Params);
 end
 
-%================= OPEN NEW PTB WINDOW?
-% if ~isfield(Params.Display, 'win')
-    HideCursor;   
-    
-    Screen('Preference', 'VisualDebugLevel', 0);   
-    Params.Display.ScreenID = max(Screen('Screens'));
-    [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.XScreenRect,[],[], [], []);
-    Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                        % Enable alpha channel
-    Params.Display.ExpRect  = Params.Display.Rect;
-    Params                  = SCNI_InitializeGrid(Params);
-% end
-
-%================= INITIALIZE DATAPIXX
-if Params.DPx.UseDPx == 1
-    Params = SCNI_DataPixxInit(Params);
-end
-
-%================= INITIALIZE KEYBOARD SHORTCUTS
-KbName('UnifyKeyNames');
-KeyNames                    = {'Escape','R','A','C'};         
-KeyFunctions                = {'Stop','Reward','Audio','CenterEyes'};
-Params.GF.KeysList   	= zeros(1,256); 
-for k = 1:numel(KeyNames)
-    eval(sprintf('Params.GF.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
-    eval(sprintf('Params.GF.KeysList(Params.GF.Keys.%s) = 1;', KeyFunctions{k}));
-end
-
-%================= INITIALIZE AUDIO
-Params = SCNI_AudioSettings(Params);
+Params = SCNI_OpenWindow(Params);
 
 %================= GENERATE FIXATION TEXTURE
 if Params.GF.FixType > 1
-    Fix.Type        = Params.GF.FixType;                        % Fixation marker format
-    Fix.Color       = Params.GF.FixColor;                       % Fixation marker color (RGB, 0-1)
-    Fix.MarkerSize  = Params.GF.FixDiameter;                  	% Fixation marker diameter (degrees)
-    Fix.LineWidth   = 4;                                        % Fixation marker line width (pixels)
+    Fix.Type        = Params.GF.FixType;                            % Fixation marker format
+    Fix.Color       = Params.GF.FixColor;                           % Fixation marker color (RGB, 0-1)
+    Fix.MarkerSize  = Params.GF.FixDiameter;                        % Fixation marker diameter (degrees)
+    Fix.LineWidth   = 4;                                            % Fixation marker line width (pixels)
     Fix.Size        = Fix.MarkerSize*Params.Display.PixPerDeg;
     Params.GF.FixTex = SCNI_GenerateFixMarker(Fix, Params);     
 end
 
-%================ PREPARE GRID FOR EXP. DISPLAY
-Params  = SCNI_InitializeGrid(Params);
-Params	= SCNI_GetPDrect(Params, Params.GF.Use3D);
+%================= INITIALIZE SETTINGS
+Params  = SCNI_AudioSettings(Params);                             	% Initialize audio
+Params  = SCNI_DataPixxInit(Params);                                % Initialize DataPixx
+Params 	= SCNI_InitializeGrid(Params);                              % Initialize experimenter's display grid
+Params	= SCNI_GetPDrect(Params, Params.Display.UseSBS3D);          % Initialize photodiode location(s)
+Params  = SCNI_InitKeyboard(Params);                                % Initialize keyboard shortcuts
 
 %================= CALCULATE SCREEN RECTANGLES
 Params.GF.RectExp   	= Params.Display.Rect;
@@ -108,13 +84,21 @@ Params.GF.GazeFixRect  	= CenterRect([1,1,Params.GF.FixWinDeg.*Params.Display.Pi
 
 %================= ADJUST FOR 3D FORMAT...
 Params.GF.ImageRes = Params.Display.Rect([3,4]);
-if Params.GF.Use3D == 1
-    NoEyes                              = 2;
-  	Params.GF.SourceRectExp             = [1, 1, Params.GF.ImageRes(1)/2, Params.GF.ImageRes(2)];
-    Params.GF.SourceRectMonk            = [1, 1, Params.GF.ImageRes];
-    Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
-    Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
-    Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
+if Params.GF.Use3D == 1                 % If frames are rendered in SBS 3D...
+    if Params.Display.UseSBS3D == 1     % If stereoscopic 3D presentation was requested...
+        NoEyes                              = 2;
+        Params.GF.SourceRectExp             = [1, 1, Params.GF.ImageRes(1)/2, Params.GF.ImageRes(2)];
+        Params.GF.SourceRectMonk            = [1, 1, Params.GF.ImageRes];
+        Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+        Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
+        Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
+    elseif Params.Display.UseSBS3D == 0     % If 2D presentation was requsted...
+        NoEyes                              = 1;
+        Params.GF.SourceRectExp             = [1, 1, Params.GF.ImageRes(1)/2, Params.GF.ImageRes(2)];
+        Params.GF.SourceRectMonk            = [1, 1, Params.GF.ImageRes(1)/2, Params.GF.ImageRes(2)];
+        Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+        Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size], Params.Display.Rect) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
+    end
     
 elseif Params.GF.Use3D == 0
     NoEyes                              = 1;
@@ -128,7 +112,7 @@ Params.Eye.GazeRect     = Params.GF.GazeFixRect;
 Params.GF.TargetRect    = [1, 1, 2*Params.GF.TargetGazeRadius.*Params.Display.PixPerDeg];
 
 %================= LOAD FRAMES TO GPU
-if ~isfield(Params.GF, 'TargetTex')
+if isempty(winPtr) 
 	Params = SCNI_LoadGFframes(Params);
 end
 
@@ -136,11 +120,8 @@ end
 Params = GenerateGFDesign(Params);
 
 
-
-
-
 %% ============================ BEGIN RUN =================================
-while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
+while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.EndRun == 0
     AdcStatus = SCNI_StartADC(Params);                                          % Start DataPixx ADC
     
     %================== BEGIN NEXT TRIAL
@@ -149,7 +130,6 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
         Params.Run.CurrentTrialStage    = TrialStage;
         Params.GF.StageTransTime        = GetSecs;
         NewStage                        = 1; 
-        PhotodiodeColor                 = repmat(Params.GF.PDlevels(TrialStage),[1,3]);
         
         %================== BEGIN NEXT STAGE OF TRIAL
         switch TrialStage 
@@ -158,10 +138,11 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
                     Params          = SCNI_PlaySound(Params, Params.Audio.Tones(1));
                 end
                 SCNI_SendEventCode('Trial_Start', Params);                   	% Send event code to connected neurophys systems
-                TargetLocs      = Params.GF.Design(:,Params.Run.TrialCount);    
+                TargetLocs      = Params.GF.Design(Params.Run.TrialCount,:);    
                 CorrectTarget   = TargetLocs(1);
                 TargetColorIndx = 1;
                 frame           = 1;
+                EndTrial        = 0;
                 
                 GazeCentroid            = Params.Display.Rect([3,4])/2; 
                 CorrectTargetCenter     = Params.GF.TargetCenterPix(CorrectTarget, :);
@@ -173,12 +154,15 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
                 
                 
             case 3      %================== Cue appears
-                
+                ValidFixProp = nanmean(Params.Run.ValidFixations(Params.Run.TrialCount,:,3));   % Check whether adequate central fixation was maintained
+                if ValidFixProp < Params.Eye.FixDur
+                    EndTrial = 1;
+                end
                 
             case 4      %================== Response window begins
                 ValidFixProp = nanmean(Params.Run.ValidFixations(Params.Run.TrialCount,:,3));   % Check whether adequate central fixation was maintained
-                if ValidFixProp < 0.7
-                    EndTrial = 1;   % <<<<<< MAKE THIS DO SOMETHING!
+                if ValidFixProp < Params.Eye.FixDur
+                    EndTrial = 1;
                 end
                 Params.GF.GazeRect  = CorrectTargetRect;    
                 Params.Eye.GazeRect = CorrectTargetRect;
@@ -186,7 +170,7 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
                 
             case 5      %================== Feedback given and avatar resets
                 ValidFixProp = nanmean(Params.Run.ValidFixations(Params.Run.TrialCount,:,3));   % <<<< More accurate method needed?
-                if ValidFixProp > 0.7
+                if ValidFixProp > Params.Eye.FixDur
                     TrialCorrect    = 1;
                 else
                     TrialCorrect    = 0;
@@ -198,13 +182,12 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
                 end
                 
             case 6      %================== ITI and reward delivery
-                
-                
+
                 
         end
         
         
-        while (GetSecs - Params.GF.StageTransTime) < Params.GF.TrialStageDur(TrialStage) && Params.Run.ExpQuit == 0
+        while (GetSecs - Params.GF.StageTransTime) < Params.GF.TrialStageDur(TrialStage) && EndTrial == 0 && Params.Run.EndRun == 0
 
             %=============== Draw stimulus components to both screens  
              
@@ -220,8 +203,15 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
             end
             %============ Draw avatar
             if Params.GF.Mode > 1
-                Screen('DrawTexture', Params.Display.win, Params.GF.AvatarTex(CorrectTarget,frame), Params.GF.SourceRectExp, Params.GF.RectExp, [], [], Params.GF.Contrast);        % Draw to the experimenter's display
-                Screen('DrawTexture', Params.Display.win, Params.GF.AvatarTex(CorrectTarget,frame), Params.GF.SourceRectMonk, Params.GF.RectMonk, [], [], Params.GF.Contrast);      % Draw to the subject's display
+                if ismember(TrialStage, [1,6])
+                    Screen('DrawTexture', Params.Display.win, Params.GF.AvatarBlink(3), Params.GF.SourceRectExp, Params.GF.RectExp, [], [], Params.GF.Contrast);        % Draw to the experimenter's display
+                    Screen('DrawTexture', Params.Display.win, Params.GF.AvatarBlink(3), Params.GF.SourceRectMonk, Params.GF.RectMonk, [], [], Params.GF.Contrast); 
+                elseif ismember(TrialStage, [2,3,4,5])            
+                    Screen('DrawTexture', Params.Display.win, Params.GF.AvatarTex(CorrectTarget,frame), Params.GF.SourceRectExp, Params.GF.RectExp, [], [], Params.GF.Contrast);        % Draw to the experimenter's display
+                    Screen('DrawTexture', Params.Display.win, Params.GF.AvatarTex(CorrectTarget,frame), Params.GF.SourceRectMonk, Params.GF.RectMonk, [], [], Params.GF.Contrast);      % Draw to the subject's display
+                end
+                Screen('DrawTexture', Params.Display.win, Params.GF.ForegroundTex, Params.GF.SourceRectExp, Params.GF.RectExp, [], [], Params.GF.Contrast);        % Draw to the experimenter's display
+              	Screen('DrawTexture', Params.Display.win, Params.GF.ForegroundTex, Params.GF.SourceRectMonk, Params.GF.RectMonk, [], [], Params.GF.Contrast);      % Draw to the subject's display
             end
             %============ Draw target objects
             if ismember(TrialStage, [2,3,4,5])
@@ -239,9 +229,13 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
            	for Eye = 1:NoEyes 
                 %============ Draw photodiode markers
                 if Params.Display.PD.Position > 1
-                    PDstatus = ismember(TrialStage, [2,3,4])+1;
-                    Screen('FillOval', Params.Display.win, PhotodiodeColor, Params.Display.PD.SubRect(Eye,:));
-                    Screen('FillOval', Params.Display.win, PhotodiodeColor, Params.Display.PD.ExpRect);
+                    if (NewStage == 1 && ismember(TrialStage, [1,2,5])) || TrialStage == 3
+                        PDstatus = 2;
+                    else
+                        PDstatus = 1;
+                    end
+                    Screen('FillOval', Params.Display.win, Params.Display.PD.Color{PDstatus}*255, Params.Display.PD.SubRect(Eye,:));
+                    Screen('FillOval', Params.Display.win, Params.Display.PD.Color{PDstatus}*255, Params.Display.PD.ExpRect);
                 end
                 %============ Draw fixation marker
                 if ismember(TrialStage, [1,2,3]) && Params.GF.FixType > 1
@@ -278,48 +272,68 @@ while Params.Run.TrialCount < Params.GF.TrialsPerRun && Params.Run.ExpQuit == 0
             
             %=============== Draw to screen and record time
             [~,FrameOnset]  	= Screen('Flip', Params.Display.win); 
+            
+            %=============== For first frame of this stage...
             if NewStage == 1
                 switch TrialStage 
                     case 1
                         SCNI_SendEventCode('Fix_On', Params);
                         
                     case 2
-                        %SCNI_SendEventCode('Target_On', Params);  
+                        SCNI_SendEventCode('Stim_On', Params);  
                         
                     case 3
-                        %SCNI_SendEventCode('Cue_On', Params); 
+                        SCNI_SendEventCode('Trial_Start', Params); 
                         
                     case 4
-                        %SCNI_SendEventCode('Fix_Off', Params); 
+                        SCNI_SendEventCode('Fix_Off', Params); 
                         
                     case 5
-                        %SCNI_SendEventCode('Target_Off', Params); 
+                        SCNI_SendEventCode('Stim_Off', Params); 
+                        
+                    case 6  % ================= ANALYSE FIXATION FOR WHOLE TRIAL
+                        %Params = SCNI_CheckTrialEyePos(Params);
+                        
+                      	if TrialCorrect == 1
+                            SCNI_SendEventCode('Reward_Auto', Params); 
+                            Params = SCNI_GiveReward(Params);
+                            if Params.GF.UseAudioCue == 1
+                                Params 	= SCNI_PlaySound(Params, Params.Audio.Tones(~TrialCorrect + 1));
+                            end
+                        else
+                            if Params.GF.UseAudioCue == 1
+                                Params 	= SCNI_PlaySound(Params, Params.Audio.Tones(~TrialCorrect + 1));
+                            end
+                        end
                         
                 end
                 NewStage = 0;
             end
             
             %=============== Check experimenter's input
-            Params.Run.ExpQuit = CheckKeys(Params);                                                     % Check for keyboard input
+            Params = SCNI_CheckKeys(Params);                                                            % Check for keyboard input
             if isfield(Params.Toolbar,'StopButton') && get(Params.Toolbar.StopButton,'value')==1     	% Check for toolbar input
-                Params.Run.ExpQuit = 1;
+                Params.Run.EndRun = 1;
             end
-            %=============== Advance frame
-            if TrialStage == 3 && frame < size(Params.GF.AvatarTex,2)
-                frame = frame+1;
-            end
-            if TrialStage == 5 && frame > 1
-                frame = frame-1;
+            
+            %=============== Advance cue animation frame
+            if isfield(Params.GF, 'AvatarTex')
+                if TrialStage == 3 && frame < size(Params.GF.AvatarTex,2)
+                    frame = frame+1;
+                end
+                if TrialStage == 5 && frame > 1
+                    frame = frame-1;
+                end
             end
         end
 
     end
     
-    %% ================= ANALYSE FIXATION FOR WHOLE TRIAL
-    %Params = SCNI_CheckTrialEyePos(Params);
-              
-    if Params.GF.UseAudioCue == 1
-        Params 	= SCNI_PlaySound(Params, Params.Audio.Tones(~TrialCorrect + 1));
+    %=============== PENALIZE SUBJECT ABORTED TRIAL
+    if EndTrial == 1
+        
+        
+        
     end
     
     Params.Run.TrialCount = Params.Run.TrialCount+1;        % Count as one trial
@@ -328,7 +342,7 @@ end
 
 
 %============== Run was aborted by experimenter
-if Params.Run.ExpQuit == 1
+if Params.Run.EndRun == 1
     
 
 end
@@ -339,31 +353,6 @@ SCNI_EndRun(Params);
 
 end
 
-%=============== CHECK FOR EXPERIMENTER INPUT
-function EndRun = CheckKeys(Params)
-    EndRun = 0;
-    [keyIsDown,secs,keyCode] = KbCheck([], Params.GF.KeysList);                 % Check keyboard for relevant key presses 
-    if keyIsDown && secs > Params.Run.LastPress+0.1                           	% If key is pressed and it's more than 100ms since last key press...
-        Params.Run.LastPress   = secs;                                        	% Log time of current key press
-        if keyCode(Params.GF.Keys.Stop) == 1                                    % Experimenter pressed quit key
-            SCNI_SendEventCode('ExpAborted', Params);                         	% Inform neurophys. system
-            SCNI_EndRun(Params);
-            EndRun = 1;
-        elseif keyCode(Params.GF.Keys.Reward) == 1                          	% Experimenter pressed manual reward key
-            Params = SCNI_GiveReward(Params);
-        elseif keyCode(Params.GF.Keys.Audio) == 1                               % Experimenter pressed play sound key
-            Params = SCNI_PlaySound(Params);                
-        elseif keyCode(Params.GF.Keys.CenterEyes) == 1
-            Params = SCNI_UpdateCenter(Params);     
-        end
-    end
-end
-
-%=============== UPDATE CENTER GAZE POSITION
-function Params = SCNI_UpdateCenter(Params)
-    Eye         = SCNI_GetEyePos(Params);                                   % Get screen coordinates of current gaze position (pixels)
-    Params.Eye.Cal.Offset{Params.Eye.EyeToUse}  =  -Eye(Params.Eye.EyeToUse).Volts;
-end
 
 %=============== END RUN
 function SCNI_EndRun(Params)
@@ -380,33 +369,55 @@ function SCNI_EndRun(Params)
     return;
 end
 
+%=============== RUN CALIBRATION
+function Params = CalibrateGF(Params)
+
+    
+    
+
+
+
+end
+
 %=============== PREALLOCATE RANDOMIZED DESIGN
 function Params = GenerateGFDesign(Params)
 
     switch Params.GF.Stim.TargetLayout
         case 'circular'
-            TotalLocations  = Params.GF.Stim.NoPolarAngles*Params.GF.Stim.NoEccentricities;
-            MinAngle        = 360/Params.GF.Stim.NoPolarAngles;
-
+%             TotalLocations  = Params.GF.Stim.NoPolarAngles*Params.GF.Stim.NoEccentricities;
+%             MinAngle        = 360/Params.GF.Stim.NoPolarAngles;
             % Calculate all pairwise distances in polar angle from avatar
 %             for n = 1:TotalLocations
 %                 for m = 1:TotalLocations
 %                     if n==m
 %                         DistMatrix(n,m) = NaN;
 %                     else
-%                         Pos1 = (n-1)*MinAngle * Params.GF.Stim.TargetDepth;
-%                         Pos2 = (m-1)*MinAngle;
-%                         DistMatrix(n,m) = abs(Pos1-Pos2);
+%                         Pos1 = [sind((n-1)*MinAngle)*Stim.Eccentricities, cosd((n-1)*MinAngle)*Stim.Eccentricities, Params.GF.Stim.TargetDepth];
+%                         Pos2 = [sind((m-1)*MinAngle)*Stim.Eccentricities, cosd((m-1)*MinAngle)*Stim.Eccentricities, Params.GF.Stim.TargetDepth];
+%                         XYdist = abs(Pos1(1:2)-Pos2(1:2));
+%                         DistMatrix(n,m) = sqrt(XYdist(1)^2 + XYdist(2)^2);
 %                     end
 %                 end
 %             end
             
-            Params.GF.Design    = randi(TotalLocations, [Params.GF.NoTargets, Params.GF.TrialsPerRun]);
-            Duplicates          = find(Params.GF.Design(1,:)==Params.GF.Design(2,:));
-            while ~isempty(Duplicates)
-                Params.GF.Design(2,Duplicates) = randi(TotalLocations, [1, numel(Duplicates)]);
-                Duplicates          = find(Params.GF.Design(1,:)==Params.GF.Design(2,:));
+            
+            if Params.GF.NoTargets == 1
+                Params.GF.Design    = randi(Params.GF.Stim.NoTargets,[Params.GF.TrialsPerRun, 1]);
+                
+            elseif Params.GF.NoTargets == 2
+                MinDistance         = 10;
+                [X,Y]               = find(Params.GF.Stim.Distances>=MinDistance);
+                AllPairs            = [X, Y];
+                Params.GF.Design    = AllPairs(randi(numel(X),[Params.GF.TrialsPerRun, 1]), :);
             end
+
+            
+%             Params.GF.Design    = randi(numel(X), [Params.GF.NoTargets, Params.GF.TrialsPerRun]);
+%             Duplicates          = find(Params.GF.Design(1,:)==Params.GF.Design(2,:));
+%             while ~isempty(Duplicates)
+%                 Params.GF.Design(2,Duplicates) = randi(TotalLocations, [1, numel(Duplicates)]);
+%                 Duplicates          = find(Params.GF.Design(1,:)==Params.GF.Design(2,:));
+%             end
                 
 
         case 'linear'

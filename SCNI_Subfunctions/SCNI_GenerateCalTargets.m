@@ -41,21 +41,29 @@ Cal.FixLocationsDeg   = Cal.FixLocDirections*Params.Eye.PointDist;
 
    
 %============= ADJUST FOR STEREOSCOPIC PRESENTATION
-if Params.Eye.UseSBS3D == 0                                                                                 % If presenting in 2D...
-    Cal.MonkFixLocations = Cal.FixLocations + repmat(Params.Display.Rect([3,1]), [Params.Eye.NoPoints,1]);     % Add an additional display width offset for subject's screen  
-elseif Params.Eye.UseSBS3D == 1
+if Params.Display.UseSBS3D == 0                                                                               	% If presenting in 2D...
+    Cal.MonkFixLocations = Cal.FixLocations + repmat(Params.Display.Rect([3,1]), [Params.Eye.NoPoints,1]);      % Add an additional display width offset for subject's screen  
+elseif Params.Display.UseSBS3D == 1
     Cal.MonkFixLocations{1} = Cal.FixLocations.*[0.5,1] + repmat(Params.Display.Rect([3,1]), [Params.Eye.NoPoints,1]);
     Cal.MonkFixLocations{2} = Cal.FixLocations.*[0.5,1] + repmat(Params.Display.Rect([3,1])*1.5, [Params.Eye.NoPoints,1]);	% Add an additional display width + half offset for subject's screen  
+    
+    %================ Add horizontal binocular disparities
+    if Params.Eye.DispPix ~= 0
+       Cal.MonkFixLocations{1}(:,1) = Cal.MonkFixLocations{1}(:,1)+Params.Eye.DispPix;
+       Cal.MonkFixLocations{2}(:,1) = Cal.MonkFixLocations{2}(:,1)-Params.Eye.DispPix;
+    end
 end
+
+
 
 %============= CONVERT TARGET POSITIONS TO SCREEN RECTS (PIXELS)
 for n = 1:size(Cal.FixLocations,1)                                                                              % For each fixation coordinate...
     Cal.FixRects{n}(1,:) = CenterRectOnPoint(Cal.FixmarkerRect, Cal.FixLocations(n,1), Cal.FixLocations(n,2));  % Generate PTB rect argument
     Cal.GazeRect{n}(1,:) = CenterRectOnPoint(Cal.GazeSourceRect, Cal.FixLocations(n,1), Cal.FixLocations(n,2));	%
-    if Params.Eye.UseSBS3D == 1  
+    if Params.Display.UseSBS3D == 1  
     	Cal.MonkeyFixRect{n}(1,:)  = CenterRectOnPoint(Cal.FixmarkerRect./[1,1,2,1], Cal.MonkFixLocations{1}(n,1), Cal.MonkFixLocations{1}(n,2)); 	% Center a horizontally squashed fixation rectangle in a half screen rectangle
         Cal.MonkeyFixRect{n}(2,:)  = CenterRectOnPoint(Cal.FixmarkerRect./[1,1,2,1], Cal.MonkFixLocations{2}(n,1), Cal.MonkFixLocations{2}(n,2)); 
-    else
+    elseif Params.Display.UseSBS3D == 0
         Cal.MonkeyFixRect{n}       = CenterRectOnPoint(Cal.FixmarkerRect, Cal.MonkFixLocations(n,1), Cal.MonkFixLocations(n,2)); 
     end
 end

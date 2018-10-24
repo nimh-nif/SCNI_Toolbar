@@ -33,7 +33,6 @@ SCNI_ToolbarDir = fileparts(Path);                                          % Ge
 addpath(genpath(SCNI_ToolbarDir));                                          % Add SCNI Toolbar directories to Matlab path
 Params.Dir      = fullfile(Path, '../SCNI_Parameters');                     % Get the directory containing parameter files
 
-
 if ~exist('ParamsFile','var') || isempty(ParamsFile)                        % If a ParamsFile input was not provided, or is empty...
     [~, CompName] = system('hostname');                                     % Get the local computer's hostname
 	CompName(regexp(CompName, '\s')) = [];                                  % Remove white space
@@ -41,10 +40,12 @@ if ~exist('ParamsFile','var') || isempty(ParamsFile)                        % If
     if ~exist(Params.File,'file')
         ParamsFileMatches = wildcardsearch(Params.Dir, sprintf('%s*.mat', CompName));
         if numel(ParamsFileMatches) > 1
-
+            [file, path]    = uigetfile([Params.Dir,'*.mat'], 'Select a Params file...'); 
+            Params.File     = fullfile(path, file);
         end
     end
     ParamsFile  = Params.File;
+    Params      = load(ParamsFile);    
     
 elseif exist('ParamsFile','var') & ~isempty(ParamsFile)                     % If 'ParamsFile' input was provided...
     if ischar(ParamsFile) && exist(ParamsFile,'file')                     	% If it is a file string... 

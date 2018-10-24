@@ -9,7 +9,8 @@
 
 function [p] = SCNI_Toolbar(p)
 
-persistent Fig Icon Params                                                        % Declare global variables
+global Params
+persistent Fig Icon                                                         % Declare global variables
 
 %============ Initialize GUI
 GUItag      = 'SCNI_Toolbar';                                               % String to use as GUI window tag
@@ -20,26 +21,8 @@ Fig.Background          = [0.6, 0.6, 0.6];
 Fig.ButtonSize          = [0,0,50,50]*Fig.DisplayScale;
 
 %========== Load default params file and experiment directory
-Params                  = load(Params.File);
-[~,ParamFilename]   	= fileparts(Params.File);
-Home                    = fileparts(mfilename('fullpath'));
-if ~isfield(Params,'Toolbar')
-    Params.Toolbar.ExpDir   = fullfile(Home, 'SCNI_Experiments');
-    Params.Toolbar.SaveDir  = '/rawdata/';
-end
-AllFullFiles            = wildcardsearch(Params.Toolbar.ExpDir, '*.m');
-for f = 1:numel(AllFullFiles)
-    [~,AllFiles{f},AllExt{f}] = fileparts(AllFullFiles{f});
-end
-AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
-AllFiles(~cellfun(@isempty, strfind(AllExt, 'Settings'))) = [];
-Params.Toolbar.AllExpFiles      = AllFiles;
-Params.Toolbar.CurrentExp       = Params.Toolbar.AllExpFiles{1};
-Params.Toolbar.Session.Subject  = [];
-Params.Toolbar.Session.DateNum  = datetime('now');
-Params.Toolbar.Session.DateStr  = datestr(Params.Toolbar.Session.DateNum, 'yyyymmdd');
-Params.Toolbar.Session.File   	= [];
-
+Params 	= load(Params.File);
+Params  = UpdateToolbarField(Params);
 
 
 %========================== Open toolbar window ===========================
@@ -153,6 +136,10 @@ for p = 1:numel(Fig.Panel.Titles)
     
 end      
 
+%========== Set stereo mode
+StereoIndx    = find(strcmp({Fig.Button.IconName}, 'Stereoscopic'));
+set(Fig.bh(StereoIndx),'value',Params.Display.UseSBS3D, 'cdata', eval(sprintf('Icon.%s{2}', Fig.Button(StereoIndx).IconName)));
+
 %================= Highlight fields requiring completion
 for Opt = 1:numel(Fig.OptsHighlight)
     for n = 1:numel(Fig.OptsHighlight{Opt})
@@ -205,7 +192,7 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                                     [~,AllFiles{f},AllExt{f}] = fileparts(AllFullFiles{f});
                                 end
                                 AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
-                                AllFiles(~cellfun(@isempty, strfind(AllExt, 'Settings'))) = [];
+                                AllFiles(~cellfun(@isempty, strfind(AllFiles, 'Settings'))) = [];
                                 set(Fig.OptH(2, 3), 'string', AllFiles);
                                 Params.Toolbar.AllExpFiles = AllFiles;
                             end
@@ -217,6 +204,7 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                             end
                         end
                         Params = AppendToolbarHandles(Params);
+                        Params = UpdateToolbarField(Params);
 
                     case 2   %================= Select experiment directory
                         Home = fileparts(mfilename('fullpath'));
@@ -246,17 +234,6 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                 switch indx2
                     case 1  %================= Set subject ID
                         Params.Toolbar.Session.Subject  = get(hObj, 'String');
-                        Params.Toolbar.Session.File     = sprintf('%s_%s_%s.mat', Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr, Params.Toolbar.CurrentExp);
-                        Params.Toolbar.Session.DataDir  = fullfile(Params.Toolbar.SaveDir, Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr);
-                        Params.Toolbar.Session.Fullfile = fullfile(Params.Toolbar.Session.DataDir, Params.Toolbar.Session.File);
-                        if ~exist(Params.Toolbar.Session.DataDir, 'dir')
-                            ans = questdlg(sprintf('Folder ''%s'' does not currently exist. Would you like to create it?', Params.Toolbar.Session.DataDir), 'Create data folder?', 'Yes','No','Yes');
-                            if strcmpi(ans,'Yes')
-                                mkdir(Params.Toolbar.Session.DataDir);
-                            end
-                        end
-                        set(Fig.OptH(2, 1), 'backgroundcolor', Fig.ValidColor);
-                        set(Fig.OptH(2, 5), 'string', Params.Toolbar.Session.File, 'backgroundcolor', Fig.ValidColor);
                         CheckReady;
                         CheckData;
                         
@@ -269,6 +246,8 @@ Fig.HelpH = uicontrol('style','pushbutton',...
                     case 4  %================= Set current run number
                         CurrentRunNo  = str2num(get(hObj, 'string'));
                         Params.Toolbar.CurrentRun = CurrentRunNo;
+                        CheckReady;
+                        CheckData;
                         
                     case 5  %================= Select experiment data file
                         if isfield(Params.Toolbar.Session, 'DataDir')
@@ -291,6 +270,39 @@ Fig.HelpH = uicontrol('style','pushbutton',...
         end
     end
 
+    %============== Toggle stereoscopic 3D
+    function Params = SCNI_3Dmode(Params)
+        Params.Display.UseSBS3D = ~Params.Display.UseSBS3D;
+    end
+
+    %============== Update 'Toolbar' field of Params struct
+    function Params = UpdateToolbarField(Params)
+        [~,ParamFilename]   	= fileparts(Params.File);
+        Home                    = fileparts(mfilename('fullpath'));
+        if ~isfield(Params,'Toolbar')
+            Params.Toolbar.ExpDir   = fullfile(Home, 'SCNI_Experiments');
+            Params.Toolbar.SaveDir  = '/rawdata/';
+        end
+        AllFullFiles            = wildcardsearch(Params.Toolbar.ExpDir, '*.m');
+        for f = 1:numel(AllFullFiles)
+            [~,AllFiles{f},AllExt{f}] = fileparts(AllFullFiles{f});
+        end
+        AllFiles(~cellfun(@isempty, strfind(AllExt, '~'))) = [];
+        AllFiles(~cellfun(@isempty, strfind(AllFiles, 'Settings'))) = [];
+        Params.Toolbar.AllExpFiles      = AllFiles;
+        Params.Toolbar.CurrentExp       = Params.Toolbar.AllExpFiles{1};
+        Params.Toolbar.Session.DateNum  = datetime('now');
+        Params.Toolbar.Session.DateStr  = datestr(Params.Toolbar.Session.DateNum, 'yyyymmdd');
+        if isfield(Fig, 'OptH')
+            set(Fig.OptH(2, 3), 'string', Params.Toolbar.AllExpFiles);
+            Params.Toolbar.Session.Subject  = get(Fig.OptH(2, 1), 'string');
+            Params.Toolbar.Session.File   	= get(Fig.OptH(2, 5), 'string');
+        else
+            Params.Toolbar.Session.Subject  = [];
+            Params.Toolbar.Session.File   	= [];
+        end
+    end
+
     %============== Check whether mat file has been created & read
     function Run = CheckData
         Run = 0;
@@ -303,7 +315,24 @@ Fig.HelpH = uicontrol('style','pushbutton',...
         Params.Toolbar.Session.File     = sprintf('%s_%s_%s.mat', Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr, Params.Toolbar.CurrentExp);
         Params.Toolbar.Session.DataDir  = fullfile(Params.Toolbar.SaveDir, Params.Toolbar.Session.Subject, Params.Toolbar.Session.DateStr);
         Params.Toolbar.Session.Fullfile = fullfile(Params.Toolbar.Session.DataDir, Params.Toolbar.Session.File);
-        set(Fig.OptH(2, 5), 'string', Params.Toolbar.Session.File, 'backgroundcolor', Fig.ValidColor);
+        
+        %=========== Create new directory for thsi session?
+        if ~exist(Params.Toolbar.Session.DataDir, 'dir')
+            ans = questdlg(sprintf('Folder ''%s'' does not currently exist. Would you like to create it?', Params.Toolbar.Session.DataDir), 'Create data folder?', 'Yes','No','Yes');
+            if strcmpi(ans,'Yes')
+                mkdir(Params.Toolbar.Session.DataDir);
+            end
+        end
+        set(Fig.OptH(2, 1), 'backgroundcolor', Fig.ValidColor);
+        
+        %=========== Does .mat file for this RUN already exist?
+        if ~exist(Params.Toolbar.Session.Fullfile)
+            StatusColor = Fig.ValidColor;
+        else
+            StatusColor = Fig.MissingColor;
+        end
+        set(Fig.OptH(2, 5), 'string', Params.Toolbar.Session.File, 'backgroundcolor', StatusColor);
+        
         
     end
     
@@ -338,7 +367,7 @@ Fig.HelpH = uicontrol('style','pushbutton',...
 
         %======= Perform action
         eval(sprintf('Params = %s(Params);', Fig.Button(indx).Func));
-
+        
     end
 
     %============== Open web browser to SCNI Toolbar wiki
@@ -349,13 +378,16 @@ Fig.HelpH = uicontrol('style','pushbutton',...
     %=========== Stop current experiment
     function Params = Stop(Params)
         Params.Run.ExpQuit = 1;
+        sca;
     end
 
     %=========== Run currently selected experiment
     function Params = RunCurrentExp(Params)
         if isfield(Params.Toolbar, 'CurrentExp')
             if ~exist(Params.Toolbar.Session.Fullfile, 'file')
-                save(Params.Toolbar.Session.Fullfile, 'Params')
+                Params.Toolbar = rmfield(Params.Toolbar, 'Button');     % Remove figure handles
+                save(Params.Toolbar.Session.Fullfile, 'Params');        % Save Params structure
+                Params = AppendToolbarHandles(Params);                  % Add figure handles
             end
             eval(sprintf('Params = %s(Params);', Params.Toolbar.CurrentExp));
         end
@@ -437,9 +469,9 @@ Fig.HelpH = uicontrol('style','pushbutton',...
         Type        = {'togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
         IconName	= {'Play','Liquid','SpeakerOn','Eye','Exit','Settings','Penalty','GammaCorrect','Sleep','EPI','Stereoscopic','Display','Liquid','Eye','DataPixx','TDT','OpenEphys','Motive','Transfer','Github','Save'};
         Tip         = {'Run current experiment','Give reward','Play audio','Run eye calibration','Quit current experiment','Edit experiment settings','Debug mode','Apply gamma','Time out','MRI training','Stereoscopic 3D','Display settings','Reward settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings','OptiTrack settings','Transfer data','Manage GitHub repos','Save parameters'};
-        Func        = {'RunCurrentExp','SCNI_GiveReward','SCNI_PlaySound','SCNI_Calibration','Stop','RunCurrentExpSettings',...
+        Func        = {'RunCurrentExp','SCNI_GiveReward','SCNI_PlaySound','SCNI_EyeCalib','Stop','RunCurrentExpSettings',...
                     	'SCNI_DebugMode','SCNI_ApplyGamma','SCNI_RestMode','SCNI_ScannerMode','SCNI_3Dmode',...
-                        'SCNI_DisplaySettings','SCNI_RewardSettings','SCNI_EyelinkSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings','SCNI_OptiTrackSettings','SCNI_TransferSettings','SCNI_CodeSettings','SaveParams'};
+                        'SCNI_DisplaySettings','SCNI_RewardSettings','SCNI_EyeCalibSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings','SCNI_OptiTrackSettings','SCNI_TransferSettings','SCNI_CodeSettings','SaveParams'};
         Shortcut    = {'g','r','a','c','q','s',[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]};
         Panel       = [1,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3];
         Enabled     = [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1];

@@ -30,22 +30,25 @@ if Params.Eye.CalMode > 1                                        	%=============
         Eye(e).Pixels   = Params.Display.Rect([3,4])/2 + Eye(e).PixCntr;                        % Center pixels relative to screen center
     end
     if Params.Eye.EyeToUse > 2                                      %============= Calculate version (both eyes)
-        Eye(3).Degrees = Eye(1).Degrees - Eye(2).Degrees;   
-        Eye(3).Pixels  = Eye(1).Pixels - Eye(2).Pixels;
+        Eye(3).Degrees = mean([Eye(1).Degrees; Eye(2).Degrees]);   
+        Eye(3).Pixels  = mean([Eye(1).Pixels; Eye(2).Pixels]);
+        Eye(3).VergDeg = Eye(1).Degrees(1) - Eye(2).Degrees(1);     % Vergence (degrees) = difference between X-position for left and right eyes
+        Eye(3).VergPix = Eye(1).Pixels(1) - Eye(2).Pixels(1); 
+        Eye(3).VergCm  = [];
+        EyeToUse       = Params.Eye.EyeToUse;
     end
     
+    if Eye(EyeToUse).Pixels(1) > Params.Display.Rect(3)                     % If gaze cursor is entering monkey's display...
+        HideCursor;                                                         % Turn cursor off!
+    else                                                                    % Otherwise, mouse is on an experimenter display
+        ShowCursor;                                                         % Show cursor
+    end
+
 elseif Params.Eye.CalMode == 1                                   	%============= Use mouse cursor to simulate eye position
-    EyeToUse = 1;
-    [EyeX, EyeY, buttons] = GetMouse(Params.Display.win);                                	% Get mouse cursor position (relative to top left corner)
+    [EyeX, EyeY, buttons]   = GetMouse(Params.Display.win);                                	% Get mouse cursor position (relative to top left corner)
     Eye(1).PupilV  = [];                                                                    % Return empty for pupil size 
     Eye(1).Pixels  = [EyeX, EyeY];                                                          % 
     Eye(1).PixCntr = Eye(1).Pixels-Params.Display.Rect([3,4])/2;                           	% Center coordinates
     Eye(1).Degrees = Eye(1).Pixels./Params.Display.PixPerDeg;                              	% Convert pixels to degrees
 	Eye(1).Volts   = (Eye(1).Degrees./Params.Eye.Cal.Gain{1})+Params.Eye.Cal.Offset{1};     % Convert degrees to volts
-end
-
-if Eye(EyeToUse).Pixels(1) > Params.Display.Rect(3)                  	% If gaze cursor is entering monkey's display...
-    HideCursor;                                                         % Turn cursor off!
-else                                                                    % Otherwise, mouse is on an experimenter display
-    ShowCursor;                                                         % Show cursor
 end

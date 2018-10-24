@@ -25,7 +25,6 @@ elseif exist('ParamsFile','var')
         ParamsFile  = Params.File;
     end
 end
-
 [Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
 
 %=========== Load default parameters
@@ -41,8 +40,8 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
         end
     end
     Params.Eye.CalibFile        = '';
-    Params.Eye.XYchannels     	= {Params.Eye.DPxChannels([1,2]), Params.Eye.DPxChannels([4,5])};
-    Params.Eye.Pupilchannels 	= {Params.Eye.DPxChannels(3), Params.Eye.DPxChannels(6)};
+    Params.Eye.XYchannels     	= {Params.Eye.DPxChannels([1,2]), Params.Eye.DPxChannels([4,5]), []};
+    Params.Eye.Pupilchannels 	= {Params.Eye.DPxChannels(3), Params.Eye.DPxChannels(6), []};
     Params.Eye.Cal.Labels       = {'Left','Right','Version','Vergence'};
     Params.Eye.Cal.Offset       = {[0,0],[0,0],[0,0],[0,0]};
     Params.Eye.Cal.Gain         = {[6,6],[6,6],[6,6],[6,6]};
@@ -71,9 +70,10 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
     Params.Eye.ITIms            = 2000;                    	% Inter-trial interval (ms)
     Params.Eye.ISIms            = 300;                      % Inter-stimulus interval (ms)
     Params.Eye.UseSBS3D         = 0;                        % Use side-by-side stereoscopic 3D presentation?
-    Params.Eye.DisparityRange   = [0, 0];                   % Range of binocular disparities to present targets at (min, max) (degrees)
+    Params.Eye.DepthCm          = 30;                       % Range of binocular disparities to present targets at (min, max) (degrees)
     Params.Eye.XYselected      	= 1;                        % X position is selected by default
     Params.Eye.GainIncrement   	= 0.1;                      % Increment size for manual changes of gain (degrees per Volt)
+    
 elseif Success > 1
     ParamsOut = Params;
 	return;
@@ -82,6 +82,9 @@ if OpenGUI == 0
     ParamsOut = Params;
     return;
 end
+
+Params.Eye.DispCm   = (Params.Display.IPD/2)/(Params.Display.ViewingDist-Params.Eye.DepthCm)*Params.Eye.DepthCm; 
+Params.Eye.DispPix  = Params.Eye.DispCm*Params.Display.PixPerCm(1);
 
 %========================= OPEN GUI WINDOW ================================
 Fig.Handle          = figure;                                       	% Open new figure window         
@@ -104,7 +107,7 @@ Fig.TitleFontSize = 18;
 
 %============= Prepare GUI panels
 Fig.PanelNames      = {'Eye tracker inputs','Calibration appearance','Calibration timing'};
-Fig.PannelHeights   = [200, 220, 260];
+Fig.PannelHeights   = [200, 240, 200];
 BoxPos{1}           = [Fig.Margin, Fig.Rect(4)-Fig.PannelHeights(1)*Fig.DisplayScale-Fig.Margin*2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(1)*Fig.DisplayScale];   
 for i = 2:numel(Fig.PanelNames)
     BoxPos{i}           = [Fig.Margin, BoxPos{i-1}(2)-Fig.PannelHeights(i)*Fig.DisplayScale-Fig.Margin/2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(i)*Fig.DisplayScale];
@@ -112,18 +115,18 @@ end
 
 Fig.UIinputs.Labels         = {'Eye XY channels', 'Eye pupil channels','Eye to use','Offset XY (V)','Degrees per V','Inverted'};
 Fig.UIinputs.Style          = {'Edit','Edit','popup','Edit','Edit','Checkbox'};
-Fig.UIinputs.Defaults       = {num2str(Params.Eye.XYchannels{Params.Eye.EyeToUse}), num2str(Params.Eye.Pupilchannels{Params.Eye.EyeToUse}), Params.Eye.Cal.Labels, Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, {[],[]}};
+Fig.UIinputs.Defaults       = {num2str(Params.Eye.XYchannels{Params.Eye.EyeToUse}), num2str(Params.Eye.Pupilchannels{Params.Eye.EyeToUse}), Params.Eye.Cal.Labels, Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, {[],[]} };
 Fig.UIinputs.Values         = {[],[],Params.Eye.EyeToUse, Params.Eye.Cal.Offset{Params.Eye.EyeToUse}, Params.Eye.Cal.Gain{Params.Eye.EyeToUse}, Params.Eye.Cal.Sign{Params.Eye.EyeToUse}};
 Fig.UIinputs.Enabled        = [0, 0, 1, 0, 0, 0];
 Fig.UIinputs.Tips           = {'','','','','',''};
 Fig.UIinputs.Ypos           = [(Fig.PannelHeights(1)-50):-20:10]*Fig.DisplayScale;
 Fig.UIinputs.Xwidth         = [180, 200]*Fig.DisplayScale;
 
-Fig.UIappearance.Labels    	= {'Calibration mode','Center only','Target layout', 'No. targets', 'Target spacing (deg)','Marker type','Marker directory','Marker diameter (deg)','Marker color'};
-Fig.UIappearance.Style     	= {'popup', 'checkbox','popup','popup', 'edit','popup','edit', 'edit', 'pushbutton'};
-Fig.UIappearance.Defaults 	= {Params.Eye.CalModes, [], Params.Eye.CalTypes, Params.Eye.NoPointsList{Params.Eye.CalType}, Params.Eye.PointDist, Params.Eye.MarkerTypes, Params.Eye.MarkerDir, Params.Eye.MarkerDiam, []};
-Fig.UIappearance.Values   	= {Params.Eye.CalMode, Params.Eye.CenterOnly, Params.Eye.CalType, Params.Eye.NoPoint, [], Params.Eye.MarkerType, [], [], []};
-Fig.UIappearance.Enabled   	= [1,1,1,1,1,1,Params.Eye.MarkerType>1,1,1];
+Fig.UIappearance.Labels    	= {'Calibration mode','Center only','Target layout', 'No. targets', 'Target spacing (deg)','Marker type','Marker directory','Marker diameter (deg)','Marker color','Target depth (cm)'};
+Fig.UIappearance.Style     	= {'popup', 'checkbox','popup','popup', 'edit','popup','edit', 'edit', 'pushbutton','edit'};
+Fig.UIappearance.Defaults 	= {Params.Eye.CalModes, [], Params.Eye.CalTypes, Params.Eye.NoPointsList{Params.Eye.CalType}, Params.Eye.PointDist, Params.Eye.MarkerTypes, Params.Eye.MarkerDir, Params.Eye.MarkerDiam, [], Params.Eye.DepthCm};
+Fig.UIappearance.Values   	= {Params.Eye.CalMode, Params.Eye.CenterOnly, Params.Eye.CalType, Params.Eye.NoPoint, [], Params.Eye.MarkerType, [], [], [], []};
+Fig.UIappearance.Enabled   	= [1,1,1,1,1,1,Params.Eye.MarkerType>1,1,1,1];
 Fig.UIappearance.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UIappearance.Xwidth   	= [180, 200]*Fig.DisplayScale;
 
@@ -148,7 +151,7 @@ Fig.UItiming.Tips           = {'Duration of each target presentation (ms)',...
 
 
 Fig.PanelVars(1).Fieldnames = {'XYchannels','Pupilchannels','EyeToUse','Cal.Offset','Cal.Gain','Cal.Sign'};
-Fig.PanelVars(2).Fieldnames = {'CalMode','CenterOnly','CalType','NoPoint','PointDist','MarkerType','MarkerDir','MarkerDiam', 'MarkerColor'};
+Fig.PanelVars(2).Fieldnames = {'CalMode','CenterOnly','CalType','NoPoint','PointDist','MarkerType','MarkerDir','MarkerDiam', 'MarkerColor','DepthCm'};
 Fig.PanelVars(3).Fieldnames = {'Duration','FixPercent','FixDist','StimPerTrial','TrialsPerRun','ITIms','ISIms'};
 
 Fig.OffOn           = {'Off','On'};

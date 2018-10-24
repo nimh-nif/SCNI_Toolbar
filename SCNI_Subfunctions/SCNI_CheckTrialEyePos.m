@@ -13,8 +13,21 @@ status          = Datapixx('GetAdcStatus');
 nReadSpls       = status.newBufferFrames;                                                 	% How many samples can we read?
 [NewData, NewDataTs] = Datapixx('ReadAdcBuffer', nReadSpls, Params.DPx.adcBuffBaseAddr); 	% Read all available samples from ADCs
 Datapixx('StopAdcSchedule');                                                                % Stop current schedule
-EyeChannels     = [Params.Eye.XYchannels{Params.Eye.EyeToUse}, Params.Eye.XYchannels{Params.Eye.EyeToUse}(2)+1];
-EyeData         = NewData(EyeChannels,:);   
+if Params.Eye.EyeToUse < 3
+    EyeChannels     = [Params.Eye.XYchannels{Params.Eye.EyeToUse}, Params.Eye.XYchannels{Params.Eye.EyeToUse}(2)+1];
+    EyeData         = NewData(EyeChannels,:); 
+    
+elseif Params.Eye.EyeToUse == 3
+    for e = 1:2
+        SingleEyeData{e} 	= NewData(Params.Eye.XYchannels{e},:); 
+        PupilData{e}        = NewData(Params.Eye.XYchannels{e}(2)+1,:);
+    end
+    EyeData(1,:)  	= mean([SingleEyeData{1}(1,:); SingleEyeData{2}(1,:)]);   	% X data = VERSION
+    EyeData(2,:)   	= mean([SingleEyeData{1}(2,:); SingleEyeData{2}(2,:)]);     % Y data = average Y
+    EyeData(3,:) 	= mean([PupilData{1}; PupilData{2}]);                       % Pupil data = average
+    EyeData(4,:)    = SingleEyeData{1}(1,:) - SingleEyeData{2}(1,:);            % Z data = VERGENCE
+end
+  
 DiodeChannel    = find(~cellfun(@isempty, strfind(Params.DPx.AnalogIn.Labels, 'Photodiode')));
 DiodeData       = NewData(DiodeChannel,:);
 Timestamps      = linspace(0, numel(DiodeData)/Params.DPx.AnalogInRate, numel(DiodeData));  % Analog data timestamps (seconds)
@@ -36,7 +49,10 @@ if numel(StimOnsetSamples) ~= Params.Eye.StimPerTrial
     subplot(1,2,1); imagesc(Timestamps, 1:size(NewData,1), NewData);
     ylabel('DataPixx Channel #')
     xlabel('Time (seconds)');
-    subplot(1,2,2); plot(Timestamps, DiodeData);
+    subplot(1,2,2); plot(Timestamps, DiodeData); hold on;
+    plot(Timestamps, NewData(1,:));
+    plot(Timestamps, NewData(2,:));
+    legend({'DIode', 'LEft X', 'Left Y'});
     title(sprintf('Photodiode = channel %d', DiodeChannel));
 end
 if numel(StimOffsetSamples) < numel(StimOnsetSamples)

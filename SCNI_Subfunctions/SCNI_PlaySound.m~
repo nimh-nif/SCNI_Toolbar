@@ -13,7 +13,7 @@ repetitions     = 1;
 if nargin < 2
     wavDir          = '/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/';
     wavFiles        = wildcardsearch(wavDir, '*.wav');
-    wavFilename     = wavFiles{randi(numel(wavFiles))}; % BE_Coo_mov53.wav';
+    wavFilename     = wavFiles{randi('/projects/murphya/MacaqueFace3D/Macaque_video/OriginalWAVs/BE_Coo_mov53.wav';
     [waveData, freq] = audioread(wavFilename);       	% Load the .wav file
     waveData        = waveData';                        % Transpose so that each row has 1 channel    
 else

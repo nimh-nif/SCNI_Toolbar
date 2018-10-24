@@ -3,10 +3,7 @@ function Params = SCNI_LoadGFframes(Params)
 %======================= LoadGazeFollowingFrames.m ========================
 
 
-if ~isfield(Params.Display, 'win')
-    
 
-end
 
 %========= Load stimulus paramater information
 StimParamsFile = wildcardsearch(Params.GF.StimDir, '*.mat');
@@ -22,6 +19,14 @@ if Params.GF.BckgrndType == 2
     BckgrndIm       = imread(AllBckgrndTex{randi(numel(AllBckgrndTex))});
     Params.GF.BckgrndTex = Screen('MakeTexture', Params.Display.win, BckgrndIm);
 end
+
+%========= Load foreground image(s)
+% if Params.GF.ForegroundType > 0
+    ForegroundFile              = wildcardsearch(Params.GF.StimDir, 'Barrel*.png');
+    [ForegroundIm, cmap, alph]  = imread(ForegroundFile{1});
+    ForegroundIm(:,:,4)         = alph;
+    Params.GF.ForegroundTex     = Screen('MakeTexture', Params.Display.win, ForegroundIm);
+% end
 
 %============= Update experimenter display
 LoadTextPos     = (Params.Display.Rect([3,4]).*[0.4,0.5]);
@@ -66,6 +71,20 @@ if Params.GF.Mode > 1
     FrameCount  = 1;
     C           = 1;
     SourceRect  = Params.Display.Rect./[1,1,2,1];
+    
+    %============= Load resting blink frames to PTB texture handles
+    BlinkFrames = wildcardsearch(Params.GF.StimDir, 'Blink*');
+    for f = 1:numel(BlinkFrames)
+        [img, cmap, alpha]  = imread(BlinkFrames{f});
+        img(:,:,4)          = alpha;
+        Params.GF.AvatarBlink(f) = Screen('MakeTexture', Params.Display.win, img);
+        ImageDim(f,:)       = [size(img,2), size(img,1)];
+        if size(unique(ImageDim,'rows'),1) > 1
+            error('Pixel resolution of frame %s does not match other frames!', BlinkFrames{f});
+        end
+    end
+    
+    %============= Load saccades/ head movements to targets
     for t = 1:Stim.NoTargets
         for f = 1:Stim.FramesPerTarget
 
@@ -94,7 +113,7 @@ if Params.GF.Mode > 1
             [img, cmap, alpha]  = imread(Filename);
             img(:,:,4)          = alpha;
             Params.GF.AvatarTex(t, f) = Screen('MakeTexture', Params.Display.win, img);
-            ImageDim            = [size(img,2), size(img,1)];
+            ImageDim(FrameCount,:)    = [size(img,2), size(img,1)];
             if size(unique(ImageDim,'rows'),1) > 1
                 error('Pixel resolution of frame %s does not match other frames!', Filename);
             end

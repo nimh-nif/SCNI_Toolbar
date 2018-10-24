@@ -31,7 +31,7 @@ elseif exist('ParamsFile','var')
         ParamsFile  = Params.File;
     end
 end
-[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
 
 %=========== Load default parameters
 if Success < 1 || ~isfield(Params, 'Movie')                                         	% If the parameters could not be loaded...
@@ -72,6 +72,10 @@ if Success < 1 || ~isfield(Params, 'Movie')                                     
     Params.Movie.Reward         = 1;                        % Give reward during movie?
     Params.Movie.FixRequired    = 1;                        % Require fixation criterion to be met for reward?
     
+end
+if OpenGUI == 0
+    ParamsOut = Params;
+    return;
 end
 Params = RefreshMovieList(Params);
 

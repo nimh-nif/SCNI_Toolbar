@@ -200,7 +200,7 @@ TipStr = {  'Set the viewing distance in centimetres (distance from observer to 
 Tags        = {'VD','IPD','ScreenDim','Pixels','PixPerDeg','PDmarkerPos','PDmarkerSize', 'PDmarkerColor'};
 
 Params.Display.XScreenRect  = Screen('Rect',1);
-Params.Display.Rect         = Resolution;
+Params.Display.Rect         = Resolution./[1,1,2,1];
 Params.Display.PixPerCm   	= Params.Display.Rect([3,4])./Params.Display.ScreenDims;                         % Calculate number of pixels per centimetre
 Params.Display.PixPerDeg 	= (Params.Display.PixPerCm*Params.Display.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
 
@@ -327,12 +327,12 @@ uicontrol(  'Style', 'pushbutton',...
             'HorizontalAlignment', 'left',...
             'Callback', {@OptionSelect, 3});         
 
-hs = guihandles(Fig.Handle);                                % get UI handles
-guidata(Fig.Handle, hs);                                    % store handles
-set(Fig.Handle, 'HandleVisibility', 'callback');            % protect from command line
-drawnow;                                                    % Update GUI window
-Params      = GetPDrect(Params);                            % Calculate photodiode rectangle
-Params      = CreatePLDAPSParams(Params);                   % Generate PLDAPS compatible version of fields
+hs = guihandles(Fig.Handle);                                    % get UI handles
+guidata(Fig.Handle, hs);                                        % store handles
+set(Fig.Handle, 'HandleVisibility', 'callback');                % protect from command line
+drawnow;                                                        % Update GUI window
+Params      = SCNI_GetPDrect(Params, Params.Display.UseSBS3D); 	% Calculate photodiode rectangle
+Params      = CreatePLDAPSParams(Params);                       % Generate PLDAPS compatible version of fields
 ParamsOut   = Params;
 
 

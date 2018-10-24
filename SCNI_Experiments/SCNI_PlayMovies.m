@@ -17,17 +17,6 @@ if nargin == 0 || ~isfield(Params, 'Movie') || ~isfield(Params, 'Design')
     Params  = SCNI_PlayMoviesSettings(Params, 0);
 end
 
-%============== Keyboard shortcuts
-KbName('UnifyKeyNames');
-KeyNames                    = {'Escape','R','S'};         
-KeyFunctions                = {'Stop','Reward','Sound'};
-Params.Movie.KeysList       = zeros(1,256); 
-for k = 1:numel(KeyNames)
-    eval(sprintf('Params.Movie.Keys.%s = KbName(''%s'');', KeyFunctions{k}, KeyNames{k}));
-    eval(sprintf('Params.Movie.KeysList(Params.Movie.Keys.%s) = 1;', KeyFunctions{k}));
-    fprintf('Press ''%s'' for %s\n', KeyNames{k}, KeyFunctions{k});
-end
-
 %================= PRE-ALLOCATE RUN AND REWARD FIELDS
 Params.Movie.TrialsPerRun       = ceil(Params.Movie.RunDuration/(Params.Movie.Duration+Params.Movie.ISI));
 Params.Run.ValidFixations       = nan(Params.Movie.TrialsPerRun, Params.Movie.Duration*Params.DPx.AnalogInRate, 3);
@@ -41,7 +30,7 @@ Params.Run.MaxTrialDur          = Params.Movie.Duration;
 Params.Run.MovieCount           = 1;                            % Start movie count at 1
 Params.Run.TrialCount           = 1;
 Params.Run.ExpQuit              = 0;
-Params.Run.EndMovie             = 0;
+Params.Run.EndRun               = 0;
 Params.Run.CurrentFile          = Params.Movie.AllFiles{4};
 Params.Run.StimIsOn             = 0;
 Params.Run.NoTTLs               = 35;
@@ -58,34 +47,16 @@ Params.DPx.UseDPx               = 1;                            % Use DataPixx?
 if ~isfield(Params, 'Eye')
     Params = SCNI_EyeCalibSettings(Params);
 end
-Params.Eye.CalMode = 2;
 
-DefaultCalfile  = '/projects/SCNI/SCNI_Datapixx/Settings/Jasper_180919_calib.mat';
-[file,path]     = uigetfile('*_calib.mat', 'Select calibration parameters file', DefaultCalfile);
-CalibrationFile = fullfile(path, file);
-load(CalibrationFile);
-
-Params.Eye.EyeToUse                         = Cal.CurrentEye;
-Params.Eye.Cal.Gain{Params.Eye.EyeToUse}     = Cal.EyeGain;
-Params.Eye.Cal.Offset{Params.Eye.EyeToUse}   = Cal.EyeOffset;
 
 %================= OPEN NEW PTB WINDOW?
-% if ~isfield(Params.Display, 'win')
-    CloseOnFinish = 1;
-    HideCursor;   
-    KbName('UnifyKeyNames');
-    Screen('Preference', 'VisualDebugLevel', 0);   
-    Params.Display.ScreenID = max(Screen('Screens'));
-    [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor*255, Params.Display.XScreenRect,[],[], [], []);
-    Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                        % Enable alpha channel
-    Params.Display.ExpRect  = Params.Display.Rect;
-    Params                  = SCNI_InitializeGrid(Params);
-% end
+Params = SCNI_OpenWindow(Params);
 
-%================= INITIALIZE DATAPIXX
-if Params.DPx.UseDPx == 1
-    Params = SCNI_DataPixxInit(Params);
-end
+%================= INITIALIZE SETTINGS
+Params  = SCNI_DataPixxInit(Params);                                % Initialize DataPixx
+Params 	= SCNI_InitializeGrid(Params);                              % Initialize experimenter's display grid
+Params	= SCNI_GetPDrect(Params, Params.Display.UseSBS3D);          % Initialize photodiode location(s)
+Params  = SCNI_InitKeyboard(Params);                                % Initialize keyboard shortcuts
 
 %================= LOAD FIRST MOVIE FILE
 [mov, Movie.duration, Movie.fps, Movie.width, Movie.height, Movie.count, Movie.AR] = Screen('OpenMovie', Params.Display.win, Params.Run.CurrentFile); 
@@ -134,16 +105,30 @@ end
 if Params.Movie.FixOn == 1
     Params.Movie.GazeRect 	= CenterRect([1,1,2*Params.Movie.GazeRectBorder.*Params.Display.PixPerDeg], Params.Display.Rect); 
 end
-if Params.Movie.SBS == 1
-    NoEyes                          = 2;
-    Params.Movie.SourceRect{1}      = [1, 1, Movie.width/2, Movie.height];
-    Params.Movie.SourceRect{2}      = [(Movie.width/2)+1, 1, Movie.width, Movie.height];
-    Params.Display.FixRectExp      	= CenterRect([1, 1, Fix.Size], Params.Display.Rect);
-    Params.Display.FixRectMonk(1,:)	= CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
-    Params.Display.FixRectMonk(2,:)	= Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
+
+if Params.Movie.SBS == 1                    % If frames are rendered as SBS stereo 3D...
+    if Params.Display.UseSBS3D == 1         % If presentation in SBS3D was requested...
+        NoEyes                          = 2;
+        Params.Movie.SourceRect{1}      = [1, 1, Movie.width/2, Movie.height];
+        Params.Movie.SourceRect{2}      = [(Movie.width/2)+1, 1, Movie.width, Movie.height];
+        Params.Movie.SourceRectMonk     = [];
+        Params.Display.FixRectExp      	= CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+        Params.Display.FixRectMonk(1,:)	= CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
+        Params.Display.FixRectMonk(2,:)	= Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
+    
+    elseif Params.Display.UseSBS3D == 0     	% If presentation in 2B was requested...
+        NoEyes                          = 1;
+        Params.Movie.SourceRect{1}      = [1, 1, Movie.width/2, Movie.height];
+        Params.Movie.SourceRectMonk     = Params.Movie.SourceRect{1};
+        Params.Display.FixRectExp      	= CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+        Params.Display.FixRectMonk(1,:)	= CenterRect([1, 1, Fix.Size], Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0]); 
+        Params.Display.FixRectMonk(2,:)	= Params.Display.FixRectMonk(1,:);
+    end
+    
 elseif Params.Movie.SBS == 0
     NoEyes                          = 1;
     Params.Movie.SourceRect{1}    	= [1, 1, Movie.width, Movie.height];
+    Params.Movie.SourceRectMonk     = [];
  	Params.Display.FixRectExp      	= CenterRect([1, 1, Fix.Size], Params.Display.Rect);
     Params.Display.FixRectMonk(1,:)	= CenterRect([1, 1, Fix.Size], Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0]); 
     Params.Display.FixRectMonk(2,:)	= Params.Display.FixRectMonk(1,:);
@@ -153,7 +138,7 @@ Params.Eye.GazeRect = Params.Movie.GazeRect;
 
 %================= BEGIN RUN
 FrameOnset                  = GetSecs;
-while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
+while Params.Run.EndRun == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
     
     Params.Run.MovieStartTime   = GetSecs;
 	if Params.Run.MovieCount > 1
@@ -188,8 +173,8 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2])+[-10,-10,10,10];                        % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                        % Get screen coordinates of current gaze position (pixels)
+        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
         ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);                     % Find first NaN elements in fix vector
@@ -229,7 +214,7 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
             end
         end
 
-        Params.Run.EndMovie = CheckKeys(Params);                                                                                    % Check for keyboard input
+        Params = SCNI_CheckKeys(Params);                                                                                    % Check for keyboard input
     end
 
     %================= Wait for TTL sync?
@@ -240,14 +225,14 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
     
     %================= BEGIN CURRENT MOVIE PLAYBACK
     Params.Run.StimOnTime = GetSecs;
-    while Params.Run.EndMovie == 0 && (FrameOnset(end)-Params.Run.StimOnTime) < Params.Movie.Duration
+    while Params.Run.EndRun == 0 && (FrameOnset(end)-Params.Run.StimOnTime) < Params.Movie.Duration
         
         %=============== Get next frame and draw to displays
        	MovieTex = Screen('GetMovieImage', Params.Display.win, mov);                                                    % Get texture handle for next frame
         Screen('FillRect', Params.Display.win, Params.Movie.Background*255);                                             	% Clear previous frame
         if MovieTex > 0
             Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRect{1}, Params.Movie.RectExp, Params.Movie.Rotation, [], Params.Movie.Contrast);      % Draw to the experimenter's display
-            Screen('DrawTexture', Params.Display.win, MovieTex, [], Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
+            Screen('DrawTexture', Params.Display.win, MovieTex, Params.Movie.SourceRectMonk, Params.Movie.RectMonk, Params.Movie.Rotation, [], Params.Movie.Contrast);   % Draw to the subject's display
         end
      	for Eye = 1:NoEyes  
             currentbuffer = Screen('SelectStereoDrawBuffer', Params.Display.win, Eye-1);                                    % Select the correct stereo buffer
@@ -262,8 +247,8 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).PixCntr),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).PixCntr, [], Params.Movie.FixOn==0, Params);	% Check if gaze position is inside fixation window
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                     % Get screen coordinates of current gaze position (pixels)
+        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params);	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
         ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
@@ -300,7 +285,7 @@ while Params.Run.EndMovie == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.
         end
 
         %=============== 
-        Params.Run.EndMovie = CheckKeys(Params);                                     	% Check for keyboard input
+        [Params] = SCNI_CheckKeys(Params);                                              % Check for keyboard input
         if MovieTex > 0
             Screen('Close', MovieTex);                                                 	% Close the last movie frame texture
         end
@@ -329,21 +314,21 @@ end
 
 end
 
-%=============== CHECK FOR EXPERIMENTER INPUT
-function EndMovie = CheckKeys(Params)
-    EndMovie = Params.Run.EndMovie;
-    [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
-    if keyIsDown && secs > Params.Run.LastPress+0.1                              	% If key is pressed and it's more than 100ms since last key press...
-        Params.Run.LastPress   = secs;                                            	% Log time of current key press
-        if keyCode(Params.Movie.Keys.Stop) == 1                     
-            EndMovie = 1;
-        elseif keyCode(Params.Movie.Keys.Reward) == 1                          	% Experimenter pressed manual reward key
-            Params = SCNI_GiveReward(Params);
-      	elseif keyCode(Params.Movie.Keys.Sound) == 1                          	% Experimenter pressed audio key
-            Params = SCNI_PlaySound(Params);   
-        end
-    end
-end
+% %=============== CHECK FOR EXPERIMENTER INPUT
+% function EndMovie = CheckKeys(Params)
+%     EndMovie = Params.Run.EndMovie;
+%     [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
+%     if keyIsDown && secs > Params.Run.LastPress+0.1                              	% If key is pressed and it's more than 100ms since last key press...
+%         Params.Run.LastPress   = secs;                                            	% Log time of current key press
+%         if keyCode(Params.Movie.Keys.Stop) == 1                     
+%             EndMovie = 1;
+%         elseif keyCode(Params.Movie.Keys.Reward) == 1                          	% Experimenter pressed manual reward key
+%             Params = SCNI_GiveReward(Params);
+%       	elseif keyCode(Params.Movie.Keys.Audio) == 1                          	% Experimenter pressed audio key
+%             Params = SCNI_PlaySound(Params);   
+%         end
+%     end
+% end
 
 %================= UPDATE EXPERIMENTER'S DISPLAY STATS
 function Params = SCNI_UpdateStats(Params)

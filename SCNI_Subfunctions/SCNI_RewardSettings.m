@@ -59,3 +59,5 @@ end
 if isfield(Params,'DPx')
     Params.Reward.OutputChannel     = find(Params.DPx.DigitalOutAssign==1);
 end
+
+ParamsOut = Params;

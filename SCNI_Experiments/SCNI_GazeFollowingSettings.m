@@ -50,6 +50,7 @@ if Success < 1
     Params.GF.BckgrndTypes      = {'None','Image','Movie'};               	% Add a background?
     Params.GF.BckgrndType       = 1;
     Params.GF.BckgrndDir        = '/projects/murphya/Stimuli/';           	% Add an image or movie background?
+    Params.GF.ForegroundType    = 1;
     Params.GF.Greyscale         = 0;                                        % Convert images to greyscale?
     Params.GF.Contrast          = 1;                                        % Contrast (proportion)
     Params.GF.Use3D             = 1;      
@@ -241,6 +242,12 @@ ParamsOut = Params;     % Output 'Params' struct
                 
             case 2  %============ Save parameters to file
                 GF = Params.GF;
+                TextureHandles = {'AvatarTex','BckgrndTex','TargetTex'};
+                for t = 1:numel(TextureHandles)
+                    if isfield(GF, TextureHandles{t})
+                        GF = rmfield(GF,TextureHandles{t});    % Remove texture handles
+                    end
+                end
                 save(Params.File, 'GF', '-append');
                 
             case 3  %============ Run experiment

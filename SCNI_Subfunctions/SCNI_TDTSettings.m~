@@ -300,11 +300,8 @@ ParamsOut = Params;
     %=============== OPEN UDP SOCKET
     function Params = OpenUDP(Params)
         
-        port = 
+        
         Params.TDT.UDPsock = pnet('udpsocket', port); 
-        if Params.TDT.UDPsock == -1
-            error('pnet failed to open a UDP socket!');
-        end
         pnet(Params.TDT.UDPsock,'udpconnect','hostname',port);
         
         pnet(Params.TDT.UDPsock,'printf','Hello world!\n');

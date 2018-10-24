@@ -35,7 +35,7 @@ elseif exist('ParamsFile','var')
         ParamsFile  = Params.File;
     end
 end
-[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
 
 %=========== Load default parameters
 if Success < 1
