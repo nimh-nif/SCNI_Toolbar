@@ -42,7 +42,7 @@ if Success < 1 || ~isfield(Params, 'Eye')                                       
     Params.Eye.CalibFile        = '';
     Params.Eye.XYchannels     	= {Params.Eye.DPxChannels([1,2]), Params.Eye.DPxChannels([4,5]), []};
     Params.Eye.Pupilchannels 	= {Params.Eye.DPxChannels(3), Params.Eye.DPxChannels(6), []};
-    Params.Eye.Cal.Labels       = {'Left','Right','Version','Vergence'};
+    Params.Eye.Cal.Labels       = {'Left','Right','Version'};
     Params.Eye.Cal.Offset       = {[0,0],[0,0],[0,0],[0,0]};
     Params.Eye.Cal.Gain         = {[6,6],[6,6],[6,6],[6,6]};
     Params.Eye.Cal.Sign         = {[1,1], [1,1], [1,1], [1,1]};
@@ -174,7 +174,7 @@ for p = 1:numel(Fig.PanelNames)
                     'FontSize', Fig.FontSize);
         if p == 1 && n >= 4
             for xy = 1:2
-            	Fig.UIhandle(p,n) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
+            	Fig.UIhandle(p,n,xy) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
                         'String', PanelStructs{p}.Defaults{n}(xy),...
                         'Value', PanelStructs{p}.Values{n}(xy),...
                         'Enable', Fig.OffOn{PanelStructs{p}.Enabled(n)+1},...
@@ -185,7 +185,7 @@ for p = 1:numel(Fig.PanelNames)
                         'Callback', {@UpdateParams, p, n, xy});
             end
         else
-            Fig.UIhandle(p,n) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
+            Fig.UIhandle(p,n,1) = uicontrol(  'Style', PanelStructs{p}.Style{n},...
                         'String', PanelStructs{p}.Defaults{n},...
                         'Value', PanelStructs{p}.Values{n},...
                         'Enable', Fig.OffOn{PanelStructs{p}.Enabled(n)+1},...
@@ -205,7 +205,7 @@ for p = 1:numel(Fig.PanelNames)
 
     end
 end
-set(Fig.UIhandle(2,9), 'backgroundcolor', Params.Eye.MarkerColor);
+set(Fig.UIhandle(2,9,1), 'backgroundcolor', Params.Eye.MarkerColor);
 
 
 %================= OPTIONS PANEL
@@ -256,6 +256,7 @@ ParamsOut = Params;     % Output 'Params' struct
             case 2  %============ Save parameters to file
                 Eye = Params.Eye;
                 save(Params.File, 'Eye', '-append');
+                fprintf('EYe
 
             case 3  %============ Run experiment
                 if Params.Eye.MarkerType == 2
@@ -275,17 +276,26 @@ ParamsOut = Params;     % Output 'Params' struct
     %=============== Update parameters
     function UpdateParams(hObj, Evnt, Indx1, Indx2)
 
-        %============= Panel 1 controls for directory selection
-        if Indx1 == 2 && Indx2 == 7         %===== Change stimulus directory
+        %============= Panel 2 controls for directory selection
+        if Indx1 == 2 && Indx2 == 7                         %============= Change stimulus directory
             ImageDir	= uigetdir('/projects/','Select stimulus directory');
             if ImageDir == 0
                 return;
             end
             Params.Eye.MarkerDir = ImageDir;
-            set(Fig.UIhandle(2,7),'string',Params.Eye.MarkerDir);
+            set(Fig.UIhandle(2,7,1),'string',Params.Eye.MarkerDir);
      
+        elseif Indx1 == 1 && Indx2 == 3                     %============= Different eye selected
+            Params.Eye.EyeToUse = get(hObj,'value');
+            set(Fig.UIhandle(1,1,1), 'string', num2str(Params.Eye.XYchannels{Params.Eye.EyeToUse})); 
+            set(Fig.UIhandle(1,2,1), 'string', num2str(Params.Eye.Pupilchannels{Params.Eye.EyeToUse}));
+            for xy = 1:2
+                set(Fig.UIhandle(1,4, xy), 'string', num2str(Params.Eye.Cal.Offset{Params.Eye.EyeToUse}(xy)));
+                set(Fig.UIhandle(1,5, xy), 'string', num2str(Params.Eye.Cal.Gain{Params.Eye.EyeToUse}(xy)));
+                set(Fig.UIhandle(1,6, xy), 'value', Params.Eye.Cal.Sign{Params.Eye.EyeToUse}(xy));
+            end
             
-        elseif Indx1 == 1 & ismember([1,2,4,5,6], Indx2)             	%============= All other controls
+        elseif Indx1 == 1 & ismember([1,2,4,5,6], Indx2) 	%============= All other controls
             if ~isempty(Fig.PanelVars(Indx1).Fieldnames{Indx2})
                 switch get(hObj,'style')
                     case 'edit'
@@ -297,7 +307,7 @@ ParamsOut = Params;     % Output 'Params' struct
                 end
                 eval(sprintf('Params.Eye.%s{%d} = %d;', Fig.PanelVars(Indx1).Fieldnames{Indx2}, Params.Eye.EyeToUse, NewValue));
             end
-        	UpdateEye;
+        	Params = UpdateEye(Params);
         else
             switch get(hObj,'style')
                 case 'edit'
@@ -321,15 +331,15 @@ ParamsOut = Params;     % Output 'Params' struct
     end
 
     %=============== Update which eye(s) to use
-    function UpdateEye
+    function Params = UpdateEye(Params)
         
         for n = [1,2,4,5,6]
             NewValue = eval(sprintf('Params.Eye.%s{%d};', Fig.PanelVars(1).Fieldnames{n}, Params.Eye.EyeToUse));
             if n < 6
-                set(Fig.UIhandle(1,n), 'string', num2str(NewValue)); 
+                set(Fig.UIhandle(1,n,xy), 'string', num2str(NewValue)); 
             else
                 InvertValue = NewValue==-1;
-                set(Fig.UIhandle(1,n), 'value', InvertValue); 
+                set(Fig.UIhandle(1,n,xy), 'value', InvertValue); 
             end
         end
         
@@ -339,12 +349,7 @@ ParamsOut = Params;     % Output 'Params' struct
     %==================== Pre-load selected images into GPU ===============
     function Params = LoadImages(win, Params)
         
-        if nargin == 0 || isempty(win)
-            Screen('Preference', 'VisualDebugLevel', 0);   
-            Params.Display.ScreenID = max(Screen('Screens'));
-            [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.Rect,[],[], [], []);
-            Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                                              % Enable alpha channel
-        end
+        Params      = SCNI_OpenWindow(Params);
         LoadTextPos = (Params.Display.Rect([3,4])./[4,2]);
         TextColor   = [1,1,1]*255;
         Screen(Params.Display.win,'TextSize',60); 

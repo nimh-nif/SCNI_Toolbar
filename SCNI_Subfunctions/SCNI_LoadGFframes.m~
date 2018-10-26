@@ -72,11 +72,10 @@ if Params.GF.Mode > 1
     SourceRect  = Params.Display.Rect./[1,1,2,1];
     
     %============= Load resting blink frames to PTB texture handles
-    BlinkFrames = wildcardsearch(Params.GF.StimDir, 'LookAtLocation_Center_Blink*');
+    BlinkFrames = wildcardsearch(Params.GF.StimDir, 'Blink*');
     for f = 1:numel(BlinkFrames)
         [img, cmap, alpha]  = imread(BlinkFrames{f});
-        img = uint8(img);
-        img(:,:,4)          = uint8(alpha);
+        img(:,:,4)          = alpha;
         Params.GF.AvatarBlink(f) = Screen('MakeTexture', Params.Display.win, img);
         ImageDim(f,:)       = [size(img,2), size(img,1)];
         if size(unique(ImageDim,'rows'),1) > 1

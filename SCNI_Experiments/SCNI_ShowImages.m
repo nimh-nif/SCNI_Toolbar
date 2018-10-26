@@ -26,47 +26,27 @@ Params.Run.TextRect             = [100, 100, [100, 100]+[200,300]];
 Params.Run.MaxTrialDur          = (Params.ImageExp.StimPerTrial*(Params.ImageExp.DurationMs+Params.ImageExp.ISIms+Params.ImageExp.ISIjitter)*10^-3)+1;
 Params.Run.TrialCount           = 1;                            % Start trial count at 1
 Params.Run.StimCount            = 1;
-Params.Run.EndRun              = 0;
+Params.Run.EndRun               = 0;
 Params.Run.StimIsOn             = 0;
 Params.Run.FixIsOn              = 0;
-if ~isfield(Params.Run, 'Number')                               % If run count field does not exist...
-    Params.Run.Number          	= 1;                            % This is the first run of the session
-else
-    Params.Run.Number          	= Params.Run.Number + 1;        % Advance run count
-end
-    
-Params.Reward.Proportion        = 0.7;                          % Set proportion of reward interval that fixation must be maintained for (0-1)
-Params.Reward.MeanIRI           = 4;                            % Set mean interval between reward delivery (seconds)
-Params.Reward.RandIRI           = 2;                            % Set random jitter between reward delivery intervals (seconds)
-Params.Reward.LastRewardTime    = GetSecs;                      % Initialize last reward delivery time (seconds)
-Params.Reward.NextRewardInt     = Params.Reward.MeanIRI + rand(1)*Params.Reward.RandIRI;           	% Generate random interval before first reward delivery (seconds)
-Params.Reward.TTLDur            = 0.05;                         % Set TTL pulse duration (seconds)
 Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
-Params.DPx.UseDPx               = 1;                            % Use DataPixx?
-
-if ~isfield(Params, 'Eye')
-    Params = SCNI_EyeCalibSettings(Params);
-end
-
-%================= OPEN NEW PTB WINDOW?
-Params = SCNI_OpenWindow(Params);
 
 %================= INITIALIZE SETTINGS
-Params  = SCNI_DataPixxInit(Params);
+Params  = SCNI_OpenWindow(Params);                              % Open an new PTB window (if not already open)
+Params  = SCNI_DataPixxInit(Params);                            
 Params	= SCNI_InitializeGrid(Params);
 Params	= SCNI_GetPDrect(Params, Params.Display.UseSBS3D);
 Params  = SCNI_InitKeyboard(Params);
 
 %================= GENERATE FIXATION TEXTURE
 if Params.ImageExp.FixType > 1
-    Fix.Type        = Params.ImageExp.FixType-1;        % Fixation marker format
-    Fix.Color       = [0,1,0];                          % Fixation marker color (RGB, 0-1)
-    Fix.MarkerSize  = 1;                                % Fixation marker diameter (degrees)
-    Fix.LineWidth   = 4;                                % Fixation marker line width (pixels)
+    Fix.Type        = Params.ImageExp.FixType-1;                % Fixation marker format
+    Fix.Color       = [0,1,0];                                 	% Fixation marker color (RGB, 0-1)
+    Fix.MarkerSize  = 1;                                        % Fixation marker diameter (degrees)
+    Fix.LineWidth   = 4;                                        % Fixation marker line width (pixels)
     Fix.Size        = Fix.MarkerSize*Params.Display.PixPerDeg;
     Params.ImageExp.FixTex = SCNI_GenerateFixMarker(Fix, Params);
 end
-
 
 %================= CALCULATE SCREEN RECTANGLES
 if Params.ImageExp.Fullscreen == 1          %============ Fullscreen image
@@ -107,18 +87,19 @@ if Params.ImageExp.SBS3D == 1                       % If images are rendered as 
     end
     
 elseif Params.ImageExp.SBS3D == 0                   % If images are rendered as regular 2D...
-    NoEyes                              = 1;
-	Params.ImageExp.SourceRectExp       = [];
-    Params.ImageExp.SourceRectMonk      = [];
-    Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
-    Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size], Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0]); 
-    Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:);
+    NoEyes                                  = 1;
+	Params.ImageExp.SourceRectExp           = [];
+    Params.ImageExp.SourceRectMonk          = [];
+    Params.Display.FixRectExp               = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
+    Params.Display.FixRectMonk(1,:)         = CenterRect([1, 1, Fix.Size], Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0]); 
+    Params.Display.FixRectMonk(2,:)         = Params.Display.FixRectMonk(1,:);
 end
 Params.Eye.GazeRect = Params.ImageExp.GazeRect;
 
 
 %================= LOAD / GENERATE STIMULUS ORDER
-if ~isfield(Params.ImageExp, 'Design')
+if ~isfield(Params.ImageExp, 'Design') %&& Params.Toolbar.CurrentRun == 1
+    fprintf('Generating new design matrix for SCNI_ShowImages.m...\n');
     Params.Design.Type          = Params.ImageExp.DesignType;
     Params.Design.TotalStim     = Params.ImageExp.TotalImages;
     Params.Design.StimPerTrial	= Params.ImageExp.StimPerTrial;
@@ -128,11 +109,23 @@ if ~isfield(Params.ImageExp, 'Design')
 end
 
 
+Stages(1).Name       = 'ISI';
+Stages(1).StimOn     = 0;
+Stages(2).Name       = 'Stimulus On';
+Stages(2).Duration   = Params.ImageExp.DurationMs/10^3;
+Stages(2).StimOn     = 1;
+
+%================= Attempt to communicate eye calibration values to TDT via
+% 13 bits!
+Params = SendEyeCalToTDT(Params); 
+
+
 %% ============================ BEGIN RUN =================================
 FrameOnset              = GetSecs;
 
 while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun == 0
 
+    Params.Run.AbortTrial   = 0;
     AdcStatus = SCNI_StartADC(Params);                                      % Start DataPixx ADC running
     
     %================= Wait for TTL sync?
@@ -142,12 +135,14 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
     end
     SCNI_SendEventCode('Trial_Start', Params);                              % Send event code to connected neurophys systems
 
+    
+    %================== LOOP THROUGH STIMULI
+    Params.Run.FixOnset = GetSecs;
     for StimNo = 1:Params.ImageExp.StimPerTrial                             % Loop through stimuli for this trial
        
         Params.Run.CurrentStimNo = StimNo;
         
-            
-        %% ================== WAIT FOR ISI TO ELAPSE ======================
+        %================== GET TRIAL STAGE DURATIONS 
         if StimNo == 1
             ISI         = Params.ImageExp.InitialFixDur/10^3;
             PDstatus    = 2;
@@ -158,8 +153,6 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                 ISI = Params.ImageExp.ISIms/10^3 + Params.Run.ISIjitter(Params.Run.StimCount);
             end
         end
-        StageDurations  = [ISI, Params.ImageExp.DurationMs/10^3];
-        StimOn          = [0,1];
 
         %================= SET NEXT STIMULUS RECT
         RectExp     = Params.ImageExp.RectExp;
@@ -173,31 +166,29 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
             RectMonk    = Params.ImageExp.RectMonk + repmat(Params.Run.PosJitter(Params.Run.StimCount,:),[1,2]);
         end
 
-        %% ================= BEGIN NEXT IMAGE PRESENTATION ================
+        %=============== Get handle to next stimulus texture                                                         	
+        Cond        = Params.Design.CondMatrix(Params.Toolbar.CurrentRun, Params.Run.StimCount);                     	% Get condition number from design matrix
+        Stim        = Params.Design.StimMatrix(Params.Toolbar.CurrentRun, Params.Run.StimCount);                      	% Get stimulus number from design matrix
+        ImageTex    = Params.ImageExp.ImgTex{Cond}(Stim);                                                             	% Get texture handle for next stimulus
+        if isfield(Params.ImageExp, 'BckgrndTex') && ~isempty(Params.ImageExp.BckgrndTex)                               % If background textures were loaded...
+            BackgroundTex = Params.ImageExp.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
+        else
+            BackgroundTex = [];
+        end
         
-        for stage = 1:numel(StageDurations)
-            Params.Run.StimOnTime   = GetSecs;
-            PDstatus                = 2;
 
-            while (GetSecs-Params.Run.StimOnTime) < StageDurations(stage) && Params.Run.EndRun == 0
-
-                %=============== Get next texture
-                if Params.Run.StimIsOn == 0                                                                                         % If this is first frame of stimulus presentation...
-                    Cond = Params.Design.CondMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get condition number from design matrix
-                    Stim = Params.Design.StimMatrix(Params.Run.Number, Params.Run.StimCount);                                       % Get stimulus number from design matrix
-                    SCNI_SendEventCode(Stim, Params);                                                                               % Send stimulus number to neurophys. system 
-                    ImageTex = Params.ImageExp.ImgTex{Cond}(Stim);                                                                 	% Get texture handle for next stimulus
-                    if isfield(Params.ImageExp, 'BckgrndTex') && ~isempty(Params.ImageExp.BckgrndTex)                               % If background textures were loaded...
-                        BackgroundTex = Params.ImageExp.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
-                    else
-                        BackgroundTex = [];
-                    end
-                end
+        %% ================= BEGIN NEXT IMAGE PRESENTATION ================
+        for stage = 1:numel(Stages)
+            Stages(1).Duration              = ISI;
+            Params.Run.StageOnTime(stage)	= GetSecs;
+            PDstatus                        = 2;
+            
+            while (GetSecs-Params.Run.StageOnTime(stage)) < Stages(stage).Duration && Params.Run.AbortTrial == 0 && Params.Run.EndRun == 0
 
                 %=============== Begin drawing to displays
                 Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                     % Clear previous frame                                                                          
 
-                if StimOn(stage) == 1
+                if Stages(stage).StimOn == 1
                     %============ Draw background texture
                     if ~isempty(BackgroundTex)          
                         Screen('DrawTexture', Params.Display.win, BackgroundTex, Params.ImageExp.SourceRectExp, RectExp);               % Draw to the experimenter's display
@@ -226,14 +217,14 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                 end
 
                 %=============== Check current eye position
-                Eye             = SCNI_GetEyePos(Params);                                                             	% Get screen coordinates of current gaze position (pixels)
-                EyeRect         = repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];              	% Prepare rect to draw current gaze position                                   
+                Eye             = SCNI_GetEyePos(Params);                                                        	% Get screen coordinates of current gaze position (pixels)
+                EyeRect         = repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];           	% Prepare rect to draw current gaze position                                   
                 [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], [], Params);               	% Check if gaze position is inside fixation window
 
                 %=============== Check whether to deliver reward
                 ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,:)), 1);            	% Find first NaN elements in fix matrix
                 Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];    	% Save current fixation result to matrix
-                Params      	= SCNI_CheckReward(Params);                                                           
+                Params      	= CheckFix(Params);                                                           
 
                 %=============== Draw experimenter's overlay
                 if Params.Display.Exp.GridOn == 1
@@ -258,10 +249,21 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
 
                 %=============== Draw to screen and record time
                 [VBL FrameOnset(end+1)] = Screen('Flip', Params.Display.win);                                   % Flip next frame
-                if Params.Run.StimIsOn == 0                                                                     % If this is first frame of stimulus presentation...
+                if Params.Run.FixIsOn == 0                                                                      % If this is the first fixation onset...
+                    Params.Run.FixOnset = FrameOnset(end);                                                      % Record fixation onset time
+                    Params.Run.FixIsOn  = 1;
+                    SCNI_SendEventCode('Fix_On', Params);                                                       
+                end
+                if Params.Run.StimIsOn == 0 & stage == 2                                                        % If this is first frame of stimulus presentation...
                     SCNI_SendEventCode('Stim_On', Params);                                                      % Send event code to connected neurophys systems
+                    SCNI_SendEventCode(Stim, Params);                                                        	% Send stimulus number to neurophys. system 
                     Params.Run.StimIsOn     = 1;                                                              	% Change flag to show movie has started
                     Params.Run.StimOnTime   = FrameOnset(end);                                                  % Record stimulus onset time
+                    
+                elseif Params.Run.StimIsOn == 1 & stage == 1                                                    % If this is first frame of ISI...
+                    SCNI_SendEventCode('Stim_Off', Params); 
+                    Params.Run.StimIsOn     = 0;                                                              	% Change flag to show movie has started
+                    Params.Run.StimOffTime	= FrameOnset(end);                                                  % Record stimulus onset time
                 end
 
                 %=============== Check experimenter's input
@@ -271,18 +273,31 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                 end
                 
                 %============== Reset photodiode status for next frame
-                PDstatus    = StimOn(stage)+1;
+                PDstatus    = Stages(stage).StimOn +1;
             end
-            Params.Run.StimCount = Params.Run.StimCount+1;                                                      % Count as one stimulus presentation
         end
+        Params.Run.StimCount = Params.Run.StimCount+1;                                                      % Count as one stimulus presentation
+        
     end
     
     %% ================= ANALYSE FIXATION
-    Params = SCNI_CheckTrialEyePos(Params);
-    
+    if Params.Run.AbortTrial == 0
+    	%Params                  = SCNI_CheckTrialEyePos(Params);
+        ITIduration             = Params.ImageExp.ITIms/10^3;           
+        Params.Run.TrialCount   = Params.Run.TrialCount+1;              % Count as one completed trial
+        RewardEarned            = 1;
+         
+    elseif Params.Run.AbortTrial == 1
+        SCNI_SendEventCode('Fixation_Broken', Params); 
+        Params.ImageExp.PenaltyTimeout = 2000;
+        ITIduration             = Params.ImageExp.PenaltyTimeout/10^3; 
+        Params.Run.FixIsOn      = 0;
+        RewardEarned            = 0;
+        Datapixx('StopAdcSchedule');   
+    end
 
     %% ================= WAIT FOR ITI TO ELAPSE
-    while (GetSecs - FrameOnset(end)) < Params.ImageExp.ITIms/10^3 && Params.Run.EndRun == 0
+    while (GetSecs - Params.Run.StimOffTime) < ITIduration && Params.Run.EndRun == 0
         for Eye = 1:NoEyes 
             Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                             	% Clear previous frame
             if Params.Display.PD.Position > 1
@@ -293,10 +308,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
 
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);                                                           % Get screen coordinates of current gaze position (pixels)
-        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2]) +[-10,-10,10,10];            % Prepare rect to draw current gaze position
-        
-        %=============== Check whether to deliver reward
-        Params       	= SCNI_CheckReward(Params);                                                          
+        EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2]) +[-10,-10,10,10];            % Prepare rect to draw current gaze position                                                 
 
         %=============== Draw experimenter's overlay
         if Params.Display.Exp.GridOn == 1
@@ -311,30 +323,43 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                 Screen('FrameRect', Params.Display.win, Params.Display.Exp.GazeWinColor(FixIn+1,:)*255, Params.ImageExp.GazeRect, 3); 	% Draw border of gaze window that subject must fixate within
             end
         end
+      	if Params.ImageExp.FixType > 1 && Params.Run.FixIsOn == 1
+            Screen('DrawTexture', Params.Display.win, Params.ImageExp.FixTex, [], Params.Display.FixRectExp);
+        end
         if Eye(Params.Eye.EyeToUse).Pixels(1) < Params.Display.Rect(3)
             Screen('FillOval', Params.Display.win, Params.Display.Exp.EyeColor(FixIn+1,:)*255, EyeRect);                            % Draw current gaze position
         end
         Params       	= SCNI_UpdateStats(Params);
 
         %=============== Draw to screen and record time
-        [~,ISIoffset]  	= Screen('Flip', Params.Display.win); 
+        [~,ITIoffset]  	= Screen('Flip', Params.Display.win); 
         if Params.Run.StimIsOn == 1
             Params.Run.StimIsOn     = 0;
             SCNI_SendEventCode('Stim_Off', Params);                                                         % Send event code to connected neurophys systems
-            Params.Run.StimOffTime  = ISIoffset;
-            Params.Run.StimOnTime   = ISIoffset;
+            Params.Run.StimOffTime  = ITIoffset;
         end
-        if Params.Run.FixIsOn == 1
+        if Params.Run.FixIsOn == 1 && (GetSecs-Params.Run.StimOffTime)> Params.ImageExp.ISIms/10^3
             Params.Run.FixIsOn = 0;
             SCNI_SendEventCode('Fix_Off', Params);                                                          % Send event code to connected neurophys systems
         end
+        
+      	%=============== Check whether to deliver reward
+        if RewardEarned  == 1 && (GetSecs - Params.Run.StimOffTime) > Params.ImageExp.ISIms/10^3
+            Params = SCNI_GiveReward(Params);
+            SCNI_SendEventCode('Reward_Auto', Params); 
+            RewardEarned = 0;
+        end
+        
         %=============== Check experimenter's input
         Params = SCNI_CheckKeys(Params);                                                                % Check for keyboard input
         if isfield(Params.Toolbar,'StopButton') && get(Params.Toolbar.StopButton,'value')==1            % Check for toolbar input
             Params.Run.EndRun = 1;
         end
     end
-    Params.Run.TrialCount = Params.Run.TrialCount+1;        % Count as one trial
+    
+    if Params.Run.AbortTrial == 0
+        SCNI_SendEventCode('Trial_End', Params);
+    end
     
 end
 
@@ -352,20 +377,16 @@ SCNI_EndRun(Params);
 end
 
 
-%=============== UPDATE CENTER GAZE POSITION
-function Params = SCNI_UpdateCenter(Params)
-    Eye         = SCNI_GetEyePos(Params);                                   % Get screen coordinates of current gaze position (pixels)
-    if Params.Eye.EyeToUse < 3
-        Params.Eye.Cal.Offset{Params.Eye.EyeToUse}  =  -Eye(Params.Eye.EyeToUse).Volts;
-        Params.Eye.Cal.Offset{Params.Eye.EyeToUse}
-    else
-        fprintf('Warning: version and vergence eye position cannot be calibrated! Please select left or right eye');
-    end
-end
-
 %=============== END RUN
 function SCNI_EndRun(Params)
-    Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);     % Clear screens
+	for Eye = 1:size(Params.Display.PD.SubRect,1)
+        Screen('FillRect', Params.Display.win, Params.Display.Exp.BackgroundColor*255);                                             	% Clear previous frame
+        if Params.Display.PD.Position > 1
+            Screen('FillOval', Params.Display.win, Params.Display.PD.Color{1}*255, Params.Display.PD.SubRect(Eye,:));
+            Screen('FillOval', Params.Display.win, Params.Display.PD.Color{1}*255, Params.Display.PD.ExpRect);
+        end
+    end
+    Params       	= SCNI_UpdateStats(Params);
     Screen('Flip', Params.Display.win); 
     return;
 end
@@ -384,6 +405,32 @@ function Params	= AllocateRand(Params)
     end
 end
 
+%================= CHECK FIXATION DURING TRIAL
+function Params = CheckFix(Params)
+    ValidFixSamples = find(Params.Run.ValidFixations(Params.Run.TrialCount, :,1) > Params.Run.FixOnset+Params.Eye.TimeToFix/10^3);
+    if ~isempty(ValidFixSamples)
+        FixSoFar        = Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixSamples,3);  	% Get all fixation validity data for current trial
+        Proportion      = nanmean(FixSoFar);
+        if Proportion < Params.Eye.FixDur/100                                                       % Calculate proportion of samples with valid fixations
+            Params.Run.AbortTrial   = 1;       
+            Params.Run.StimOffTime  = GetSecs;
+        end
+    end
+end
+
+%================= SEND EYE CALIBRATION VALUES TO TDT
+function Params = SendEyeCalToTDT(Params)
+    SCNI_SendEventCode('Sending_EyeOffsets',Params);
+    for xy = 1:2
+        OffsetValue(xy) = 4000 + round(Params.Eye.Cal.Offset{Params.Eye.EyeToUse}(xy)*1000);
+        SCNI_SendEventCode(OffsetValue(xy), Params);
+    end
+    SCNI_SendEventCode('Sending_EyeGains',Params);
+    for xy = 1:2
+        GainValue(xy) = 4000 + round(Params.Eye.Cal.Gain{Params.Eye.EyeToUse}(xy)*100);
+        SCNI_SendEventCode(GainValue(xy), Params);
+    end
+end
 
 %================= UPDATE EXPERIMENTER'S DISPLAY STATS
 function Params = SCNI_UpdateStats(Params)
@@ -429,7 +476,7 @@ function Params = SCNI_UpdateStats(Params)
     Params.Run.CurrentMins      = floor(Params.Run.CurrentTime/60);                    
     Params.Run.CurrentSecs      = rem(Params.Run.CurrentTime, 60);
     Params.Run.CurrentPercent   = (Params.Run.TrialCount/Params.ImageExp.TrialsPerRun)*100;
-	Params.Run.TextContent      = [Params.Run.Number, Params.Run.TrialCount, Params.ImageExp.TrialsPerRun, Params.Run.CurrentStimNo, Params.ImageExp.StimPerTrial, Params.Run.CurrentMins, Params.Run.CurrentSecs, Params.Reward.RunCount, Params.Run.ValidFixPercent];
+	Params.Run.TextContent      = [Params.Toolbar.CurrentRun, Params.Run.TrialCount, Params.ImageExp.TrialsPerRun, Params.Run.CurrentStimNo, Params.ImageExp.StimPerTrial, Params.Run.CurrentMins, Params.Run.CurrentSecs, Params.Reward.RunCount, Params.Run.ValidFixPercent];
     Params.Run.TextString       = sprintf(Params.Run.TextFormat, Params.Run.TextContent);
 
     %========= Update stats bars

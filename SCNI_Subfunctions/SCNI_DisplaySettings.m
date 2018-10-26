@@ -37,7 +37,7 @@ elseif exist('ParamsFile','var')
         ParamsFile  = Params.File;
     end
 end
-[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, ParamsFile, OpenGUI);
+[Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
 
 %=========== Load default parameters
 if Success < 1
@@ -201,6 +201,7 @@ Tags        = {'VD','IPD','ScreenDim','Pixels','PixPerDeg','PDmarkerPos','PDmark
 
 Params.Display.XScreenRect  = Screen('Rect',1);
 Params.Display.Rect         = Resolution./[1,1,2,1];
+Params.Display.ScreenID     = max(Screen('Screens'));
 Params.Display.PixPerCm   	= Params.Display.Rect([3,4])./Params.Display.ScreenDims;                         % Calculate number of pixels per centimetre
 Params.Display.PixPerDeg 	= (Params.Display.PixPerCm*Params.Display.ViewingDist*tand(0.5))*2;              % Calculate pixles per degree
 

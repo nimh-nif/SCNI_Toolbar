@@ -36,7 +36,7 @@ elseif exist('ParamsFile','var')
     end
 end
 [Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
-
+Params.ImageExp.SyncStimTTL	= 0;
 %=========== Load default parameters
 if Success < 1
     Params.ImageExp.ImageDir	= uigetdir('/projects/murphya/Stimuli');    % Get full path of directory containing stimulus images
@@ -78,6 +78,7 @@ if Success < 1
     Params.ImageExp.BckgrndDir  = {};
     Params.ImageExp.FixWinDeg   = 2;                                        % Diameter of circular fixation window (degrees)
     Params.ImageExp.InitialFixDur = 500;                                    % Duration (ms) of fixation period before each trial
+    Params.ImageExp.SyncStimTTL	= 0;                                        % Synchronize stimulus onsets to incoming TTL pulses from MRI scanner? 
     
 elseif Success > 1
     ParamsOut = Params;
@@ -110,7 +111,7 @@ Fig.TitleFontSize = 18;
 
 %============= Prepare GUI panels
 Fig.PanelNames      = {'Image selection','Image transforms','Image presentation'};
-Fig.PannelHeights   = [220, 200, 260];
+Fig.PannelHeights   = [220, 200, 280];
 BoxPos{1}           = [Fig.Margin, Fig.Rect(4)-Fig.PannelHeights(1)*Fig.DisplayScale-Fig.Margin*2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(1)*Fig.DisplayScale];   
 for i = 2:numel(Fig.PanelNames)
     BoxPos{i}           = [Fig.Margin, BoxPos{i-1}(2)-Fig.PannelHeights(i)*Fig.DisplayScale-Fig.Margin/2, Fig.Rect(3)-Fig.Margin*2, Fig.PannelHeights(i)*Fig.DisplayScale];
@@ -135,17 +136,17 @@ Fig.UItransform.Enabled     = [1, ~Params.ImageExp.Fullscreen, 1, 1, 1,1,1,1];
 Fig.UItransform.Ypos      	= [(Fig.PannelHeights(2)-50):-20:10]*Fig.DisplayScale;
 Fig.UItransform.Xwidth     	= [180, 200]*Fig.DisplayScale;
 
-Fig.UIpresent.Labels        = {'Experimental design','Trials per run','Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)','Fixation window (deg)'};
-Fig.UIpresent.Style        	= {'Popup', 'Edit','Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit','Edit'};
-Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.TrialsPerRun, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIms, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg};
-Fig.UIpresent.Values        = {Params.ImageExp.DesignType,[],[],[],[],[],[],Params.ImageExp.FixType,[],[],[]};
-Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1,1,1,1];
+Fig.UIpresent.Labels        = {'Experimental design','Trials per run','Stim. per trial','Stimulus duration (ms)', 'Inter-stim interval (ms)', 'Temporal jitter (max ms)', 'Inter-trial interval (ms)','Fixation marker', 'Spatial jitter (max deg)', 'Scale jitter (max %)','Fixation window (deg)','Sync to scanner?'};
+Fig.UIpresent.Style        	= {'Popup', 'Edit','Edit','Edit','Edit','Edit','Edit','popup','Edit','Edit','Edit','Checkbox'};
+Fig.UIpresent.Defaults     	= {Params.ImageExp.DesignTypes, Params.ImageExp.TrialsPerRun, Params.ImageExp.StimPerTrial, Params.ImageExp.DurationMs, Params.ImageExp.ISIms, Params.ImageExp.ISIjitter, Params.ImageExp.ITIms, Params.ImageExp.FixTypes, Params.ImageExp.PosJitter, Params.ImageExp.ScaleJitter, Params.ImageExp.FixWinDeg,[]};
+Fig.UIpresent.Values        = {Params.ImageExp.DesignType,[],[],[],[],[],[],Params.ImageExp.FixType,[],[],[],Params.ImageExp.SyncStimTTL};
+Fig.UIpresent.Enabled       = [1,1,1,1,1,1,1,1,1,1,1,1];
 Fig.UIpresent.Ypos          = [(Fig.PannelHeights(3)-50):-20:10]*Fig.DisplayScale;
 Fig.UIpresent.Xwidth        = [180, 200]*Fig.DisplayScale;
 
 Fig.PanelVars(1).Fieldnames = {'', '', 'FileFormat', 'SubdirOpt', '', '', '','SBS3D','Preload'};
 Fig.PanelVars(2).Fieldnames = {'Fullscreen','SizeDeg','UseAlpha','MaskType','Greyscale','Rotation','Contrast'};
-Fig.PanelVars(3).Fieldnames = {'DesignType','TrialsPerRun','StimPerTrial','DurationMs','ISIms','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg'};
+Fig.PanelVars(3).Fieldnames = {'DesignType','TrialsPerRun','StimPerTrial','DurationMs','ISIms','ISIjitter','ITIms','FixType','PosJitter','ScaleJitter','FixWinDeg','SyncStimTTL'};
 
 Fig.OffOn           = {'Off','On'};
 PanelStructs        = {Fig.UIimages, Fig.UItransform, Fig.UIpresent};
@@ -237,6 +238,7 @@ ParamsOut = Params;     % Output 'Params' struct
             case 2  %============ Save parameters to file
                 ImageExp = Params.ImageExp;
                 save(Params.File, 'ImageExp', '-append');
+                fprintf('ImageExp parameters saved to %s\n!', Params.File);
                 
             case 3  %============ Run experiment
                 if Params.ImageExp.Preload == 1 && Params.ImageExp.ImagesLoaded == 0
@@ -253,15 +255,10 @@ ParamsOut = Params;     % Output 'Params' struct
     %==================== Pre-load selected images into GPU ===============
     function Params = LoadImages(win, Params)
         
-        if nargin == 0 || isempty(win)
-            Screen('Preference', 'VisualDebugLevel', 0);   
-            Params.Display.ScreenID = max(Screen('Screens'));
-            [Params.Display.win]    = Screen('OpenWindow', Params.Display.ScreenID, Params.Display.Exp.BackgroundColor, Params.Display.Rect,[],[], [], []);
-            Screen('BlendFunction', Params.Display.win, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);                                              % Enable alpha channel
-        end
+        Params      = SCNI_OpenWindow(Params);
         LoadTextPos = (Params.Display.Rect([3,4])./[4,2]);
         TextColor   = [1,1,1]*255;
-        Screen(Params.Display.win,'TextSize',60); 
+        Screen('TextSize',Params.Display.win,60); 
         wbh         = waitbar(0, '');                                                                                                       % Open a waitbar figure
         StimCount   = 1;
         
@@ -395,8 +392,7 @@ ParamsOut = Params;     % Output 'Params' struct
         if Indx1 == 2 && Indx2 == 1
             set(Fig.UIhandle(2,2), 'enable', Fig.OffOn{1 + ~NewValue});
         end
-
-
+     	set(Fig.UIhandle(3,6),'enable',Fig.OffOn{~Params.ImageExp.SyncStimTTL + 1});
     end
 
     %====================== Refresh the list(s) of images =================

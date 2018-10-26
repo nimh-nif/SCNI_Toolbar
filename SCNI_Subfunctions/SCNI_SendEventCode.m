@@ -50,6 +50,11 @@ if Params.DPx.TDTonDOUT == 1                    % Is TDT connected to DataPixx v
     SCNI_SetBitsTDT(NumToSend, DirectConnect);
 end
 
+%================= Send event string to TDT over UDP socket
+if isfield(Params,'TDT') && Params.TDT.UDPsocket > 0
+    
+end
+
 %================= Send event string to OpenEphys over ethernet
 if isfield(Params,'OE') && Params.OE.Enabled == 1
     if ~isfield(Params.OE, 'handle')

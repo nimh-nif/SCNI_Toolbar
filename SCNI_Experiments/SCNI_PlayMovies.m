@@ -297,12 +297,13 @@ while Params.Run.EndRun == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Ru
     Params.Run.MovieCount = Params.Run.MovieCount+1;
 end
 
-if CloseOnFinish == 1
-    sca;
-end
+%================= END RUN
+Screen('FillRect', Params.Display.win, Params.Movie.Background*255);                    % Clear previous frame
+Screen('Flip', Params.Display.win);                                                     % Flip next frame
+
 
 %================= PRINT PLAYBACK STATISTICS
-if isfield(Params, 'Debug') && Params.Debug.On == 1
+if isfield(Params.Toolbar, 'Debug') && Params.Toolbar.DebugMode == 1
     Frametimes      = diff(FrameOnset);
     meanFrameRate   = mean(Frametimes(2:end))*1000;
     semFrameRate    = (std(Frametimes(2:end))*1000)/sqrt(numel(Frametimes(2:end)));
@@ -314,21 +315,6 @@ end
 
 end
 
-% %=============== CHECK FOR EXPERIMENTER INPUT
-% function EndMovie = CheckKeys(Params)
-%     EndMovie = Params.Run.EndMovie;
-%     [keyIsDown,secs,keyCode] = KbCheck([], Params.Movie.KeysList);                  % Check keyboard for relevant key presses 
-%     if keyIsDown && secs > Params.Run.LastPress+0.1                              	% If key is pressed and it's more than 100ms since last key press...
-%         Params.Run.LastPress   = secs;                                            	% Log time of current key press
-%         if keyCode(Params.Movie.Keys.Stop) == 1                     
-%             EndMovie = 1;
-%         elseif keyCode(Params.Movie.Keys.Reward) == 1                          	% Experimenter pressed manual reward key
-%             Params = SCNI_GiveReward(Params);
-%       	elseif keyCode(Params.Movie.Keys.Audio) == 1                          	% Experimenter pressed audio key
-%             Params = SCNI_PlaySound(Params);   
-%         end
-%     end
-% end
 
 %================= UPDATE EXPERIMENTER'S DISPLAY STATS
 function Params = SCNI_UpdateStats(Params)

@@ -1,7 +1,8 @@
 function Params = SCNI_CheckReward(Params)
 
-%=========================== SCNI_CheckReward.m ===========================
-% Check the reward schedule and deliver reward if appropriate.
+%========================= SCNI_CheckReward.m =============================
+% For continuous reward delivery, check the reward schedule and deliver 
+% reward if appropriate time has elapsed.
 
 
 if ~isfield(Params, 'Run')

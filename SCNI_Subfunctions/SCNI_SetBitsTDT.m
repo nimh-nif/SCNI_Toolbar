@@ -14,17 +14,12 @@ function SCNI_SetBitsTDT(val, dc)
 %   03/22/2018 - Updated to allow for connection via SCNI DataPixx-TDT interface
 %==========================================================================
 
-% if nargin == 1 || dc == 0
-%     MaxBits = 15;
-% else
-%     MaxBits = 13;
-% end
-if dc == 1
-    StrobeCh    = 9;                    % Which channel/ bit TDT expects strobe on?
+if dc == 1                      % If Datapixx is connected directly to the TDT 
+    StrobeCh    = 9;           	% Which channel/ bit TDT expects strobe on?
     MaxBits     = 15;
-elseif dc == 0
-  	StrobeCh    = 6; 
-    MaxBits     = 16;
+elseif dc == 0                  % If Datapixx is connected to TDT via the SCNI Interface Box...
+	StrobeCh    = 0;            
+	MaxBits     = 16;
 end
 if ~strcmp(class(val),'double')  || val > (2^MaxBits)-1
     error('Input value ''val'' must be a double in the range 0-%d!', (2^MaxBits)-1);
@@ -35,7 +30,6 @@ if ~Datapixx('IsReady')                                         % If Datapixx is
    Datapixx('RegWrRd');                                         
 end
 
-
 BinaryValue         = de2bi(val);                               % Convert input decimal to binary
 bitValues           = [zeros(1,StrobeCh), BinaryValue, zeros(1, MaxBits-length(BinaryValue))]; % Insert value in bit mask
 DecValues           = bi2de(bitValues);                         % Convert binary back to decimal
@@ -45,11 +39,10 @@ Datapixx('RegWrRd');
 
 if dc == 1
     bitValues(StrobeCh) = 1;                                  	% Set strobe bit high     
+    DecValues           = bi2de(bitValues);                   	% Re-convert binary to decimal
+    Datapixx('SetDoutValues', DecValues);%, bitMask);       	% Set digital output
+    Datapixx('RegWrRd');
 end
-DecValues           = bi2de(bitValues);                         % Re-convert binary to decimal
-Datapixx('SetDoutValues', DecValues);%, bitMask);             	% Set digital output
-Datapixx('RegWrRd');
-
 Datapixx('SetDoutValues', 0);%, bitMask);                       % Reset all digital outputs to zeros
 Datapixx('RegWrRd');
 

@@ -43,7 +43,7 @@ function [Params] = SCNI_CheckKeys(Params)
       	elseif keyCode(Params.Eye.Keys.Save) == 1 
             %Params = SaveCal(Params);
     	elseif keyCode(Params.Eye.Keys.Mouse) == 1                          % Update center based on mouse cursor
-            Params = SCNI_UpdateCenterFromMouse(Params);
+            Params = SCNI_UpdateCenterFromMouse(Params);                    
         end
 
     end
