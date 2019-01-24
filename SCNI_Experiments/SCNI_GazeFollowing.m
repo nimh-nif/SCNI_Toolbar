@@ -115,9 +115,9 @@ Params.Eye.GazeRect     = Params.GF.GazeFixRect;
 Params.GF.TargetRect    = [1, 1, 2*Params.GF.TargetGazeRadius.*Params.Display.PixPerDeg];
 
 %================= LOAD FRAMES TO GPU
-if isempty(winPntr) 
+%if isempty(winPntr) 
 	Params = SCNI_LoadGFframes(Params);
-end
+%end
 
 %================= LOAD / GENERATE STIMULUS ORDER
 Params = GenerateGFDesign(Params);

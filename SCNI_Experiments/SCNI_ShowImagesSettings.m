@@ -36,7 +36,7 @@ elseif exist('ParamsFile','var')
     end
 end
 [Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
-Params.ImageExp.SyncStimTTL	= 0;
+
 %=========== Load default parameters
 if Success < 1
     Params.ImageExp.ImageDir	= uigetdir('/projects/murphya/Stimuli');    % Get full path of directory containing stimulus images
@@ -300,10 +300,17 @@ ParamsOut = Params;     % Output 'Params' struct
 
                 %============= Load next file
                 img = imread(Params.ImageExp.ImByCond{Cond}{Stim});                                                                         % Load image file
+                if isa(img, 'uint16')                                                                                                       % If image is 16-bit color
+                    img = uint8(img)/256;                                                                                                   % Reduce bit depth to 8-bit
+                end
                 if Params.ImageExp.UseAlpha == 1
                     [~,~, imalpha] = imread(Params.ImageExp.ImByCond{Cond}{Stim});                                                          % Read alpha channel
                     if ~isempty(imalpha)                                                                                                 	% If image file contains transparency data...
-                        img(:,:,4) = imalpha;                                                                                           	% Combine into a single RGBA image matrix
+                        if isa(img, 'uint16')
+                            img(:,:,4) = uint8(imalpha)/256;
+                        else
+                            img(:,:,4) = imalpha;                                                                                           	% Combine into a single RGBA image matrix
+                        end
                     else
                         img(:,:,4) = ones(size(img,1),size(img,2))*255;
                     end
@@ -338,7 +345,7 @@ ParamsOut = Params;     % Output 'Params' struct
                 else
                     Params.ImageExp.BckgrndTex = [];
                 end
-                
+                %img = uint8(img);
                 Params.ImageExp.ImgTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, img);                                                       % Create a PTB offscreen texture for the stimulus
                 StimCount = StimCount+1;
             end
@@ -358,20 +365,20 @@ ParamsOut = Params;     % Output 'Params' struct
 
         %============= Panel 1 controls for directory selection
         if Indx1 == 1 && Indx2 == 1         %===== Change image directory
-                    ImageDir	= uigetdir('/projects/','Select stimulus directory');
-                    if ImageDir == 0
-                        return;
-                    end
-                    Params.ImageExp.ImageDir = ImageDir;
-                    set(Fig.UIhandle(1,1),'string',Params.ImageExp.ImageDir);
+            ImageDir	= uigetdir(Params.ImageExp.ImageDir, 'Select stimulus directory');
+            if ImageDir == 0
+                return;
+            end
+            Params.ImageExp.ImageDir = ImageDir;
+            set(Fig.UIhandle(1,1),'string',Params.ImageExp.ImageDir);
 
         elseif Indx1 == 1 && Indx2 == 2      %===== Change background image directory
-                    BckgrndDir	= uigetdir('/projects/','Select background image directory');
-                    if BckgrndDir == 0
-                        return;
-                    end
-                    Params.ImageExp.BckgrndDir = BckgrndDir;
-                    set(Fig.UIhandle(1,2),'string',Params.ImageExp.BckgrndDir);
+            BckgrndDir	= uigetdir(Params.ImageExp.BckgrndDir, 'Select background image directory');
+            if BckgrndDir == 0
+                return;
+            end
+            Params.ImageExp.BckgrndDir = BckgrndDir;
+            set(Fig.UIhandle(1,2),'string',Params.ImageExp.BckgrndDir);
                     
         else                                %============= All other controls
             if ~isempty(Fig.PanelVars(Indx1).Fieldnames{Indx2})

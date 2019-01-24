@@ -12,7 +12,7 @@ function Params = SCNI_ShowImages(Params)
 %==========================================================================
 
 %================= SET DEFAULT PARAMETERS
-if nargin == 0 || ~isfield(Params,'ImageExp') || ~isfield(Params.ImageExp,'ImgTex') || Params.ImageExp.ImagesLoaded == 0
+if nargin == 0 || ~isfield(Params,'ImageExp') || ~isfield(Params.ImageExp,'ImgTex') || (Params.ImageExp.Preload == 1 && Params.ImageExp.ImagesLoaded == 0)
     Params = SCNI_ShowImagesSettings(Params, 0);
 end
 
@@ -29,7 +29,9 @@ Params.Run.StimCount            = 1;
 Params.Run.EndRun               = 0;
 Params.Run.StimIsOn             = 0;
 Params.Run.FixIsOn              = 0;
+Params.Run.StimCodeSent        	= 0;
 Params.Reward.RunCount          = 0;                            % Count how many reward delvieries in this run
+
 
 %================= INITIALIZE SETTINGS
 Params  = SCNI_OpenWindow(Params);                              % Open an new PTB window (if not already open)
@@ -49,6 +51,9 @@ if Params.ImageExp.FixType > 1
 end
 
 %================= CALCULATE SCREEN RECTANGLES
+img = imread(Params.ImageExp.ImByCond{1}{1});
+%Params.ImageExp.SizePix = [size(img,2), size(img,1)];
+
 if Params.ImageExp.Fullscreen == 1          %============ Fullscreen image
     Params.ImageExp.RectExp         = Params.Display.Rect;
     Params.ImageExp.RectMonk        = Params.Display.Rect + [Params.Display.Rect(3), 0, Params.Display.Rect(3), 0];
@@ -62,7 +67,6 @@ elseif Params.ImageExp.Fullscreen == 0      %============ Scaled image (degrees)
     if Params.ImageExp.FixType == 1                           	% If fixation marker is OFF...
         Params.ImageExp.GazeRect	= Params.ImageExp.RectExp + [-1,-1, 1, 1]*Params.ImageExp.GazeRectBorder*Params.Display.PixPerDeg(1);  	% Rectangle specifying gaze window on experimenter's display
     end
-    
 end
 if Params.ImageExp.FixType > 1                                  % If fixation marker is ON...
     Params.ImageExp.GazeRect    = CenterRect([1,1,Params.ImageExp.FixWinDeg.*Params.Display.PixPerDeg], Params.Display.Rect);
@@ -70,14 +74,14 @@ end
 
 %================= ADJUST FOR 3D FORMAT...
 if Params.ImageExp.SBS3D == 1                       % If images are rendered as SBS stereo 3D...
-    if Params.ImageExp.SBS3D == 1                   % If SBS stereo 3D presentation was requested...
+    if Params.Display.UseSBS3D == 1               	% If SBS stereo 3D presentation was requested...
         NoEyes                              = 2;
         Params.ImageExp.SourceRectExp       = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
         Params.ImageExp.SourceRectMonk      = [1, 1, Params.ImageExp.SizePix];
         Params.Display.FixRectExp           = CenterRect([1, 1, Fix.Size], Params.Display.Rect);
         Params.Display.FixRectMonk(1,:)     = CenterRect([1, 1, Fix.Size./[2,1]], Params.Display.Rect./[1,1,2,1]) + [Params.Display.Rect(3),0,Params.Display.Rect(3),0]; 
         Params.Display.FixRectMonk(2,:)     = Params.Display.FixRectMonk(1,:) + Params.Display.Rect([3,1,3,1]).*[0.5,0,0.5,0];
-    elseif Params.ImageExp.SBS3D == 0               % If SBS stereo 3D presentation was NOT requested...
+    elseif Params.Display.UseSBS3D == 0            	% If SBS stereo 3D presentation was NOT requested...
         NoEyes                              = 1;
         Params.ImageExp.SourceRectExp       = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
         Params.ImageExp.SourceRectMonk      = [1, 1, Params.ImageExp.SizePix(1)/2, Params.ImageExp.SizePix(2)];
@@ -98,7 +102,7 @@ Params.Eye.GazeRect = Params.ImageExp.GazeRect;
 
 
 %================= LOAD / GENERATE STIMULUS ORDER
-if ~isfield(Params.ImageExp, 'Design') %&& Params.Toolbar.CurrentRun == 1
+%if ~isfield(Params.ImageExp, 'Design') || Params.Toolbar.CurrentRun == 1
     fprintf('Generating new design matrix for SCNI_ShowImages.m...\n');
     Params.Design.Type          = Params.ImageExp.DesignType;
     Params.Design.TotalStim     = Params.ImageExp.TotalImages;
@@ -106,8 +110,9 @@ if ~isfield(Params.ImageExp, 'Design') %&& Params.Toolbar.CurrentRun == 1
     Params.Design.TrialsPerRun  = Params.ImageExp.TrialsPerRun;
     Params                      = SCNI_GenerateDesign(Params, 0);
     Params                      = AllocateRand(Params);
-end
+%end
 
+SCNI_SaveExperiment(Params);    % Save all parameters for current run to .mat file
 
 Stages(1).Name       = 'ISI';
 Stages(1).StimOn     = 0;
@@ -144,8 +149,9 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
         
         %================== GET TRIAL STAGE DURATIONS 
         if StimNo == 1
-            ISI         = Params.ImageExp.InitialFixDur/10^3;
-            PDstatus    = 2;
+            ISI           	= Params.ImageExp.InitialFixDur/10^3;
+            PDstatus     	= 2;
+            
         elseif StimNo > 1
             if Params.ImageExp.ISIjitter == 0
                 ISI = Params.ImageExp.ISIms/10^3;
@@ -169,13 +175,18 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
         %=============== Get handle to next stimulus texture                                                         	
         Cond        = Params.Design.CondMatrix(Params.Toolbar.CurrentRun, Params.Run.StimCount);                     	% Get condition number from design matrix
         Stim        = Params.Design.StimMatrix(Params.Toolbar.CurrentRun, Params.Run.StimCount);                      	% Get stimulus number from design matrix
-        ImageTex    = Params.ImageExp.ImgTex{Cond}(Stim);                                                             	% Get texture handle for next stimulus
+        if Params.ImageExp.Preload == 0
+        	ImageTex    = LoadImage(Params, Cond, Stim);
+            Params.ImageExp.MaskTex = [];
+        elseif Params.ImageExp.Preload == 1
+            ImageTex    = Params.ImageExp.ImgTex{Cond}(Stim);                                                             	% Get texture handle for next stimulus
+        end
         if isfield(Params.ImageExp, 'BckgrndTex') && ~isempty(Params.ImageExp.BckgrndTex)                               % If background textures were loaded...
             BackgroundTex = Params.ImageExp.BckgrndTex{Cond}(Stim);                                                     % Get texture handle for corresponding background texture
         else
             BackgroundTex = [];
         end
-        
+        Params.Run.StimCodeSent	= 0;
 
         %% ================= BEGIN NEXT IMAGE PRESENTATION ================
         for stage = 1:numel(Stages)
@@ -198,7 +209,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                     Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRectExp, RectExp, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);        % Draw to the experimenter's display
                     Screen('DrawTexture', Params.Display.win, ImageTex, Params.ImageExp.SourceRectMonk, RectMonk, Params.ImageExp.Rotation, [], Params.ImageExp.Contrast);     % Draw to the subject's display
                     %============ Draw mask texture
-                    if isfield(Params.ImageExp,'MaskTex') & ~isempty(Params.ImageExp.MaskTex)
+                    if isfield(Params.ImageExp,'MaskTex') & ~isempty(Params.ImageExp.MaskTex) & Params.ImageExp.MaskType > 1
                         Screen('DrawTexture', Params.Display.win, Params.ImageExp.MaskTex, Params.ImageExp.SourceRectExp, RectExp);
                         Screen('DrawTexture', Params.Display.win, Params.ImageExp.MaskTex, Params.ImageExp.SourceRectMonk, RectMonk);
                     end
@@ -256,13 +267,15 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
                 end
                 if Params.Run.StimIsOn == 0 & stage == 2                                                        % If this is first frame of stimulus presentation...
                     SCNI_SendEventCode('Stim_On', Params);                                                      % Send event code to connected neurophys systems
-                    SCNI_SendEventCode(Stim, Params);                                                        	% Send stimulus number to neurophys. system 
                     Params.Run.StimIsOn     = 1;                                                              	% Change flag to show movie has started
                     Params.Run.StimOnTime   = FrameOnset(end);                                                  % Record stimulus onset time
-                    
+                elseif Params.Run.StimIsOn == 1 & stage == 2 & Params.Run.StimCodeSent== 0                    	% If this is second frame of stimulus presentation...
+                    SCNI_SendEventCode(Stim, Params);                                                        	% Send stimulus number to neurophys. system 
+                    Params.Run.StimCodeSent = 1;
                 elseif Params.Run.StimIsOn == 1 & stage == 1                                                    % If this is first frame of ISI...
                     SCNI_SendEventCode('Stim_Off', Params); 
                     Params.Run.StimIsOn     = 0;                                                              	% Change flag to show movie has started
+                    StimCodeSent            = 0;
                     Params.Run.StimOffTime	= FrameOnset(end);                                                  % Record stimulus onset time
                 end
 
@@ -282,7 +295,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
     
     %% ================= ANALYSE FIXATION
     if Params.Run.AbortTrial == 0
-    	%Params                  = SCNI_CheckTrialEyePos(Params);
+    	Params                  = SCNI_CheckTrialEyePos(Params);
         ITIduration             = Params.ImageExp.ITIms/10^3;           
         Params.Run.TrialCount   = Params.Run.TrialCount+1;              % Count as one completed trial
         RewardEarned            = 1;
@@ -389,6 +402,28 @@ function SCNI_EndRun(Params)
     Params       	= SCNI_UpdateStats(Params);
     Screen('Flip', Params.Display.win); 
     return;
+end
+
+%=============== LOAD IMAGE TO TEXTURE ON THE FLY
+function ImageTex = LoadImage(Params, Cond, Stim)
+    img = imread(Params.ImageExp.ImByCond{Cond}{Stim});                                     	% Load image file
+    if isa(img, 'uint16')                                                                      	% If image is 16-bit color
+        img = uint8(img)/256;                                                                  	% Reduce bit depth to 8-bit
+        Bits16 = 0;
+    else
+        Bits16 = 0;
+    end
+    img = double(img);
+    if Params.ImageExp.UseAlpha == 1
+        [~,~, imalpha] = imread(Params.ImageExp.ImByCond{Cond}{Stim});                          % Read alpha channel
+        if ~isempty(imalpha)                                                                 	% If image file contains transparency data...
+            imalpha     = double(imalpha);
+            img(:,:,4)  = imalpha;                                                          	% Combine into a single RGBA image matrix
+        else
+            img(:,:,4) = ones(size(img,1),size(img,2))*255;
+        end
+    end
+  	ImageTex = Screen('MakeTexture', Params.Display.win, img, [], [], Bits16); 
 end
 
 %=============== PREALLOCATE RANDOMIZATIONS

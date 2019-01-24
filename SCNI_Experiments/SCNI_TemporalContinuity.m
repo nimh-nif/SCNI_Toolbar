@@ -1,20 +1,16 @@
-function Params = SCNI_PlayMovies(Params)
+function Params = SCNI_TemporalContinuity(Params)
 
-%=========================== SCNI_PlayMovies.m ============================
-% This function serves as a template for how to write an experiment using
-% the SCNI toolbar subfunctions. As is, this particular function allows the
-% experimenter to present one or more movie files in an order of their
-% choosing (e.g. a block design for fMRI experiments, or pseudorandomly for
-% neurophysiology). The numerous variables can be adjusted by running the
-% accompanying SCNI_PlayMoviesSettings.m GUI and saving to your parameters
-% file.
-%
+%======================= SCNI_TemporalContinuity.m ========================
+% This function runs an experiment in which all frames of a series of short 
+% movie files are first loaded into graphics memory. Block types sepcified
+% by the experimenter change the amount of visual motion and temporal continuity
+% present in the visual stimulus presentation format.
 %
 %==========================================================================
 
 %================= SET DEFAULT PARAMETERS
-if nargin == 0 || ~isfield(Params, 'Movie') || ~isfield(Params, 'Design')
-    Params  = SCNI_PlayMoviesSettings(Params, 0);
+if nargin == 0 || ~isfield(Params, 'TC') || ~isfield(Params, 'Design')
+    Params  = SCNI_TemporalContinuitySettings(Params, 0);
 end
 
 %================= PRE-ALLOCATE RUN AND REWARD FIELDS
@@ -137,11 +133,6 @@ Params.Eye.GazeRect = Params.Movie.GazeRect;
 
 
 %================= BEGIN RUN
-Params.Movie.SyncToScanner = 0;
-if Params.Movie.SyncToScanner == 1
-    PulsePolarity  = -1;
-    ScannerOn       = SCNI_WaitForTTL(Params, 5, PulsePolarity, 1);
-end
 FrameOnset                  = GetSecs;
 while Params.Run.EndRun == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.RunDuration
     

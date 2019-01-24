@@ -97,6 +97,8 @@ while Params.Run.TrialCount < Params.Eye.TrialsPerRun && Params.Run.ExpQuit == 0
 
     %================= Initialize DataPixx/ send event codes
     AdcStatus = SCNI_StartADC(Params);                                  % Start DataPixx ADC
+%     Datapixx('RegWrRd'); 
+%     WaitSecs(0.01);
     SCNI_SendEventCode('Trial_Start', Params);                       	% Send event code to connected neurophys systems
 
     for StimNo = 1:Params.Eye.StimPerTrial                              % Loop through stimuli for this trial

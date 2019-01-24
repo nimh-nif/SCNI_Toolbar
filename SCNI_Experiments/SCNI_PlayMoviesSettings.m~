@@ -302,7 +302,7 @@ ParamsOut = Params;     % Output 'Params' struct
 
 
     %====================== Update fixation color
-    function ChangeFixColor(hObj, Evnt, Indx)
+    function ChangeFixColor(hObj, Evnt, Indx1, Indx2)
         Color = uisetcolor;
         if numel(Color>1)
             set(hObj, 'Background', Color);

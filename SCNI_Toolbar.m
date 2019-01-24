@@ -9,13 +9,17 @@
 
 function [p] = SCNI_Toolbar(p)
 
-global Params
+%global Params
 persistent FigTB Icon                                                         % Declare global variables
 
 %============ Initialize GUI
 GUItag      = 'SCNI_Toolbar';                                               % String to use as GUI window tag
 Fieldname   = [];                             
 OpenGUI     = 1;
+if ~exist('SCNI_InitGUI.m','file')
+    [SCNItoolbarDir, file] = fileparts(mfilename('fullpath'));
+    addpath(genpath(SCNItoolbarDir));
+end
 [Params, Success, FigTB]  = SCNI_InitGUI(GUItag, Fieldname, [], OpenGUI);
 FigTB.Background          = [0.6, 0.6, 0.6];                                      
 FigTB.ButtonSize          = [0,0,50,50]*FigTB.DisplayScale;
@@ -141,7 +145,7 @@ end
 
 %========== Set stereo mode
 StereoIndx    = find(strcmp({FigTB.Button.IconName}, 'Stereoscopic'));
-set(FigTB.bh(StereoIndx),'value',Params.Display.UseSBS3D, 'cdata', eval(sprintf('Icon.%s{2}', FigTB.Button(StereoIndx).IconName)));
+set(FigTB.bh(StereoIndx),'value',Params.Display.UseSBS3D, 'cdata', eval(sprintf('Icon.%s{Params.Display.UseSBS3D+1}', FigTB.Button(StereoIndx).IconName)));
 
 %================= Highlight fields requiring completion
 for Opt = 1:numel(FigTB.OptsHighlight)
@@ -453,6 +457,11 @@ FigTB.HelpH = uicontrol('style','pushbutton',...
     function RunFunction(hObj, event, indx)
 
         %======= Toggle button icon
+%         ClickType = get(hObj, 'SelectionType')
+%         if strmcp(ClickType, 'Alt')==1
+%             
+%         end
+        
         if strcmpi(get(FigTB.bh(indx), 'style'), 'togglebutton')
             if get(hObj, 'value')==0
                 set(FigTB.bh(indx), 'cdata', eval(sprintf('Icon.%s{1}',FigTB.Button(indx).IconName)));
@@ -575,9 +584,9 @@ FigTB.HelpH = uicontrol('style','pushbutton',...
         FieldNames  = {'Type','IconName','Tip','Func','Shortcut','Panel','Enabled','XPos'};
         Type        = {'pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','togglebutton','togglebutton','togglebutton','togglebutton','togglebutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton','pushbutton'};
         IconName	= {'Play','Liquid','SpeakerOn','Eye','Exit','Settings','Penalty','GammaCorrect','Sleep','EPI','Stereoscopic','Display','Liquid','Eye','DataPixx','TDT','OpenEphys','Motive','Transfer','Github','Save'};
-        Tip         = {'Run current experiment','Give reward','Play audio','Run eye calibration','Quit current experiment','Edit experiment settings','Debug mode','Apply gamma','Time out','MRI training','Stereoscopic 3D','Display settings','Reward settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings','OptiTrack settings','Transfer data','Manage GitHub repos','Save parameters'};
+        Tip         = {'Run current experiment','Give reward','Play audio','Run eye calibration','Quit current experiment','Edit experiment settings','Debug mode','Apply gamma','Measure luminance','MRI training','Stereoscopic 3D','Display settings','Reward settings','Eye tracking settings','DataPixx settings','TDT settings','Open Ephys settings','OptiTrack settings','Transfer data','Manage GitHub repos','Save parameters'};
         Func        = {'RunCurrentExp','SCNI_GiveReward','SCNI_PlaySound','SCNI_EyeCalib','Stop','RunCurrentExpSettings',...
-                    	'SCNI_DebugMode','SCNI_ApplyGamma','SCNI_RestMode','SCNI_ScannerMode','SCNI_3Dmode',...
+                    	'SCNI_DebugMode','SCNI_ApplyGamma','SCNI_RunLuminanceCal','SCNI_ScannerMode','SCNI_3Dmode',...
                         'SCNI_DisplaySettings','SCNI_RewardSettings','SCNI_EyeCalibSettings','SCNI_DatapixxSettings','SCNI_TDTSettings','SCNI_OpenEphysSettings','SCNI_OptiTrackSettings','SCNI_TransferSettings','SCNI_CodeSettings','SaveParams'};
         Shortcut    = {'g','r','a','c','q','s',[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]};
         Panel       = [1,1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3];
