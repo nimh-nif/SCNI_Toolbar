@@ -1,6 +1,6 @@
-function Params = SCNI_CheckTrialEyePos(Params)
+function Params = SCNI_CheckImageTrialEyePos(Params)
 
-%======================== SCNI_CheckTrialEyePos.m =========================
+%======================== SCNI_CheckImageTrialEyePos.m =========================
 % This function reads all analog eye position data for the current trial
 % period from DataPixx2 and assesses whether fixation requirements were met
 % in order to determine appropriate feedback.
@@ -41,20 +41,20 @@ StimOnsetSamples      = find(diff(DiodeData) > 1)+1;                            
 StimOffsetSamples     = find(diff(DiodeData) < -1);                                         % Find photodiode offset samples
 StimOnsetSamples(find(diff(StimOnsetSamples)==1)+1) =[];                                    % Remove consecutive samples
 StimOffsetSamples(find(diff(StimOffsetSamples)==1)+1) =[];                      
-
-if numel(StimOnsetSamples) < Params.Eye.StimPerTrial-1
-    fprintf('\nWARNING: number of detected photiode onsets (%d) does not match expected number of stimuli per trials (%d)!\n', numel(StimOnsetSamples), Params.Eye.StimPerTrial);
-    fprintf('Check the analog input signals (plotted) for which channel the photodiode data appears on');
-    figure;
-    subplot(1,2,1); imagesc(Timestamps, 1:size(NewData,1), NewData);
-    ylabel('DataPixx Channel #')
-    xlabel('Time (seconds)');
-    subplot(1,2,2); plot(Timestamps, DiodeData); hold on;
-    plot(Timestamps, NewData(1,:));
-    plot(Timestamps, NewData(2,:));
-    legend({'DIode', 'LEft X', 'Left Y'});
-    title(sprintf('Photodiode = channel %d', DiodeChannel));
-end
+% 
+% if numel(StimOnsetSamples) > Params.Eye.StimPerTrial-1
+%     fprintf('\nWARNING: number of detected photiode onsets (%d) does not match expected number of stimuli per trials (%d)!\n', numel(StimOnsetSamples), Params.Eye.StimPerTrial);
+%     fprintf('Check the analog input signals (plotted) for which channel the photodiode data appears on');
+%     figure;
+%     subplot(1,2,1); imagesc(Timestamps, 1:size(NewData,1), NewData);
+%     ylabel('DataPixx Channel #')
+%     xlabel('Time (seconds)');
+%     subplot(1,2,2); plot(Timestamps, DiodeData); hold on;
+%     plot(Timestamps, NewData(1,:));
+%     plot(Timestamps, NewData(2,:));
+%     legend({'DIode', 'LEft X', 'Left Y'});
+%     title(sprintf('Photodiode = channel %d', DiodeChannel));
+% end
 if numel(StimOffsetSamples) < numel(StimOnsetSamples)
     StimOffsetSamples(end+1) = numel(Timestamps);
 end
@@ -66,9 +66,9 @@ elseif Params.Eye.CenterOnly == 0
     LocIndices     = Params.Eye.Target.LocationOrder((Params.Run.StimCount-Params.Eye.StimPerTrial):(Params.Run.StimCount-1));
 end
 
-for stim = 1:Params.Eye.StimPerTrial 
+for stim = 1:Params.ImageExp.StimPerTrial 
     Samples         = StimOnsetSamples(stim):StimOffsetSamples(stim); 
-    GazeRect        = Params.Eye.Target.GazeRect{LocIndices(stim)};
+    GazeRect        = Params.ImageExp.GazeRect;
     InRect          = (EyeDataPixScreen(1,Samples) >= GazeRect(RectLeft) & EyeDataPixScreen(1,Samples) <= GazeRect(RectRight) & ...
                         EyeDataPixScreen(2,Samples) >= GazeRect(RectTop) & EyeDataPixScreen(2,Samples) <= GazeRect(RectBottom));
     PropFix(stim)   = sum(InRect)/numel(InRect);

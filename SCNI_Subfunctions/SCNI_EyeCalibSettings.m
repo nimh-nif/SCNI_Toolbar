@@ -28,7 +28,7 @@ end
 [Params, Success, Fig]   = SCNI_InitGUI(GUItag, Fieldname, Params, OpenGUI);
 
 %=========== Load default parameters
-%if Success < 1 || ~isfield(Params, 'Eye')                                         	% If the parameters could not be loaded...
+if Success < 1 || ~isfield(Params, 'Eye')                                         	% If the parameters could not be loaded...
     
     Params.Eye.ChannelNames     =  {'Left eye X', 'Left eye Y', 'Left eye pupil', 'Right eye X', 'Right eye Y', 'Right eye pupil'};
     for ch = 1:numel(Params.Eye.ChannelNames)
@@ -73,11 +73,11 @@ end
     Params.Eye.DepthCm          = 30;                       % Range of binocular disparities to present targets at (min, max) (degrees)
     Params.Eye.XYselected      	= 1;                        % X position is selected by default
     Params.Eye.GainIncrement   	= 0.1;                      % Increment size for manual changes of gain (degrees per Volt)
-%     
-% elseif Success > 1
-%     ParamsOut = Params;
-% 	return;
-% end
+    
+elseif Success > 1
+    ParamsOut = Params;
+	return;
+end
 if OpenGUI == 0
     ParamsOut = Params;
     return;

@@ -110,6 +110,7 @@ Params.Eye.GazeRect = Params.ImageExp.GazeRect;
     Params.Design.TrialsPerRun  = Params.ImageExp.TrialsPerRun;
     Params                      = SCNI_GenerateDesign(Params, 0);
     Params                      = AllocateRand(Params);
+    size(Params.Design.CondMatrix)
 %end
 
 SCNI_SaveExperiment(Params);    % Save all parameters for current run to .mat file
@@ -295,7 +296,7 @@ while Params.Run.TrialCount < Params.ImageExp.TrialsPerRun && Params.Run.EndRun 
     
     %% ================= ANALYSE FIXATION
     if Params.Run.AbortTrial == 0
-    	Params                  = SCNI_CheckTrialEyePos(Params);
+    	Params                  = SCNI_CheckImageTrialEyePos(Params);
         ITIduration             = Params.ImageExp.ITIms/10^3;           
         Params.Run.TrialCount   = Params.Run.TrialCount+1;              % Count as one completed trial
         RewardEarned            = 1;

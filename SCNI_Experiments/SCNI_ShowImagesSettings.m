@@ -345,7 +345,15 @@ ParamsOut = Params;     % Output 'Params' struct
                 else
                     Params.ImageExp.BckgrndTex = [];
                 end
-                %img = uint8(img);
+%                 %img = uint8(img);
+
+                %%%% TEMPORARY FIX FOR SIZE-DISTANCE EXP
+%                 Background = imread(fullfile(Params.ImageExp.BckgrndDir, 'BackgroundArray_01.png'));
+%                 [~,~, imalpha] = imread(fullfile(Params.ImageExp.BckgrndDir, 'BackgroundArray_01.png'));
+%                 Background(:,:,4) = imalpha;
+                %%%%=====================================
+                
+%                 Params.ImageExp.BckgrndTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, Background); 
                 Params.ImageExp.ImgTex{Cond}(Stim) = Screen('MakeTexture', Params.Display.win, img);                                                       % Create a PTB offscreen texture for the stimulus
                 StimCount = StimCount+1;
             end

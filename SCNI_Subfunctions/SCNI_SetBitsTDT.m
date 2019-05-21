@@ -43,6 +43,7 @@ if dc == 1
     Datapixx('SetDoutValues', DecValues);%, bitMask);       	% Set digital output
     Datapixx('RegWrRd');
 end
+%WaitSecs(0.001);                                    % <<< Solution for TDT systems too slow to detect event!
 Datapixx('SetDoutValues', 0);%, bitMask);                       % Reset all digital outputs to zeros
 Datapixx('RegWrRd');
 
