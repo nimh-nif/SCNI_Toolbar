@@ -67,8 +67,7 @@ if isempty(Params.Movie.Duration)
 end
 
 %================= GENERATE EXPERIMENTAL DESIGN
-Params.Run.MovieIndx = randperm(numel(Params.Movie.AllFiles));
-%Params.Run.MovieIndx = randi(numel(Params.Movie.AllFiles), [1, Params.Movie.TrialsPerRun]);  	% <<<< RANDOMIZED (FUDGE) movie order
+Params.Run.MovieIndx = randi(numel(Params.Movie.AllFiles), [1, Params.Movie.TrialsPerRun]);  	% <<<< RANDOMIZED (FUDGE) movie order
 
 %================= GENERATE FIXATION TEXTURE
 Fix.Size        = Params.Movie.FixSize*Params.Display.PixPerDeg;
@@ -183,17 +182,13 @@ while Params.Run.EndRun == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Ru
         %=============== Check current eye position
         Eye         = SCNI_GetEyePos(Params);
         EyeRect   	= repmat(round(Eye(Params.Eye.EyeToUse).Pixels),[1,2])+[-10,-10,10,10];                        % Get screen coordinates of current gaze position (pixels)
-        [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
+        %[FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params); 	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
         %ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);                     % Find first NaN elements in fix vector
      	%Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];               % Save current fixation result to matrix
-        try
-            Params       	= SCNI_CheckReward(Params);   
-        catch
-            disp('Fail!')
-        end
-        
+       	%Params       	= SCNI_CheckReward(Params);                                                           
+         Params = SCNI_GiveReward(Params); 
         
         %=============== Draw experimenter's overlay
         if Params.Display.Exp.GridOn == 1
@@ -266,12 +261,12 @@ while Params.Run.EndRun == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Ru
         [FixIn, FixDist]= SCNI_IsInFixWin(Eye(Params.Eye.EyeToUse).Pixels, [], Params.Movie.FixOn==0, Params);	% Check if gaze position is inside fixation window
 
         %=============== Check whether to deliver reward
-        %ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);                 % Find first NaN elements in fix vector
-%      	try
-%             Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];       % Save current fixation result to matrix
-%         catch
-%             disp('Error')
-%         end
+        ValidFixNans 	= find(isnan(Params.Run.ValidFixations(Params.Run.TrialCount,:,1)), 1);         % Find first NaN elements in fix vector
+     	try
+            Params.Run.ValidFixations(Params.Run.TrialCount, ValidFixNans,:) = [GetSecs, FixDist, FixIn];   % Save current fixation result to matrix
+        catch
+            disp('Error')
+        end
         Params       	= SCNI_CheckReward(Params);                                                      
 
         %=============== Draw experimenter's overlay
@@ -314,8 +309,7 @@ while Params.Run.EndRun == 0 && (GetSecs-Params.Run.StartTime) < Params.Movie.Ru
     MovieEndTime = Screen('GetMovieTimeIndex', mov);
     Screen('CloseMovie',mov);
     Params.Run.MovieCount = Params.Run.MovieCount+1;
-    %Params.Run.TrialCount   = Params.Run.TrialCount+1;                                  % Count as one completed trial
-    Params = SCNI_GiveReward(Params);                               % <<<< TEMP JUICE FIX
+    Params.Run.TrialCount   = Params.Run.TrialCount+1;                                  % Count as one completed trial
 end
 
 %================= END RUN
@@ -377,7 +371,7 @@ function Params = SCNI_UpdateStats(Params)
         end
     end
 
-	Params.Run.ValidFixPercent = 100;%nanmean(nanmean(Params.Run.ValidFixations(1:Params.Run.TrialCount,:,3)))*100; <<<< TEMPORARY FIX
+	Params.Run.ValidFixPercent = nanmean(nanmean(Params.Run.ValidFixations(1:Params.Run.TrialCount,:,3)))*100;
 
     %========= Update clock
 %     if Params.Movie.Paused == 1   

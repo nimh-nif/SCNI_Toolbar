@@ -49,7 +49,7 @@ if Success < 1 || ~isfield(Params, 'Movie')                                     
     Params.Movie.Loop           = 1;                        % Loop playback of same movie if it reaches the end before the set playback duration?
     Params.Movie.Background     = [0,0,0];                  % Color (RGB) of background for non-fullscreen movies
     Params.Movie.Rate           = 1;                        % Rate of movie playback as proportion of original fps (range -1:1)
-    Params.Movie.StartTime      = 1;                        % Movie playback starts at time (seconds)
+    Params.Movie.StartTime      = 0;                        % Movie playback starts at time (seconds)
     Params.Movie.Scale          = 0.8;                      % Proportion of original size to present movie at
     Params.Movie.Paused         = 0;
     Params.Movie.FileFormats    = {'.mp4','.mpg','.wmv','.mov','.avi'};   	% What file format are the movies?

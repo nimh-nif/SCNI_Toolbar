@@ -23,6 +23,7 @@ ScannerThresh   = 2.5;                                                      % Se
 ScannerChannel  = find(~cellfun(@isempty, strfind(Params.DPx.AnalogInLabels, 'Scanner')));    % Find which ADC channel the scanner is connected to
 TTLcount        = 0;
 ScannerOn       = 0;
+StartTime       = GetSecs;
 
 while TTLcount < NoTTLs
     
@@ -32,6 +33,7 @@ while TTLcount < NoTTLs
     end
     
     while ScannerOn == 0
+        Datapixx('RegWrRd'); 
         status = Datapixx('GetAdcStatus');
         Datapixx('RegWrRd')
         V 	= Datapixx('GetAdcVoltages');
@@ -41,9 +43,13 @@ while TTLcount < NoTTLs
         CheckPress(Params);                                         % Allow experimenter to abort if necessary
     end
     TTLcount = TTLcount+1;
+    if Print == 2
+        fprintf('Pulse %d/%d detected after %.2f seconds!\n', TTLcount, NoTTLs, GetSecs-StartTime);
+    end
     
     if TTLcount < NoTTLs                                            % If waiting for more TTL pulses...
         while ScannerOn == 1                                        % Wait for pulse to end
+            Datapixx('RegWrRd');  
             status = Datapixx('GetAdcStatus');                      
             Datapixx('RegWrRd')
             V 	= Datapixx('GetAdcVoltages');
